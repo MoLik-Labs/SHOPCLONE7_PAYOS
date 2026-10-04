@@ -1,0 +1,89 @@
+CHUYỂN SHOPCLONE7 SANG payOS
+
+Phạm vi bản sửa
+- Route nạp ngân hàng cũ mở trang payOS; thêm trang quản trị nạp payOS.
+- Tạo liên kết thanh toán trên server, giữ khuyến mãi tại thời điểm tạo.
+- Xác minh HMAC webhook và dữ liệu đối soát trả về trực tiếp từ payOS.
+- Không cộng tiền theo status/cancel/orderCode do trình duyệt tự gửi.
+- Cộng tiền, lịch sử, hoa hồng và khấu trừ nợ trong một transaction InnoDB.
+- Khóa dòng đơn để thông báo lặp hoặc nhiều request không cộng tiền hai lần.
+- Trang trạng thái tự đối soát khi webhook đến chậm/mất; giới hạn mỗi 15 giây/đơn.
+- Tiền chuyển thiếu chỉ được cộng khi payOS xác nhận PAID và đã nhận đủ.
+- Chuyển dư: chỉ cộng số tiền của đơn và khuyến mãi đã chốt. Phần dư cần
+  chủ shop đối soát/hoàn hoặc cộng bổ sung thủ công, không tự mất vào số dư.
+
+Cài đặt trên website đang có dữ liệu
+1. Sao lưu cả source, .env và database; đưa website vào bảo trì.
+2. Chép các file bản sửa lên host. Giữ thông tin DB và SECRET_KEY cũ.
+   Không import shopclone7.sql đè database đang chạy: đây là SQL của archive.
+3. PHP 7.4+ 64-bit, MySQL/MariaDB; bật curl, pdo_mysql, mysqli, mbstring,
+   openssl và các extension ứng dụng cũ cần. Thư mục vendor đã có trong gói.
+   Máy chủ cần CA certificate hợp lệ để kiểm tra TLS, không tắt xác minh TLS.
+4. Điền .env theo .env.example:
+     APP_URL=https://ten-mien-shop.vn
+     PAYOS_ENABLED=false
+     PAYOS_CLIENT_ID=<Client ID của kênh payOS>
+     PAYOS_API_KEY=<API Key của kênh payOS>
+     PAYOS_CHECKSUM_KEY=<Checksum Key của kênh payOS>
+   APP_URL phải đúng HTTPS domain, thêm thư mục con nếu website nằm trong đó.
+   PAYOS_MIN_AMOUNT/PAYOS_MAX_AMOUNT là hạn mức shop tự đặt, không phải
+   tuyên bố giới hạn chung của payOS. Mặc định 1.000–50.000.000 VND.
+5. Trong thư mục web chạy: php scripts/migrate-payos.php
+   Migration tạo payos_orders, chuyển bảng tiền về InnoDB và cột tiền sang
+   DECIMAL(20,2), giữ số dư/lịch sử. DDL MySQL không rollback toàn bộ được;
+   cần sao lưu trước và bảo trì trong lúc chạy. Có thể chạy lại khi bị ngắt.
+6. Trong kênh tại https://my.payos.vn/ đăng ký webhook:
+     https://ten-mien-shop.vn/api/webhook-payos.php
+   Thay domain và thêm thư mục con tương ứng. Webhook phải truy cập công khai
+   bằng POST qua HTTPS; không đặt trang đăng nhập/challenge trình duyệt trước nó.
+   Endpoint chỉ chấp nhận dữ liệu ký bằng Checksum Key đã cấu hình.
+7. Dừng cron đọc ngân hàng/Web2M/Momo cũ. Đối soát các lệnh đang chờ trước
+   thời điểm chuyển; thanh toán payOS dùng mã đơn riêng, không dùng prefix cũ.
+   Khi PAYOS_ENABLED=true, các endpoint nạp tự động cũ bị chặn trong bản sửa.
+8. Đặt PAYOS_ENABLED=true. Mở /client/recharge-bank hoặc /client/recharge-payos.
+   Trang admin: /admin/recharge-payos. Lịch sử bank cũ vẫn giữ trong database
+   và trang quản trị ngân hàng. Không bật thêm cron bank cũ cùng với payOS.
+9. Hoàn thành một giao dịch giá trị nhỏ và đối chiếu số dư, deposit_log,
+   payment_bank, dongtien, payos_orders. Chuyển khoản thật chưa được thực hiện
+   trong phiên sửa source này vì không có khóa và host của chủ web.
+
+Khóa và cấu hình
+- Client ID/API Key/Checksum Key phải lấy hoặc tạo lại tại payOS. Không thể tự
+  tạo chuỗi ngẫu nhiên để thay khóa của nhà cung cấp. Không đưa khóa vào JS.
+- Khóa mẫu phát hiện trong SQL đã được làm trống. Khóa từng lộ cần được
+  thu hồi/cấp lại ở dịch vụ tương ứng; xóa khỏi source không thu hồi khóa.
+- Không tự đổi SECRET_KEY của website đang có dữ liệu mã hóa. Đổi nhầm có thể
+  làm mất khả năng đọc dữ liệu cũ. Bản mã này giữ giá trị hiện có.
+- .user.ini không còn open_basedir trỏ vào host khác. Thiết lập open_basedir
+  đúng đường dẫn triển khai trong control panel/php.ini của host nếu cần.
+- Không đưa .tools, file ZIP gốc hoặc database backup lên document root.
+
+Kiểm tra và xử lý lỗi
+- Các test trong tests chạy offline với khóa giả; không gọi payOS thật.
+  php tests/payos_client_test.php
+  php tests/legacy_security_test.php
+- Test database cần DB riêng có tên payos_test_*; tuyệt đối không dùng DB shop.
+  Đặt PAYOS_TEST_DB, PAYOS_TEST_PORT, PAYOS_TEST_USER, PAYOS_TEST_PASSWORD rồi:
+  php tests/payos_service_test.php
+  Test xóa/tạo lại bảng fixture trong DB thử đó, có kiểm rollback khi lỗi ghi.
+- Webhook trả 400: JSON/chữ ký hoặc thông tin đơn không hợp lệ.
+- Webhook trả 503: lỗi DB, khóa, TLS hoặc payOS; không xác nhận đã xử lý,
+  cần xem error log và retry. Payload, API key không được ghi vào log mới.
+- CREATE_FAILED: timeout có thể xảy ra sau khi payOS đã tạo link. Bản ghi được
+  giữ để đối soát; không xóa bản ghi hoặc tự cộng tiền theo lời báo từ browser.
+- PAYOS_ENABLED=false chỉ dừng tạo mới. Webhook cho các đơn cũ vẫn đối soát
+  nếu còn đủ khóa, tránh mất các khoản đang chờ.
+
+Web server
+- .htaccess áp dụng cho Apache có AllowOverride phù hợp. Nginx/IIS không đọc
+  .htaccess: cấu hình tương đương để chặn .env/dotfiles, SQL/backups/logs,
+  vendor/docs/tests/scripts/migrations và file cài đặt qua HTTP, tắt listing.
+- Chặn thực thi PHP/script trong thư mục upload. Với reverse proxy, khai báo
+  TRUSTED_PROXY_IPS đúng IP proxy; không tin X-Forwarded-For từ mọi máy khách.
+
+Tài liệu chính thức đã đối chiếu
+https://payos.vn/docs/api/
+https://payos.vn/docs/du-lieu-tra-ve/webhook/
+https://github.com/payOSHQ/payos-lib-php/blob/main/src/Crypto/CryptoProvider.php
+
+Chi tiết rà soát source và những giới hạn còn lại: CLEANUP_NOTES.txt.

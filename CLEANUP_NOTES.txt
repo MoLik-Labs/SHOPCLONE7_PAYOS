@@ -1,0 +1,85 @@
+GHI CHÚ RÀ SOÁT VÀ LÀM SẠCH — 04/10/2026
+
+Phạm vi
+Đã rà soát tĩnh mã ứng dụng PHP, luồng thanh toán cũ, bootstrap, cấu hình HTTP,
+upload và dữ liệu mẫu trong shopclone7.sql; chạy các kiểm tra hồi quy cục bộ.
+Đây không phải xác nhận pentest toàn diện hay chứng nhận không còn backdoor.
+Không có thông tin truy cập host thật, dữ liệu vận hành hay khóa payOS thật trong
+phạm vi kiểm tra này. Không thực hiện giao dịch tiền thật hoặc gọi API cũ để thử.
+
+Các vấn đề đã sửa
+1. libs/helper.php / myip(): bản gốc tin HTTP_CLIENT_IP và X-Forwarded-For; nhánh
+   có dấu phẩy trả chuỗi chưa lọc rồi nội suy vào SQL block_ip. Nay chỉ dùng IP
+   hợp lệ từ REMOTE_ADDR. Chỉ nhận chuỗi forwarded khi REMOTE_ADDR nằm trong
+   TRUSTED_PROXY_IPS; duyệt chuỗi proxy từ phải sang trái và kiểm tra từng IP.
+2. index.php: bỏ chuỗi quảng cáo repo bị echo trước session/header.
+   install.php chỉ chạy CLI; version.php yêu cầu đăng nhập admin.
+3. .htaccess: chặn dotfiles, SQL/log/backup/archive/composer manifests, thư mục
+   docs/tests/scripts/migrations/vendor qua HTTP; tắt directory listing; chặn
+   thực thi PHP trong vùng upload và CKEditor samples. Giữ .well-known/ACME.
+   Host Nginx phải áp dụng quy tắc tương đương; không đọc .htaccess.
+4. .user.ini: bỏ open_basedir trỏ vào đường dẫn host cũ; tắt display_errors và
+   bật log_errors. Nếu cần expose_php=Off/open_basedir, đặt trong php.ini hoặc
+   cấu hình pool/vhost với đường dẫn thực tế; expose_php không hỗ trợ .user.ini.
+5. Khi PAYOS_ENABLED=true, chặn 410 trước xử lý API/tiền ở callback card, crypto,
+   Squadco, Flutterwave, Perfect Money, webhook Web2M, cron bank/bankWeb2m/momo,
+   cùng các action nap_the/CreateInvoiceCrypto/CreateToyyibpay/confirmPaypal.
+   Các action mua hàng, ghi chú, yêu thích, tiền tệ, ngôn ngữ không bị gate này.
+   Nếu payOS tắt, callback cũ vẫn phải có provider active và secret không rỗng.
+6. api/callback_toyyibpay.php trước đây nhận trạng thái POST không có xác minh
+   chữ ký hoặc giao dịch từ máy chủ. Đã ngừng callback và tạo invoice Toyyibpay
+   hoàn toàn trong bản chuyển đổi này; trả 410 để tránh nhận tiền không đối soát.
+7. Callback cũ so sánh chữ ký/token bằng hash_equals; helper HTTP và tạo invoice
+   crypto bật kiểm tra chứng chỉ TLS, bỏ verbose cURL có thể ghi token vào log.
+8. random() dùng random_int và trả đúng độ dài yêu cầu (str_shuffle bản cũ không
+   bảo đảm độ dài khi yêu cầu vượt chiều dài alphabet). Sửa phép nối chuỗi trong
+   lựa chọn theo trọng số và làm tròn tiền thành phép toán tương ứng.
+9. Đăng nhập tạo lại session ID, cookie token có HttpOnly/SameSite=Lax và Secure
+   khi dùng HTTPS. Luồng OTP/2FA chặn tài khoản banned; liên kết reset mật khẩu
+   hết hạn sau 15 phút. Không thay thuật toán hash của tài khoản hiện hữu.
+10. Upload ảnh kiểm tra upload hợp lệ, nội dung JPEG/PNG/GIF đúng phần mở rộng,
+    tối đa 5 MiB và 10000 pixel mỗi chiều; áp dụng cả upload sản phẩm nhiều ảnh.
+
+Dữ liệu, khóa và mã chèn
+- shopclone7.sql có giá trị license_key và cặp khóa Flutterwave mẫu; đã xóa
+  giá trị này và tắt các provider cũ/status_update/debug API trong seed.
+  Schema và dữ liệu kinh doanh không liên quan được giữ lại.
+- Không có INSERT users/banks/suppliers trong dump đã nhận. Super Admin trong
+  admin_role chỉ là định nghĩa quyền, không phải tài khoản đăng nhập ẩn.
+  Khi dựng DB mới cần tạo admin qua quy trình cài đặt/tài khoản do chủ host quản lý.
+- Các khóa API khác trong seed chủ yếu rỗng. SECRET_KEY và thông số DB của .env
+  hiện hữu không tự đổi; khóa mã hóa đang sử dụng có thể cần cho dữ liệu cũ.
+- Xóa khóa khỏi file không thu hồi khóa ở nhà cung cấp: chủ tài khoản cần thu hồi
+  và cấp khóa riêng cho deployment, nhất là nếu từng dùng khóa có trong archive.
+- Chưa thấy eval/gzinflate/shell_exec/passthru hay tải-và-thực-thi updater trong
+  mã ứng dụng đã rà soát. Các base64_decode được thấy dùng cho nội dung/địa chỉ
+  API/cache license; đây không phải bằng chứng toàn bộ thư viện hoặc DB đều sạch.
+- update.php hiện có sẵn lệnh thoát khóa chức năng; không chạy tải cập nhật.
+  checkLicenseKey() trong archive đã trả Active vô điều kiện; không sửa hoặc
+  bổ sung cơ chế bỏ qua license trong đợt này.
+- .DS_Store không được xóa khỏi thư mục gốc trong đợt này; loại khỏi gói phát hành.
+
+Kiểm tra đã thực hiện
+- PHP lint các file PHP đã thay trong phạm vi cleanup.
+- tests/legacy_security_test.php: IP giả mạo và payload header, chuỗi trusted
+  proxy, token dài hơn alphabet, random trọng số, làm tròn tiền, upload giả.
+- tests/legacy_payment_gate_test.php: 14 endpoint/action cũ dừng với 410 khi
+  payOS bật, trước khi cần DB hoặc API của nhà cung cấp.
+- Kiểm tra mẫu quy tắc chặn đường dẫn .htaccess; chưa xác nhận bằng Apache thật.
+
+Giới hạn và việc cần kiểm tra tiếp
+- Không coi đây là bảo đảm sạch tuyệt đối. Cần kiểm tra staging/host thật, các
+  tài khoản admin, file mới ngoài archive, access/error logs và dữ liệu settings
+  đang chạy. Việc sửa SQL seed không tự thay settings/credentials trong DB cũ.
+- Các trang cấu hình admin cũ còn có pattern cập nhật settings từ toàn bộ POST,
+  và nhiều truy vấn SQL cũ vẫn ghép chuỗi. Cần audit quyền/CSRF theo từng form,
+  whitelist trường được phép, và chuyển sang truy vấn tham số trong đợt tiếp theo.
+- Các provider cũ khi bật lại không nằm trong bộ kiểm thử payOS mới; không coi
+  việc thêm gate là xác minh đầy đủ tiền, currency, replay/race của mọi provider.
+- Các thư viện vendor cũ có cảnh báo deprecated trên PHP 8.5; chưa nâng cấp hàng
+  loạt thư viện trong đợt thay API này. Không bật display_errors ở host vận hành.
+  Guzzle/PSR-7 và các phụ thuộc liên quan đã được cập nhật sau bước rà soát này;
+  Composer audit sau cập nhật không còn advisory đã biết khớp lock hiện tại.
+  Chi tiết kiểm tra thư viện có trong DEPENDENCY_AUDIT.txt.
+- Chưa kiểm tra đăng nhập/upload qua trình duyệt và web-server thật cho toàn bộ
+  màn hình. Cần xác nhận cấu hình proxy/HTTPS, CA bundle và quy tắc HTTP của host.

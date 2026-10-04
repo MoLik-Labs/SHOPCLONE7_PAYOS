@@ -1,0 +1,53 @@
+DEPENDENCY SECURITY AUDIT - RESOLVED STATE
+Date: 04/10/2026
+
+Result
+Composer 2.10.3 audit completed successfully after the dependency update.
+Command: composer --no-plugins --no-scripts --no-interaction audit --locked --format=json --abandoned=report
+Exit code: 0
+Locked packages checked: 26
+Matching security advisories: 0
+Abandoned packages reported by Composer: 0
+Composer output: {"advisories":[],"abandoned":[],"filter":[]}
+Lock SHA256: eefc9843cdf0fb2145bd60bc4114aa82304920b467d8f43f52c573040539f309
+
+Changes made
+- guzzlehttp/guzzle: 7.4.1 -> 7.15.2
+- guzzlehttp/psr7: 2.1.0 -> 2.13.1
+- guzzlehttp/promises: 1.5.1 -> 2.5.3
+- psr/http-message: 1.0.1 -> 1.1
+- symfony/polyfill-php80: 1.23.1 -> 1.43.0
+- Composer removed facebook/graph-sdk 5.1.4 because it was no longer required by composer.json or the resolved dependency graph.
+- Other locked package versions were retained.
+- composer.json config.platform.php is now 7.4.0, so dependency resolution remains compatible with the PHP 7.4 baseline.
+
+Update and verification
+The official Composer 2.10.3 PHAR was downloaded from the composer/composer GitHub release. Its SHA256 matched the digest published by the official GitHub release asset API before execution.
+The update used --with-dependencies --minimal-changes --prefer-dist and disabled Composer plugins and scripts. Vendor installation and autoloader generation completed with exit code 0.
+The post-update audit queried the configured official Packagist repository.
+The payOS client offline test suite passed all 45 checks after vendor installation.
+Dependency resolution was constrained to PHP 7.4.0. Runtime checks here used PHP 8.5.11; PHP 7.4 execution was not separately exercised.
+
+Baseline findings resolved
+The previous lock contained 20 matching advisories across Guzzle and PSR-7: 6 high and 14 medium, with no matching critical advisory. The update places those packages outside every affected range returned by Packagist at the time of this audit.
+Historical PHPMailer critical advisories did not apply to the locked PHPMailer 6.5.1 and were not counted.
+
+Scope and remaining maintenance
+This is a dependency-version audit, not proof that all application code or unknown vulnerabilities have been eliminated. Application routes and database behavior are tested separately.
+Composer reported no abandoned package entries in this audit. An old package version or an archived upstream project is not automatically a vulnerability, and this result does not replace future dependency maintenance.
+The new payOS client uses its own cURL transport and does not depend on Guzzle.
+
+Evidence retained outside the deployable project
+- ../.tools/composer-verification.json: official PHAR version, SHA256 and release asset URL.
+- ../.tools/dependency-advisories.json: final audit metadata and current lock SHA256.
+- ../.tools/composer-audit-after.json: unmodified final Composer JSON output.
+- ../.tools/dependency-advisories-before.json: matching baseline advisories.
+- ../.tools/packagist-advisories-raw.json: raw baseline Packagist response.
+- ../.tools/dependency-update.stderr.txt: package update/install log.
+
+Primary references
+https://getcomposer.org/doc/03-cli.md#audit
+https://packagist.org/apidoc#list-security-advisories
+https://github.com/composer/composer/releases/tag/2.10.3
+https://github.com/guzzle/guzzle/blob/7.15.2/composer.json
+https://github.com/guzzle/psr7/blob/2.13.1/composer.json

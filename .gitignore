@@ -1,0 +1,13 @@
+/.idea
+/.env
+/.env.*
+!/.env.example
+/vendor/
+/node_modules/
+*.log
+*.sql
+*.bak
+*.backup
+*.zip
+.DS_Store
+Thumbs.db

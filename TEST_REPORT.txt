@@ -1,0 +1,50 @@
+KẾT QUẢ KIỂM TRA CỤC BỘ — 04/10/2026
+
+Môi trường
+Windows, PHP CLI 8.5.11, MariaDB 11.8.9.
+Database thử tách riêng, chỉ lắng nghe localhost; không dùng dữ liệu host thật.
+Client payOS được mô phỏng trong test; không tạo link hoặc chuyển khoản thật.
+
+Kết quả
+1. PHP lint: 207 file ứng dụng tại thời điểm quét toàn bộ không có lỗi cú pháp.
+   Các file thêm/sửa tiếp theo được lint hoặc chạy qua test/HTTP tương ứng.
+2. payos_client_test.php: 45 checks PASS.
+   Fixture chữ ký chính thức; null/bool/Unicode/slash/array; signature tạo đơn;
+   dữ liệu giả mạo, response signature, mã đơn/số tiền sai, lỗi HTTP và cấu hình.
+3. payos_service_test.php: 44 assertions PASS trên MariaDB thật.
+   Migration chạy lại; hạn mức; chống double-click; quyền sở hữu; webhook giả;
+   tiền chuyển thiếu; sai amount/link/currency; rollback khi lỗi ghi ledger;
+   retry sau rollback; cộng khuyến mãi, trừ nợ, hoa hồng đúng; chống webhook lặp;
+   đối soát khi mất webhook; timeout trước/sau tạo link; tiền chuyển dư;
+   hai PHP worker đồng thời chỉ cộng tiền và ghi lịch sử một lần.
+4. legacy_security_test.php: PASS.
+   Header IP giả/SQL payload, trusted proxy, token dài/charset, toán học,
+   upload file giả không phải HTTP upload.
+5. legacy_payment_gate_test.php: 14 entry points/actions PASS.
+   Tất cả dừng 410 khi bật payOS trước truy cập API cũ hoặc cộng tiền.
+6. JavaScript UI: syntax PASS; 7 kiểm tra trạng thái/chuyển hướng PASS.
+   Không có credited_at thì không báo cộng tiền, wrong owner không báo success,
+   URL javascript bị chặn, không lặp reload, timeout chưa rõ kết quả tiếp tục kiểm tra.
+7. Menu/provider guards: 15 checks PASS.
+8. HTTP smoke trên PHP server và DB import từ shopclone7.sql đã làm sạch:
+   - Client payOS và admin payOS trả 200, hiển thị form/bảng cấu hình.
+   - 10 route nạp cũ/ngân hàng đều hiển thị payOS khi bật.
+   - Không đăng nhập: 401; không có đơn thuộc chủ tài khoản: 404.
+   - CSRF sai: 403; số tiền dạng 1e6: 400; webhook chữ ký sai: 400.
+   - Trang vẫn trả 200 với header IP giả; query return status=PAID không được
+     dùng làm chứng cứ cộng tiền.
+9. Dependency audit: trước cập nhật có 20 advisory khớp 2 package; sau nâng
+   Guzzle/PSR-7 và các phụ thuộc cần thiết, Composer audit --locked trả 0 advisory.
+   Giữ tương thích PHP 7.4 trong resolver. Đã chạy lại 44 kiểm tra database,
+   45 kiểm tra client, regression và HTTP client/admin sau cập nhật vendor.
+   Xem phiên bản và phạm vi kết luận chính xác trong DEPENDENCY_AUDIT.txt.
+
+Giới hạn
+- Chưa thử live payOS: thiếu kênh/khóa thật và domain triển khai.
+- PHP built-in server không thực thi .htaccess. Quy tắc Apache đã rà tĩnh;
+  cần kiểm tra lại trên Apache/Nginx/IIS của host.
+- Chưa kiểm thử toàn bộ màn hình, trình duyệt, quyền admin, thư viện bên thứ ba
+  hoặc mã/settings bổ sung trên website thật. Đọc CLEANUP_NOTES.txt và
+  DEPENDENCY_AUDIT.txt; các test PASS không phải chứng nhận hết mọi lỗ hổng.
+- Vendor cũ phát cảnh báo deprecated trên PHP 8.5. Endpoint payOS và cấu hình
+  triển khai tắt display_errors để giữ JSON hợp lệ; cần kế hoạch nâng cấp vendor.
