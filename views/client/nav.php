@@ -5,6 +5,10 @@ if(!defined("IN_SITE")) {
 }
 require_once __DIR__ . '/../../libs/payos.php';
 $payosNavEnabled = (bool) payos_config()['enabled'];
+require_once __DIR__ . '/../../libs/gtf.php';
+$gtfNavConfig = gtf_config();
+$gtfNavCard = $gtfNavConfig['card_enabled'] && $gtfNavConfig['partner_key'] !== '' && $gtfNavConfig['api_base'] !== '' && $gtfNavConfig['card_request_format'] !== '';
+$gtfNavCardHtml = $gtfNavCard ? "                                    <li><a href=\"" . base_url("?action=recharge-gtf-card") . "\"><img width=\"20px\"\n                                                src=\"" . base_url("assets/img/icon-cards.png") . "\">Thẻ cào (GachtheFast)</a></li>\n" : '';
 echo "\n<body>\n    <div class=\"backdrop\"></div><a class=\"backtop\" href=\"#\"><i class=\"fa-sharp fa-solid fa-chevron-up\"></i></a>\n    <div class=\"header-top\">\n        <div class=\"container\">\n            <div class=\"row\">\n                <div class=\"col-md-12 col-lg-5\">\n                    <div class=\"header-top-welcome\">\n                        <p>";
 echo $CMSNT->site("notice_top_left");
 echo "</p>\n                    </div>\n                </div>\n                <div class=\"col-md-5 col-lg-3\">\n                    <div class=\"header-top-select\">\n                        <div class=\"header-select\"><i class=\"icofont-world\"></i>\n                            ";
@@ -125,6 +129,7 @@ if($payosNavEnabled || $CMSNT->site("bank_status") == 1) {
     echo $payosNavEnabled ? "Ngân hàng (payOS)" : __("Ngân hàng");
     echo "</a></li>\n                                    ";
 }
+echo $gtfNavCardHtml;
 echo "                                    ";
 if(!$payosNavEnabled && $CMSNT->site("momo_status") == 1) {
     echo "                                    <li><a href=\"";

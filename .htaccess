@@ -4,7 +4,7 @@ RewriteEngine On
 
 # Keep internal files out of HTTP responses; allow ACME challenges.
 RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
-RewriteRule ^(?:vendor|docs|tests|scripts|migrations)(?:/|$) - [F,L,NC]
+RewriteRule ^(?:vendor|docs|tests|scripts|migrations|tools)(?:/|$) - [F,L,NC]
 RewriteRule ^(?:assets/storage|public/ckeditor/samples)/.*\.(?:php[0-9]?|phtml|phar)(?:/|$) - [F,L,NC]
 
 <FilesMatch "(?i)(?:\.(?:sql|log|bak|backup|old|orig|save|swp|zip|tar|gz|7z|rar)$|^composer\.(?:json|lock)$|^(?:CLEANUP_NOTES|DEPENDENCY_AUDIT|TEST_REPORT|HUONG_DAN_PAYOS|CHANGE_MANIFEST)\.txt$|^install\.php$)">
