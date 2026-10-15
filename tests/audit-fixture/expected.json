@@ -1,0 +1,63 @@
+{
+  "note": "One fixture per rule, wrong and right. Generated from tools/frontend-audit.php --path=tests/audit-fixture and reviewed line by line; the driver is run_selftest.py in this directory (audit_runner.php is only an argument shim for runtimes without $argv, and is itself part of the clean set).",
+  "findings": {
+    "tests/audit-fixture/bad-asset-version.php": [
+      "unversioned-asset"
+    ],
+    "tests/audit-fixture/bad-blocking-script.php": [
+      "blocking-script"
+    ],
+    "tests/audit-fixture/bad-font.css": [
+      "external-request",
+      "remote-font"
+    ],
+    "tests/audit-fixture/bad-handler.php": [
+      "inline-handler"
+    ],
+    "tests/audit-fixture/bad-http.php": [
+      "insecure-http"
+    ],
+    "tests/audit-fixture/bad-media.php": [
+      "img-dimensions"
+    ],
+    "tests/audit-fixture/bad-motion.css": [
+      "reduced-motion"
+    ],
+    "tests/audit-fixture/bad-style-block.php": [
+      "inline-style-block"
+    ],
+    "tests/audit-fixture/bad-w3c-hotlink.css": [
+      "insecure-http"
+    ],
+    "tests/audit-fixture/bad/music-player.js": [
+      "player-preload"
+    ],
+    "tests/audit-fixture/bad/playlist.json": [
+      "external-request",
+      "insecure-http"
+    ]
+  },
+  "counts": {
+    "tests/audit-fixture/bad-asset-version.php": 1,
+    "tests/audit-fixture/bad-blocking-script.php": 1,
+    "tests/audit-fixture/bad-font.css": 2,
+    "tests/audit-fixture/bad-handler.php": 1,
+    "tests/audit-fixture/bad-http.php": 1,
+    "tests/audit-fixture/bad-media.php": 1,
+    "tests/audit-fixture/bad-motion.css": 1,
+    "tests/audit-fixture/bad-style-block.php": 1,
+    "tests/audit-fixture/bad-w3c-hotlink.css": 1,
+    "tests/audit-fixture/bad/music-player.js": 2,
+    "tests/audit-fixture/bad/playlist.json": 3
+  },
+  "clean": [
+    "tests/audit-fixture/audit_runner.php",
+    "tests/audit-fixture/clean-page.php",
+    "tests/audit-fixture/ok-deferred-script.php",
+    "tests/audit-fixture/ok-motion.css",
+    "tests/audit-fixture/ok-namespace.js",
+    "tests/audit-fixture/ok-player-pattern.js",
+    "tests/audit-fixture/ok/music-player.js",
+    "tests/audit-fixture/ok/playlist.json"
+  ]
+}

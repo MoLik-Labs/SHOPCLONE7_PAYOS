@@ -1,0 +1,1013 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>[preview] Thống kê bán hàng</title>
+<meta name="description" content="Shop bán tài khoản &amp; licence">
+<meta name="keywords" content="shop, licence">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Thống kê bán hàng">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="#preview-client-orbittokens.css?v=1792086227">
+<link rel="stylesheet" href="#preview-client-orbitbase.css?v=1792086227">
+<link rel="stylesheet" href="#preview-client-orbitcomponents.css?v=1792086227">
+<link rel="stylesheet" href="#preview-client-orbitshell.css?v=1792086227">
+<link rel="stylesheet" href="assets/preview.css">
+</head>
+<body class="">
+<div class="preview-banner"><strong>Bản xem trước tĩnh</strong> — trang thật chạy trong shop, ở đây dùng dữ liệu mẫu. Không có dữ liệu thật, không gọi mạng, không phát nhạc. Biểu đồ vẽ bằng SVG nội bộ; bảng vẫn đọc được khi tắt JavaScript.</div>
+
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="container topbar__inner">
+    <a class="topbar__brand" href="#preview-client-home">Thống kê bán hàng</a>
+  </div>
+</header>
+<main id="main" class="container section">
+<link rel="stylesheet" href="#preview-client-orbitchart.css?v=1792086227">
+<script src="#preview-client-orbitchart.js?v=1792086227" defer></script>
+
+<div class="stack stack--lg">
+
+  <header class="row row--between">
+    <div>
+      <h1 style="margin-bottom: var(--space-1)">Thống kê bán hàng</h1>
+      <p class="muted" style="margin:0">2026-09-16 →
+        2026-10-15        · so với 2026-08-17 → 2026-09-15</p>
+    </div>
+    <div class="btn-group">
+      <div class="segmented" role="group" aria-label="Khoảng thời gian">
+                  <a href="#preview-admin-sales-days-7"
+             >7 ngày</a>
+                  <a href="#preview-admin-sales-days-30"
+             aria-current="page">30 ngày</a>
+                  <a href="#preview-admin-sales-days-90"
+             >90 ngày</a>
+              </div>
+      <a class="btn btn--ghost" href="#preview-admin-sales-days-30-export-csv">Xuất CSV</a>
+    </div>
+  </header>
+
+  
+  <!-- KPI -->
+  <section class="stats" aria-label="Chỉ số chính">
+    <div class="stat stat--accent">
+      <p class="stat__label">Doanh thu</p>
+      <p class="stat__value">36.830.000đ</p>
+      <p class="stat__foot">
+        <span class="delta delta--flat">
+          0,0%        </span>
+        <span class="delta__note">so với kỳ trước (36.830.000đ)</span>
+      </p>
+    </div>
+    <div class="stat stat--ok">
+      <p class="stat__label">Lợi nhuận</p>
+      <p class="stat__value">10.584.000đ</p>
+      <p class="stat__foot">
+        <span class="delta delta--flat">
+          0,0%        </span>
+        <span class="delta__note">biên 28,7%</span>
+      </p>
+    </div>
+    <div class="stat">
+      <p class="stat__label">Đơn hàng</p>
+      <p class="stat__value">120</p>
+      <p class="stat__foot">
+        <span class="delta delta--flat">
+          0,0%        </span>
+        <span class="delta__note">giá trị TB 306.917đ</span>
+      </p>
+    </div>
+    <div class="stat">
+      <p class="stat__label">Khách mới / tổng</p>
+      <p class="stat__value">486 <span class="muted" style="font-size:var(--text-base)">/ 486</span></p>
+      <p class="stat__foot">Chi phí hàng bán kỳ này: 26.246.000đ</p>
+    </div>
+  </section>
+
+  <!-- Revenue trend -->
+  <section class="card">
+    <div class="card__body">
+      <figure class="chart" data-chart data-summary="Doanh thu theo ngày, 30 ngày gần nhất">
+<figcaption class="chart__head"><h3 class="chart__title">Doanh thu theo ngày</h3><p class="chart__caption">Đã trừ đơn hoàn tiền và đơn bị xoá</p></figcaption>
+<div class="chart__canvas" aria-hidden="true"></div>
+<script type="application/json">{"type":"area","suffix":"đ","prefix":"","format":"currency","decimal":".","thousands":",","height":260,"labels":["2026-09-16","2026-09-17","2026-09-18","2026-09-19","2026-09-20","2026-09-21","2026-09-22","2026-09-23","2026-09-24","2026-09-25","2026-09-26","2026-09-27","2026-09-28","2026-09-29","2026-09-30","2026-10-01","2026-10-02","2026-10-03","2026-10-04","2026-10-05","2026-10-06","2026-10-07","2026-10-08","2026-10-09","2026-10-10","2026-10-11","2026-10-12","2026-10-13","2026-10-14","2026-10-15"],"series":[{"name":"Doanh thu","color":"accent","stats":{"count":30,"sum":36830000,"average":1227666.6666666667,"max":2280000,"min":150000,"last":2200000,"first":570000},"max":2500000,"points":[{"x":0,"y":77.2,"value":570000},{"x":3.45,"y":66.4,"value":840000},{"x":6.9,"y":56,"value":1100000},{"x":10.34,"y":48.8,"value":1280000},{"x":13.79,"y":34.4,"value":1640000},{"x":17.24,"y":76,"value":600000},{"x":20.69,"y":65.2,"value":870000},{"x":24.14,"y":60,"value":1000000},{"x":27.59,"y":57.6,"value":1060000},{"x":31.03,"y":40.8,"value":1480000},{"x":34.48,"y":64.8,"value":880000},{"x":37.93,"y":38.8,"value":1530000},{"x":41.38,"y":48,"value":1300000},{"x":44.83,"y":46.8,"value":1330000},{"x":48.28,"y":83.2,"value":420000},{"x":51.72,"y":94,"value":150000},{"x":55.17,"y":82,"value":450000},{"x":58.62,"y":80,"value":500000},{"x":62.07,"y":48.8,"value":1280000},{"x":65.52,"y":44,"value":1400000},{"x":68.97,"y":38,"value":1550000},{"x":72.41,"y":38,"value":1550000},{"x":75.86,"y":48,"value":1300000},{"x":79.31,"y":40.8,"value":1480000},{"x":82.76,"y":8.8,"value":2280000},{"x":86.21,"y":34.8,"value":1630000},{"x":89.66,"y":28.8,"value":1780000},{"x":93.1,"y":28.8,"value":1780000},{"x":96.55,"y":36,"value":1600000},{"x":100,"y":12,"value":2200000}],"path":"M 0 77.2 C 1.725 77.2, 1.725 66.4, 3.45 66.4 C 5.175 66.4, 5.175 56, 6.9 56 C 8.62 56, 8.62 48.8, 10.34 48.8 C 12.065 48.8, 12.065 34.4, 13.79 34.4 C 15.515 34.4, 15.515 76, 17.24 76 C 18.965 76, 18.965 65.2, 20.69 65.2 C 22.415 65.2, 22.415 60, 24.14 60 C 25.865 60, 25.865 57.6, 27.59 57.6 C 29.31 57.6, 29.31 40.8, 31.03 40.8 C 32.755 40.8, 32.755 64.8, 34.48 64.8 C 36.205 64.8, 36.205 38.8, 37.93 38.8 C 39.655 38.8, 39.655 48, 41.38 48 C 43.105 48, 43.105 46.8, 44.83 46.8 C 46.555 46.8, 46.555 83.2, 48.28 83.2 C 50 83.2, 50 94, 51.72 94 C 53.445 94, 53.445 82, 55.17 82 C 56.895 82, 56.895 80, 58.62 80 C 60.345 80, 60.345 48.8, 62.07 48.8 C 63.795 48.8, 63.795 44, 65.52 44 C 67.245 44, 67.245 38, 68.97 38 C 70.69 38, 70.69 38, 72.41 38 C 74.135 38, 74.135 48, 75.86 48 C 77.585 48, 77.585 40.8, 79.31 40.8 C 81.035 40.8, 81.035 8.8, 82.76 8.8 C 84.485 8.8, 84.485 34.8, 86.21 34.8 C 87.935 34.8, 87.935 28.8, 89.66 28.8 C 91.38 28.8, 91.38 28.8, 93.1 28.8 C 94.825 28.8, 94.825 36, 96.55 36 C 98.275 36, 98.275 12, 100 12","area":"M 0 77.2 C 1.725 77.2, 1.725 66.4, 3.45 66.4 C 5.175 66.4, 5.175 56, 6.9 56 C 8.62 56, 8.62 48.8, 10.34 48.8 C 12.065 48.8, 12.065 34.4, 13.79 34.4 C 15.515 34.4, 15.515 76, 17.24 76 C 18.965 76, 18.965 65.2, 20.69 65.2 C 22.415 65.2, 22.415 60, 24.14 60 C 25.865 60, 25.865 57.6, 27.59 57.6 C 29.31 57.6, 29.31 40.8, 31.03 40.8 C 32.755 40.8, 32.755 64.8, 34.48 64.8 C 36.205 64.8, 36.205 38.8, 37.93 38.8 C 39.655 38.8, 39.655 48, 41.38 48 C 43.105 48, 43.105 46.8, 44.83 46.8 C 46.555 46.8, 46.555 83.2, 48.28 83.2 C 50 83.2, 50 94, 51.72 94 C 53.445 94, 53.445 82, 55.17 82 C 56.895 82, 56.895 80, 58.62 80 C 60.345 80, 60.345 48.8, 62.07 48.8 C 63.795 48.8, 63.795 44, 65.52 44 C 67.245 44, 67.245 38, 68.97 38 C 70.69 38, 70.69 38, 72.41 38 C 74.135 38, 74.135 48, 75.86 48 C 77.585 48, 77.585 40.8, 79.31 40.8 C 81.035 40.8, 81.035 8.8, 82.76 8.8 C 84.485 8.8, 84.485 34.8, 86.21 34.8 C 87.935 34.8, 87.935 28.8, 89.66 28.8 C 91.38 28.8, 91.38 28.8, 93.1 28.8 C 94.825 28.8, 94.825 36, 96.55 36 C 98.275 36, 98.275 12, 100 12 L 100 100 L 0 100 Z","showMarkers":false}],"hasData":true,"stats":[],"max":2500000,"ticks":[0,625000,1250000,1875000,2500000]}</script>
+<table class="chart__table" id="chart-table-da6e973c">
+<caption>Doanh thu theo ngày</caption>
+<thead><tr><th>Ngày</th><th class="num">Doanh thu</th></tr></thead>
+<tbody>
+<tr><td>2026-09-16</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-17</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-18</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-19</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-20</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-21</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-22</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-23</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-24</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-25</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-26</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-27</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-28</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-29</td><td class="num">0đ</td></tr>
+<tr><td>2026-09-30</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-01</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-02</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-03</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-04</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-05</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-06</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-07</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-08</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-09</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-10</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-11</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-12</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-13</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-14</td><td class="num">0đ</td></tr>
+<tr><td>2026-10-15</td><td class="num">0đ</td></tr>
+</tbody>
+</table>
+</figure>
+    </div>
+  </section>
+
+  <!-- Two smaller charts -->
+  <section class="grid grid--2">
+    <div class="card">
+      <div class="card__body">
+        <figure class="chart" data-chart>
+<figcaption class="chart__head"><h3 class="chart__title">Số đơn theo ngày</h3></figcaption>
+<div class="chart__canvas" aria-hidden="true"></div>
+<script type="application/json">{"type":"bar","suffix":"","prefix":"","format":"number","decimal":".","thousands":",","height":200,"labels":["2026-09-16","2026-09-17","2026-09-18","2026-09-19","2026-09-20","2026-09-21","2026-09-22","2026-09-23","2026-09-24","2026-09-25","2026-09-26","2026-09-27","2026-09-28","2026-09-29","2026-09-30","2026-10-01","2026-10-02","2026-10-03","2026-10-04","2026-10-05","2026-10-06","2026-10-07","2026-10-08","2026-10-09","2026-10-10","2026-10-11","2026-10-12","2026-10-13","2026-10-14","2026-10-15"],"series":[{"name":"Đơn hàng","color":"info","stats":{"count":30,"sum":120,"average":4,"max":8,"min":1,"last":7,"first":3},"max":10,"bars":[{"x":0.58,"y":70,"width":2.17,"height":30,"value":3},{"x":3.92,"y":70,"width":2.17,"height":30,"value":3},{"x":7.25,"y":70,"width":2.17,"height":30,"value":3},{"x":10.58,"y":60,"width":2.17,"height":40,"value":4},{"x":13.92,"y":40,"width":2.17,"height":60,"value":6},{"x":17.25,"y":70,"width":2.17,"height":30,"value":3},{"x":20.58,"y":70,"width":2.17,"height":30,"value":3},{"x":23.92,"y":70,"width":2.17,"height":30,"value":3},{"x":27.25,"y":70,"width":2.17,"height":30,"value":3},{"x":30.58,"y":50,"width":2.17,"height":50,"value":5},{"x":33.92,"y":60,"width":2.17,"height":40,"value":4},{"x":37.25,"y":60,"width":2.17,"height":40,"value":4},{"x":40.58,"y":70,"width":2.17,"height":30,"value":3},{"x":43.92,"y":70,"width":2.17,"height":30,"value":3},{"x":47.25,"y":80,"width":2.17,"height":20,"value":2},{"x":50.58,"y":90,"width":2.17,"height":10,"value":1},{"x":53.92,"y":90,"width":2.17,"height":10,"value":1},{"x":57.25,"y":90,"width":2.17,"height":10,"value":1},{"x":60.58,"y":60,"width":2.17,"height":40,"value":4},{"x":63.92,"y":50,"width":2.17,"height":50,"value":5},{"x":67.25,"y":50,"width":2.17,"height":50,"value":5},{"x":70.58,"y":50,"width":2.17,"height":50,"value":5},{"x":73.92,"y":50,"width":2.17,"height":50,"value":5},{"x":77.25,"y":50,"width":2.17,"height":50,"value":5},{"x":80.58,"y":20,"width":2.17,"height":80,"value":8},{"x":83.92,"y":40,"width":2.17,"height":60,"value":6},{"x":87.25,"y":50,"width":2.17,"height":50,"value":5},{"x":90.58,"y":50,"width":2.17,"height":50,"value":5},{"x":93.92,"y":50,"width":2.17,"height":50,"value":5},{"x":97.25,"y":30,"width":2.17,"height":70,"value":7}]}],"hasData":true,"stats":[],"max":10,"ticks":[0,2.5,5,7.5,10]}</script>
+<table class="chart__table" id="chart-table-dc7416e7">
+<caption>Số đơn theo ngày</caption>
+<thead><tr><th>Ngày</th><th class="num">Đơn hàng</th></tr></thead>
+<tbody>
+<tr><td>2026-09-16</td><td class="num">0</td></tr>
+<tr><td>2026-09-17</td><td class="num">0</td></tr>
+<tr><td>2026-09-18</td><td class="num">0</td></tr>
+<tr><td>2026-09-19</td><td class="num">0</td></tr>
+<tr><td>2026-09-20</td><td class="num">0</td></tr>
+<tr><td>2026-09-21</td><td class="num">0</td></tr>
+<tr><td>2026-09-22</td><td class="num">0</td></tr>
+<tr><td>2026-09-23</td><td class="num">0</td></tr>
+<tr><td>2026-09-24</td><td class="num">0</td></tr>
+<tr><td>2026-09-25</td><td class="num">0</td></tr>
+<tr><td>2026-09-26</td><td class="num">0</td></tr>
+<tr><td>2026-09-27</td><td class="num">0</td></tr>
+<tr><td>2026-09-28</td><td class="num">0</td></tr>
+<tr><td>2026-09-29</td><td class="num">0</td></tr>
+<tr><td>2026-09-30</td><td class="num">0</td></tr>
+<tr><td>2026-10-01</td><td class="num">0</td></tr>
+<tr><td>2026-10-02</td><td class="num">0</td></tr>
+<tr><td>2026-10-03</td><td class="num">0</td></tr>
+<tr><td>2026-10-04</td><td class="num">0</td></tr>
+<tr><td>2026-10-05</td><td class="num">0</td></tr>
+<tr><td>2026-10-06</td><td class="num">0</td></tr>
+<tr><td>2026-10-07</td><td class="num">0</td></tr>
+<tr><td>2026-10-08</td><td class="num">0</td></tr>
+<tr><td>2026-10-09</td><td class="num">0</td></tr>
+<tr><td>2026-10-10</td><td class="num">0</td></tr>
+<tr><td>2026-10-11</td><td class="num">0</td></tr>
+<tr><td>2026-10-12</td><td class="num">0</td></tr>
+<tr><td>2026-10-13</td><td class="num">0</td></tr>
+<tr><td>2026-10-14</td><td class="num">0</td></tr>
+<tr><td>2026-10-15</td><td class="num">0</td></tr>
+</tbody>
+</table>
+</figure>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card__body">
+        <figure class="chart" data-chart>
+<figcaption class="chart__head"><h3 class="chart__title">Tiền nạp theo phương thức</h3><p class="chart__caption">Tổng 14.870.000đ · chỉ tính tiền nạp thật</p></figcaption>
+<div class="chart__canvas" aria-hidden="true"></div>
+<ul class="chart__legend">
+<li><span class="chart__swatch c-accent"></span>payOS <span class="chart__legend-value">8.600.000đ</span> <span class="faint">57.83%</span></li>
+<li><span class="chart__swatch c-ok"></span>Ngân hàng <span class="chart__legend-value">4.200.000đ</span> <span class="faint">28.24%</span></li>
+<li><span class="chart__swatch c-warn"></span>MoMo <span class="chart__legend-value">1.350.000đ</span> <span class="faint">9.08%</span></li>
+<li><span class="chart__swatch c-info"></span>Thẻ cào <span class="chart__legend-value">720.000đ</span> <span class="faint">4.84%</span></li>
+</ul>
+<script type="application/json">{"type":"donut","suffix":"","prefix":"","format":"currency","decimal":".","thousands":",","height":220,"labels":["payOS","Ngân hàng","MoMo","Thẻ cào"],"series":[{"label":"payOS","value":8600000,"share":57.83,"start":0,"end":208.2,"color":"accent"},{"label":"Ngân hàng","value":4200000,"share":28.24,"start":208.2,"end":309.89,"color":"ok"},{"label":"MoMo","value":1350000,"share":9.08,"start":309.89,"end":342.57,"color":"warn"},{"label":"Thẻ cào","value":720000,"share":4.84,"start":342.57,"end":360,"color":"info"}],"hasData":true,"stats":[],"total":14870000}</script>
+<table class="chart__table" id="chart-table-2d5b75b1">
+<caption>Tiền nạp theo phương thức</caption>
+<thead><tr><th>Mục</th><th class="num">Giá trị</th><th class="num">Tỷ lệ</th></tr></thead>
+<tbody>
+<tr><td>payOS</td><td class="num">8.600.000đ</td><td class="num">57.83%</td></tr>
+<tr><td>Ngân hàng</td><td class="num">4.200.000đ</td><td class="num">28.24%</td></tr>
+<tr><td>MoMo</td><td class="num">1.350.000đ</td><td class="num">9.08%</td></tr>
+<tr><td>Thẻ cào</td><td class="num">720.000đ</td><td class="num">4.84%</td></tr>
+</tbody>
+</table>
+</figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- Top products -->
+  <section class="card">
+    <div class="card__header">
+      <h2 class="card__title">Sản phẩm bán chạy</h2>
+      <span class="pill">5 sản phẩm</span>
+    </div>
+          <div class="table-wrap">
+        <table class="table table--zebra table--responsive" data-table>
+          <caption>Xếp theo doanh thu trong 30 ngày</caption>
+          <thead>
+            <tr>
+              <th>Sản phẩm</th>
+              <th class="num">Đơn</th>
+              <th class="num">Số lượng</th>
+              <th class="num">Doanh thu</th>
+              <th class="num">Lợi nhuận</th>
+              <th>Tỷ trọng</th>
+            </tr>
+          </thead>
+          <tbody>
+                          <tr>
+                <td>
+                  <span class="cell-main">Office 365 Family</span>
+                  <span class="cell-sub mono">#8</span>
+                </td>
+                <td class="num" data-sort-value="7">7</td>
+                <td class="num" data-sort-value="10">10</td>
+                <td class="num" data-sort-value="4500000">4.500.000đ</td>
+                <td class="num" data-sort-value="1200000">1.200.000đ</td>
+                <td>
+                  <div class="progress-row">
+                    <div class="progress" role="img" aria-label="37.2 phần trăm">
+                      <span class="progress__bar" style="width: 37.2%"></span>
+                    </div>
+                    <span class="progress-row__value">37,2%</span>
+                  </div>
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <span class="cell-main">Spotify Premium 3 tháng</span>
+                  <span class="cell-sub mono">#6</span>
+                </td>
+                <td class="num" data-sort-value="8">8</td>
+                <td class="num" data-sort-value="13">13</td>
+                <td class="num" data-sort-value="2340000">2.340.000đ</td>
+                <td class="num" data-sort-value="702000">702.000đ</td>
+                <td>
+                  <div class="progress-row">
+                    <div class="progress" role="img" aria-label="19.4 phần trăm">
+                      <span class="progress__bar" style="width: 19.4%"></span>
+                    </div>
+                    <span class="progress-row__value">19,4%</span>
+                  </div>
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub mono">#7</span>
+                </td>
+                <td class="num" data-sort-value="8">8</td>
+                <td class="num" data-sort-value="9">9</td>
+                <td class="num" data-sort-value="2250000">2.250.000đ</td>
+                <td class="num" data-sort-value="675000">675.000đ</td>
+                <td>
+                  <div class="progress-row">
+                    <div class="progress" role="img" aria-label="18.6 phần trăm">
+                      <span class="progress__bar" style="width: 18.6%"></span>
+                    </div>
+                    <span class="progress-row__value">18,6%</span>
+                  </div>
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <span class="cell-main">YouTube Premium 2 tháng</span>
+                  <span class="cell-sub mono">#9</span>
+                </td>
+                <td class="num" data-sort-value="8">8</td>
+                <td class="num" data-sort-value="12">12</td>
+                <td class="num" data-sort-value="1800000">1.800.000đ</td>
+                <td class="num" data-sort-value="540000">540.000đ</td>
+                <td>
+                  <div class="progress-row">
+                    <div class="progress" role="img" aria-label="14.9 phần trăm">
+                      <span class="progress__bar" style="width: 14.9%"></span>
+                    </div>
+                    <span class="progress-row__value">14,9%</span>
+                  </div>
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <span class="cell-main">Netflix Premium 1 tháng</span>
+                  <span class="cell-sub mono">#5</span>
+                </td>
+                <td class="num" data-sort-value="9">9</td>
+                <td class="num" data-sort-value="10">10</td>
+                <td class="num" data-sort-value="1200000">1.200.000đ</td>
+                <td class="num" data-sort-value="360000">360.000đ</td>
+                <td>
+                  <div class="progress-row">
+                    <div class="progress" role="img" aria-label="9.9 phần trăm">
+                      <span class="progress__bar" style="width: 9.9%"></span>
+                    </div>
+                    <span class="progress-row__value">9,9%</span>
+                  </div>
+                </td>
+              </tr>
+                      </tbody>
+        </table>
+      </div>
+      </section>
+
+  <section class="grid grid--2">
+    <!-- Top customers -->
+    <div class="card">
+      <div class="card__header"><h2 class="card__title">Khách mua nhiều</h2></div>
+              <div class="table-wrap">
+          <table class="table table--compact table--responsive" data-table>
+            <thead>
+              <tr><th>Khách hàng</th><th class="num">Đơn</th><th class="num">Doanh thu</th></tr>
+            </thead>
+            <tbody>
+                              <tr>
+                  <td>
+                    <span class="cell-main">minhanh</span>
+                    <span class="cell-sub">9</span>
+                  </td>
+                  <td class="num" data-sort-value="14">14</td>
+                  <td class="num" data-sort-value="3120000">3.120.000đ</td>
+                </tr>
+                              <tr>
+                  <td>
+                    <span class="cell-main">quanghuy</span>
+                    <span class="cell-sub">12</span>
+                  </td>
+                  <td class="num" data-sort-value="11">11</td>
+                  <td class="num" data-sort-value="2480000">2.480.000đ</td>
+                </tr>
+                              <tr>
+                  <td>
+                    <span class="cell-main">khachhang7</span>
+                    <span class="cell-sub">7</span>
+                  </td>
+                  <td class="num" data-sort-value="9">9</td>
+                  <td class="num" data-sort-value="1860000">1.860.000đ</td>
+                </tr>
+                              <tr>
+                  <td>
+                    <span class="cell-main">thaovy</span>
+                    <span class="cell-sub">18</span>
+                  </td>
+                  <td class="num" data-sort-value="7">7</td>
+                  <td class="num" data-sort-value="1240000">1.240.000đ</td>
+                </tr>
+                              <tr>
+                  <td>
+                    <span class="cell-main">ductri</span>
+                    <span class="cell-sub">23</span>
+                  </td>
+                  <td class="num" data-sort-value="5">5</td>
+                  <td class="num" data-sort-value="820000">820.000đ</td>
+                </tr>
+                              <tr>
+                  <td>
+                    <span class="cell-main">hoangnam</span>
+                    <span class="cell-sub">31</span>
+                  </td>
+                  <td class="num" data-sort-value="4">4</td>
+                  <td class="num" data-sort-value="610000">610.000đ</td>
+                </tr>
+                          </tbody>
+          </table>
+        </div>
+          </div>
+
+    <!-- Deposits table -->
+    <div class="card">
+      <div class="card__header"><h2 class="card__title">Nạp tiền theo phương thức</h2></div>
+              <div class="table-wrap">
+          <table class="table table--compact table--responsive" data-table>
+            <thead>
+              <tr><th>Phương thức</th><th class="num">Lệnh</th><th class="num">Số tiền</th><th class="num">Thực nhận</th></tr>
+            </thead>
+            <tbody>
+                              <tr>
+                  <td>payOS</td>
+                  <td class="num" data-sort-value="38">38</td>
+                  <td class="num" data-sort-value="8600000">8.600.000đ</td>
+                  <td class="num" data-sort-value="8600000">8.600.000đ</td>
+                </tr>
+                              <tr>
+                  <td>Ngân hàng</td>
+                  <td class="num" data-sort-value="21">21</td>
+                  <td class="num" data-sort-value="4200000">4.200.000đ</td>
+                  <td class="num" data-sort-value="4190000">4.190.000đ</td>
+                </tr>
+                              <tr>
+                  <td>MoMo</td>
+                  <td class="num" data-sort-value="9">9</td>
+                  <td class="num" data-sort-value="1350000">1.350.000đ</td>
+                  <td class="num" data-sort-value="1350000">1.350.000đ</td>
+                </tr>
+                              <tr>
+                  <td>Thẻ cào</td>
+                  <td class="num" data-sort-value="6">6</td>
+                  <td class="num" data-sort-value="720000">720.000đ</td>
+                  <td class="num" data-sort-value="692000">692.000đ</td>
+                </tr>
+                          </tbody>
+          </table>
+        </div>
+          </div>
+  </section>
+
+  <!-- Recent orders -->
+  <section class="card">
+    <div class="card__header">
+      <h2 class="card__title">Đơn hàng gần đây</h2>
+      <div class="row">
+        <span class="toolbar__count" id="orders-count"></span>
+        <a class="btn btn--sm btn--ghost" href="#preview-admin-product-orders">Tất cả đơn hàng</a>
+      </div>
+    </div>
+          <div class="toolbar">
+        <div class="toolbar__field">
+          <label class="toolbar__label" for="orders-search">Tìm trong bảng</label>
+          <input class="input" type="search" id="orders-search" placeholder="Mã đơn, sản phẩm, khách…">
+        </div>
+        <div class="toolbar__spacer"></div>
+        <span class="toolbar__count" id="orders-count-inline" data-template="Hiển thị %shown% / %total% đơn"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="table table--zebra table--sticky table--responsive"
+               data-table data-sortable data-table-filter="#orders-search" data-table-count="#orders-count-inline">
+          <thead>
+            <tr>
+              <th><button class="table__sort" type="button">Mã đơn</button></th>
+              <th><button class="table__sort" type="button">Sản phẩm</button></th>
+              <th><button class="table__sort" type="button">Khách</button></th>
+              <th><button class="table__sort" type="button">Thời gian</button></th>
+              <th class="num"><button class="table__sort" type="button">Thanh toán</button></th>
+              <th class="num"><button class="table__sort" type="button">Lợi nhuận</button></th>
+            </tr>
+          </thead>
+          <tbody>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9040</span></td>
+                <td>
+                  <span class="cell-main">Netflix Premium 1 tháng</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#7</td>
+                <td data-sort-value="2026-10-15 08:15:00">
+                  <span class="cell-main">2026-10-15 08:15:00</span>
+                </td>
+                <td class="num" data-sort-value="240000">240.000đ</td>
+                <td class="num" data-sort-value="72000">72.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9039</span></td>
+                <td>
+                  <span class="cell-main">Netflix Premium 1 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#31</td>
+                <td data-sort-value="2026-10-14 16:15:00">
+                  <span class="cell-main">2026-10-14 16:15:00</span>
+                </td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+                <td class="num" data-sort-value="36000">36.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9038</span></td>
+                <td>
+                  <span class="cell-main">YouTube Premium 2 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#23</td>
+                <td data-sort-value="2026-10-14 14:15:00">
+                  <span class="cell-main">2026-10-14 14:15:00</span>
+                </td>
+                <td class="num" data-sort-value="150000">150.000đ</td>
+                <td class="num" data-sort-value="45000">45.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9037</span></td>
+                <td>
+                  <span class="cell-main">Office 365 Family</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#18</td>
+                <td data-sort-value="2026-10-14 12:15:00">
+                  <span class="cell-main">2026-10-14 12:15:00</span>
+                </td>
+                <td class="num" data-sort-value="900000">900.000đ</td>
+                <td class="num" data-sort-value="240000">240.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9036</span></td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#12</td>
+                <td data-sort-value="2026-10-14 10:15:00">
+                  <span class="cell-main">2026-10-14 10:15:00</span>
+                </td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td class="num" data-sort-value="75000">75.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9035</span></td>
+                <td>
+                  <span class="cell-main">Spotify Premium 3 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#9</td>
+                <td data-sort-value="2026-10-14 08:15:00">
+                  <span class="cell-main">2026-10-14 08:15:00</span>
+                </td>
+                <td class="num" data-sort-value="180000">180.000đ</td>
+                <td class="num" data-sort-value="54000">54.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9034</span></td>
+                <td>
+                  <span class="cell-main">Spotify Premium 3 tháng</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#42</td>
+                <td data-sort-value="2026-10-13 16:15:00">
+                  <span class="cell-main">2026-10-13 16:15:00</span>
+                </td>
+                <td class="num" data-sort-value="360000">360.000đ</td>
+                <td class="num" data-sort-value="108000">108.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9033</span></td>
+                <td>
+                  <span class="cell-main">Netflix Premium 1 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#31</td>
+                <td data-sort-value="2026-10-13 14:15:00">
+                  <span class="cell-main">2026-10-13 14:15:00</span>
+                </td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+                <td class="num" data-sort-value="36000">36.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9032</span></td>
+                <td>
+                  <span class="cell-main">YouTube Premium 2 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#23</td>
+                <td data-sort-value="2026-10-13 12:15:00">
+                  <span class="cell-main">2026-10-13 12:15:00</span>
+                </td>
+                <td class="num" data-sort-value="150000">150.000đ</td>
+                <td class="num" data-sort-value="45000">45.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9031</span></td>
+                <td>
+                  <span class="cell-main">Office 365 Family</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#18</td>
+                <td data-sort-value="2026-10-13 10:15:00">
+                  <span class="cell-main">2026-10-13 10:15:00</span>
+                </td>
+                <td class="num" data-sort-value="900000">900.000đ</td>
+                <td class="num" data-sort-value="240000">240.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9030</span></td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#12</td>
+                <td data-sort-value="2026-10-13 08:15:00">
+                  <span class="cell-main">2026-10-13 08:15:00</span>
+                </td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td class="num" data-sort-value="75000">75.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9029</span></td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#7</td>
+                <td data-sort-value="2026-10-12 16:15:00">
+                  <span class="cell-main">2026-10-12 16:15:00</span>
+                </td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td class="num" data-sort-value="75000">75.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9028</span></td>
+                <td>
+                  <span class="cell-main">Spotify Premium 3 tháng</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#42</td>
+                <td data-sort-value="2026-10-12 14:15:00">
+                  <span class="cell-main">2026-10-12 14:15:00</span>
+                </td>
+                <td class="num" data-sort-value="360000">360.000đ</td>
+                <td class="num" data-sort-value="108000">108.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9027</span></td>
+                <td>
+                  <span class="cell-main">Netflix Premium 1 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#31</td>
+                <td data-sort-value="2026-10-12 12:15:00">
+                  <span class="cell-main">2026-10-12 12:15:00</span>
+                </td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+                <td class="num" data-sort-value="36000">36.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9026</span></td>
+                <td>
+                  <span class="cell-main">YouTube Premium 2 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#23</td>
+                <td data-sort-value="2026-10-12 10:15:00">
+                  <span class="cell-main">2026-10-12 10:15:00</span>
+                </td>
+                <td class="num" data-sort-value="150000">150.000đ</td>
+                <td class="num" data-sort-value="45000">45.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9025</span></td>
+                <td>
+                  <span class="cell-main">Office 365 Family</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#18</td>
+                <td data-sort-value="2026-10-12 08:15:00">
+                  <span class="cell-main">2026-10-12 08:15:00</span>
+                </td>
+                <td class="num" data-sort-value="900000">900.000đ</td>
+                <td class="num" data-sort-value="240000">240.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9024</span></td>
+                <td>
+                  <span class="cell-main">YouTube Premium 2 tháng</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#12</td>
+                <td data-sort-value="2026-10-11 18:15:00">
+                  <span class="cell-main">2026-10-11 18:15:00</span>
+                </td>
+                <td class="num" data-sort-value="300000">300.000đ</td>
+                <td class="num" data-sort-value="90000">90.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9023</span></td>
+                <td>
+                  <span class="cell-main">Office 365 Family</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#9</td>
+                <td data-sort-value="2026-10-11 16:15:00">
+                  <span class="cell-main">2026-10-11 16:15:00</span>
+                </td>
+                <td class="num" data-sort-value="450000">450.000đ</td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9022</span></td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#7</td>
+                <td data-sort-value="2026-10-11 14:15:00">
+                  <span class="cell-main">2026-10-11 14:15:00</span>
+                </td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td class="num" data-sort-value="75000">75.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9021</span></td>
+                <td>
+                  <span class="cell-main">Spotify Premium 3 tháng</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#42</td>
+                <td data-sort-value="2026-10-11 12:15:00">
+                  <span class="cell-main">2026-10-11 12:15:00</span>
+                </td>
+                <td class="num" data-sort-value="360000">360.000đ</td>
+                <td class="num" data-sort-value="108000">108.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9020</span></td>
+                <td>
+                  <span class="cell-main">Netflix Premium 1 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#31</td>
+                <td data-sort-value="2026-10-11 10:15:00">
+                  <span class="cell-main">2026-10-11 10:15:00</span>
+                </td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+                <td class="num" data-sort-value="36000">36.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9019</span></td>
+                <td>
+                  <span class="cell-main">YouTube Premium 2 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#23</td>
+                <td data-sort-value="2026-10-11 08:15:00">
+                  <span class="cell-main">2026-10-11 08:15:00</span>
+                </td>
+                <td class="num" data-sort-value="150000">150.000đ</td>
+                <td class="num" data-sort-value="45000">45.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9018</span></td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#31</td>
+                <td data-sort-value="2026-10-10 10:15:00">
+                  <span class="cell-main">2026-10-10 10:15:00</span>
+                </td>
+                <td class="num" data-sort-value="500000">500.000đ</td>
+                <td class="num" data-sort-value="150000">150.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9017</span></td>
+                <td>
+                  <span class="cell-main">Spotify Premium 3 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#23</td>
+                <td data-sort-value="2026-10-10 08:15:00">
+                  <span class="cell-main">2026-10-10 08:15:00</span>
+                </td>
+                <td class="num" data-sort-value="180000">180.000đ</td>
+                <td class="num" data-sort-value="54000">54.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9016</span></td>
+                <td>
+                  <span class="cell-main">Netflix Premium 1 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#18</td>
+                <td data-sort-value="2026-10-10 18:15:00">
+                  <span class="cell-main">2026-10-10 18:15:00</span>
+                </td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+                <td class="num" data-sort-value="36000">36.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9015</span></td>
+                <td>
+                  <span class="cell-main">YouTube Premium 2 tháng</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#12</td>
+                <td data-sort-value="2026-10-10 16:15:00">
+                  <span class="cell-main">2026-10-10 16:15:00</span>
+                </td>
+                <td class="num" data-sort-value="300000">300.000đ</td>
+                <td class="num" data-sort-value="90000">90.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9014</span></td>
+                <td>
+                  <span class="cell-main">Office 365 Family</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#9</td>
+                <td data-sort-value="2026-10-10 14:15:00">
+                  <span class="cell-main">2026-10-10 14:15:00</span>
+                </td>
+                <td class="num" data-sort-value="450000">450.000đ</td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9013</span></td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#7</td>
+                <td data-sort-value="2026-10-10 12:15:00">
+                  <span class="cell-main">2026-10-10 12:15:00</span>
+                </td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td class="num" data-sort-value="75000">75.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9012</span></td>
+                <td>
+                  <span class="cell-main">Spotify Premium 3 tháng</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#42</td>
+                <td data-sort-value="2026-10-10 10:15:00">
+                  <span class="cell-main">2026-10-10 10:15:00</span>
+                </td>
+                <td class="num" data-sort-value="360000">360.000đ</td>
+                <td class="num" data-sort-value="108000">108.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9011</span></td>
+                <td>
+                  <span class="cell-main">Netflix Premium 1 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#31</td>
+                <td data-sort-value="2026-10-10 08:15:00">
+                  <span class="cell-main">2026-10-10 08:15:00</span>
+                </td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+                <td class="num" data-sort-value="36000">36.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9010</span></td>
+                <td>
+                  <span class="cell-main">Netflix Premium 1 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#18</td>
+                <td data-sort-value="2026-10-09 16:15:00">
+                  <span class="cell-main">2026-10-09 16:15:00</span>
+                </td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+                <td class="num" data-sort-value="36000">36.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9009</span></td>
+                <td>
+                  <span class="cell-main">YouTube Premium 2 tháng</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#12</td>
+                <td data-sort-value="2026-10-09 14:15:00">
+                  <span class="cell-main">2026-10-09 14:15:00</span>
+                </td>
+                <td class="num" data-sort-value="300000">300.000đ</td>
+                <td class="num" data-sort-value="90000">90.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9008</span></td>
+                <td>
+                  <span class="cell-main">Office 365 Family</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#9</td>
+                <td data-sort-value="2026-10-09 12:15:00">
+                  <span class="cell-main">2026-10-09 12:15:00</span>
+                </td>
+                <td class="num" data-sort-value="450000">450.000đ</td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9007</span></td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#7</td>
+                <td data-sort-value="2026-10-09 10:15:00">
+                  <span class="cell-main">2026-10-09 10:15:00</span>
+                </td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td class="num" data-sort-value="75000">75.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9006</span></td>
+                <td>
+                  <span class="cell-main">Spotify Premium 3 tháng</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#42</td>
+                <td data-sort-value="2026-10-09 08:15:00">
+                  <span class="cell-main">2026-10-09 08:15:00</span>
+                </td>
+                <td class="num" data-sort-value="360000">360.000đ</td>
+                <td class="num" data-sort-value="108000">108.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9005</span></td>
+                <td>
+                  <span class="cell-main">Spotify Premium 3 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#23</td>
+                <td data-sort-value="2026-10-08 16:15:00">
+                  <span class="cell-main">2026-10-08 16:15:00</span>
+                </td>
+                <td class="num" data-sort-value="180000">180.000đ</td>
+                <td class="num" data-sort-value="54000">54.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9004</span></td>
+                <td>
+                  <span class="cell-main">Netflix Premium 1 tháng</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#18</td>
+                <td data-sort-value="2026-10-08 14:15:00">
+                  <span class="cell-main">2026-10-08 14:15:00</span>
+                </td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+                <td class="num" data-sort-value="36000">36.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9003</span></td>
+                <td>
+                  <span class="cell-main">YouTube Premium 2 tháng</span>
+                  <span class="cell-sub">SL 2</span>
+                </td>
+                <td>#12</td>
+                <td data-sort-value="2026-10-08 12:15:00">
+                  <span class="cell-main">2026-10-08 12:15:00</span>
+                </td>
+                <td class="num" data-sort-value="300000">300.000đ</td>
+                <td class="num" data-sort-value="90000">90.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9002</span></td>
+                <td>
+                  <span class="cell-main">Office 365 Family</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#9</td>
+                <td data-sort-value="2026-10-08 10:15:00">
+                  <span class="cell-main">2026-10-08 10:15:00</span>
+                </td>
+                <td class="num" data-sort-value="450000">450.000đ</td>
+                <td class="num" data-sort-value="120000">120.000đ</td>
+              </tr>
+                          <tr>
+                <td class="mono"><span class="cell-main">ORD9001</span></td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub">SL 1</span>
+                </td>
+                <td>#7</td>
+                <td data-sort-value="2026-10-08 08:15:00">
+                  <span class="cell-main">2026-10-08 08:15:00</span>
+                </td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td class="num" data-sort-value="75000">75.000đ</td>
+              </tr>
+                      </tbody>
+        </table>
+      </div>
+      <div class="pagination-bar">
+        <span class="pagination-bar__info">Hiển thị tối đa 100 đơn gần nhất trong 30 ngày ·
+          dùng <strong>Xuất CSV</strong> để lấy toàn bộ</span>
+        <a class="btn btn--sm" href="#preview-admin-sales-days-30-export-csv">Tải CSV</a>
+      </div>
+      </section>
+
+  <section class="card">
+    <div class="card__body">
+      <dl class="kv">
+        <dt>Tổng doanh thu (mọi thời gian)</dt><dd class="price">412.000.000đ</dd>
+        <dt>Tổng đơn (mọi thời gian)</dt><dd>1,840</dd>
+        <dt>Tổng lợi nhuận (mọi thời gian)</dt><dd class="price">123.000.000đ</dd>
+      </dl>
+      <p class="small faint" style="margin-top:var(--space-4)">
+        Cách tính: doanh thu = tổng <span class="mono">pay</span>, chi phí = tổng <span class="mono">cost</span>,
+        lợi nhuận = doanh thu − chi phí, chỉ tính đơn <span class="mono">refund = 0</span> và
+        <span class="mono">trash = 0</span>. Múi giờ theo máy chủ.
+      </p>
+    </div>
+  </section>
+
+</div>
+
+</main>
+<footer class="footer">
+  <div class="container footer__inner">
+    <p style="margin:0">Thống kê bán hàng</p>
+  </div>
+</footer>
+<script defer src="assets/client/orbit/table.js?v=1792086227"></script></body>
+</html>

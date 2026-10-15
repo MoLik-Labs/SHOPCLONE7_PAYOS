@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>[preview] Lịch sử mua hàng</title>
+<meta name="description" content="Shop bán tài khoản &amp; licence">
+<meta name="keywords" content="shop, licence">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Lịch sử mua hàng">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="#preview-client-orbittokens.css?v=1792086227">
+<link rel="stylesheet" href="#preview-client-orbitbase.css?v=1792086227">
+<link rel="stylesheet" href="#preview-client-orbitcomponents.css?v=1792086227">
+<link rel="stylesheet" href="#preview-client-orbitshell.css?v=1792086227">
+<link rel="stylesheet" href="assets/preview.css">
+</head>
+<body class="">
+<div class="preview-banner"><strong>Bản xem trước tĩnh</strong> — trang thật chạy trong shop, ở đây dùng dữ liệu mẫu. Không có dữ liệu thật, không gọi mạng, không phát nhạc. Biểu đồ vẽ bằng SVG nội bộ; bảng vẫn đọc được khi tắt JavaScript.</div>
+
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="container topbar__inner">
+    <a class="topbar__brand" href="#preview-client-home">Lịch sử mua hàng</a>
+    <nav aria-label="Lịch sử mua hàng">
+      <ul class="topbar__nav">
+        <li><a href="#preview-client-home">Trang chủ</a></li>
+        <li><a href="#preview-client-purchase-history" aria-current="page">Lịch sử mua hàng</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<main id="main" class="container section">
+
+<div class="stack stack--lg">
+
+  <header class="row row--between">
+    <div>
+      <h1 style="margin-bottom: var(--space-1)">Lịch sử mua hàng</h1>
+      <p class="muted" style="margin:0">2026-07-18 → 2026-10-15</p>
+    </div>
+    <div class="segmented" role="group" aria-label="Khoảng thời gian">
+              <a href="#preview-client-purchase-history-amp-days-7"
+           >7 ngày</a>
+              <a href="#preview-client-purchase-history-amp-days-30"
+           >30 ngày</a>
+              <a href="#preview-client-purchase-history-amp-days-90"
+           aria-current="page">90 ngày</a>
+          </div>
+  </header>
+
+  <section class="stats" aria-label="Tổng quan của bạn">
+    <div class="stat stat--accent">
+      <p class="stat__label">Đã chi</p>
+      <p class="stat__value">1.490.000đ</p>
+      <p class="stat__foot">
+        <span class="delta delta--down">
+          -94,8%        </span>
+        <span class="delta__note">so với kỳ trước</span>
+      </p>
+    </div>
+    <div class="stat">
+      <p class="stat__label">Số đơn</p>
+      <p class="stat__value">6</p>
+      <p class="stat__foot">Giá trị trung bình 248.333đ</p>
+    </div>
+    <div class="stat">
+      <p class="stat__label">Sản phẩm mua nhiều nhất</p>
+      <p class="stat__value stat__value--sm">Office 365 Family</p>
+      <p class="stat__foot">Đã mua 7 lần</p>
+    </div>
+    <div class="stat">
+      <p class="stat__label">Số dư hiện tại</p>
+      <p class="stat__value stat__value--sm">250.000đ</p>
+      <p class="stat__foot"><a href="#preview-client-recharge-bank">Nạp thêm tiền</a></p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__body">
+      <figure class="chart" data-chart data-summary="Chi tiêu theo ngày của bạn">
+<figcaption class="chart__head"><h3 class="chart__title">Chi tiêu theo ngày</h3><p class="chart__caption">Chỉ tính đơn đã mua thành công</p></figcaption>
+<div class="chart__empty">Bạn chưa mua gì trong khoảng này</div>
+</figure>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header">
+      <h2 class="card__title">Đơn hàng của bạn</h2>
+      <span class="toolbar__count" id="mine-count" data-template="Hiển thị %shown% / %total% đơn"></span>
+    </div>
+
+    <div class="toolbar">
+      <form class="row" method="get" action="#preview-index-php" role="search">
+        <input type="hidden" name="module" value="client">
+        <input type="hidden" name="action" value="purchase-history">
+        <input type="hidden" name="days" value="90">
+        <div class="toolbar__field">
+          <label class="toolbar__label" for="q">Tìm theo mã đơn hoặc tên sản phẩm</label>
+          <div class="search">
+            <input class="input" type="search" id="q" name="q"
+                   value=""
+                   placeholder="VD: NETFLIX hoặc mã đơn">
+            <button class="btn" type="submit">Tìm</button>
+          </div>
+        </div>
+              </form>
+    </div>
+
+          <div class="table-wrap">
+        <table class="table table--zebra table--responsive" data-table data-sortable>
+          <caption>
+            Hiển thị 1–6 trong 6 đơn                      </caption>
+          <thead>
+            <tr>
+              <th><button class="table__sort" type="button">Mã đơn</button></th>
+              <th><button class="table__sort" type="button">Sản phẩm</button></th>
+              <th class="num">Số lượng</th>
+              <th class="num"><button class="table__sort" type="button">Thanh toán</button></th>
+              <th><button class="table__sort" type="button">Thời gian</button></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+                          <tr>
+                <td class="mono">ORD9001</td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub mono">#9001</span>
+                </td>
+                <td class="num" data-sort-value="1">1</td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td data-sort-value="2026-10-08 08:15:00">
+                  2026-10-08 08:15:00                </td>
+                <td class="right">
+                  <a class="btn btn--sm" href="#preview-client-product-order-trans-id-ORD9001">Xem</a>
+                </td>
+              </tr>
+                          <tr>
+                <td class="mono">ORD9007</td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub mono">#9007</span>
+                </td>
+                <td class="num" data-sort-value="1">1</td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td data-sort-value="2026-10-09 10:15:00">
+                  2026-10-09 10:15:00                </td>
+                <td class="right">
+                  <a class="btn btn--sm" href="#preview-client-product-order-trans-id-ORD9007">Xem</a>
+                </td>
+              </tr>
+                          <tr>
+                <td class="mono">ORD9013</td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub mono">#9013</span>
+                </td>
+                <td class="num" data-sort-value="1">1</td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td data-sort-value="2026-10-10 12:15:00">
+                  2026-10-10 12:15:00                </td>
+                <td class="right">
+                  <a class="btn btn--sm" href="#preview-client-product-order-trans-id-ORD9013">Xem</a>
+                </td>
+              </tr>
+                          <tr>
+                <td class="mono">ORD9022</td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub mono">#9022</span>
+                </td>
+                <td class="num" data-sort-value="1">1</td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td data-sort-value="2026-10-11 14:15:00">
+                  2026-10-11 14:15:00                </td>
+                <td class="right">
+                  <a class="btn btn--sm" href="#preview-client-product-order-trans-id-ORD9022">Xem</a>
+                </td>
+              </tr>
+                          <tr>
+                <td class="mono">ORD9029</td>
+                <td>
+                  <span class="cell-main">Canva Pro 1 năm</span>
+                  <span class="cell-sub mono">#9029</span>
+                </td>
+                <td class="num" data-sort-value="1">1</td>
+                <td class="num" data-sort-value="250000">250.000đ</td>
+                <td data-sort-value="2026-10-12 16:15:00">
+                  2026-10-12 16:15:00                </td>
+                <td class="right">
+                  <a class="btn btn--sm" href="#preview-client-product-order-trans-id-ORD9029">Xem</a>
+                </td>
+              </tr>
+                          <tr>
+                <td class="mono">ORD9040</td>
+                <td>
+                  <span class="cell-main">Netflix Premium 1 tháng</span>
+                  <span class="cell-sub mono">#9040</span>
+                </td>
+                <td class="num" data-sort-value="2">2</td>
+                <td class="num" data-sort-value="240000">240.000đ</td>
+                <td data-sort-value="2026-10-15 08:15:00">
+                  2026-10-15 08:15:00                </td>
+                <td class="right">
+                  <a class="btn btn--sm" href="#preview-client-product-order-trans-id-ORD9040">Xem</a>
+                </td>
+              </tr>
+                      </tbody>
+        </table>
+      </div>
+      <div class="pagination-bar"><span class="pagination-bar__info">Hiển thị 1–6 trong 6</span></div>
+      </section>
+
+  <p class="small faint">
+    Số liệu tính theo thời gian máy chủ. Đơn hoàn tiền hoặc đã xoá không được tính.
+    Cần giúp đỡ? <a href="#preview-client-contact">Liên hệ hỗ trợ</a>.
+  </p>
+
+</div>
+
+</main>
+<footer class="footer">
+  <div class="container footer__inner">
+    <p style="margin:0">Lịch sử mua hàng</p>
+  </div>
+</footer>
+<script defer src="assets/client/orbit/table.js?v=1792086227"></script></body>
+</html>

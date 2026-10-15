@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>[preview] Orbit design system (admin preview)</title>
+<meta name="description" content="Shop bán tài khoản &amp; licence">
+<meta name="keywords" content="shop, licence">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Orbit design system (admin preview)">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="#preview-client-orbittokens.css?v=1792086227">
+<link rel="stylesheet" href="#preview-client-orbitbase.css?v=1792086227">
+<link rel="stylesheet" href="#preview-client-orbitcomponents.css?v=1792086227">
+<link rel="stylesheet" href="#preview-client-orbitshell.css?v=1792086227">
+<link rel="stylesheet" href="assets/client/orbit/music-player.css?v=1792086227"><link rel="stylesheet" href="assets/preview.css">
+</head>
+<body class="">
+<div class="preview-banner"><strong>Bản xem trước tĩnh</strong> — trang thật chạy trong shop, ở đây dùng dữ liệu mẫu. Không có dữ liệu thật, không gọi mạng, không phát nhạc. Biểu đồ vẽ bằng SVG nội bộ; bảng vẫn đọc được khi tắt JavaScript.</div>
+
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="container topbar__inner">
+    <a class="topbar__brand" href="#preview-client-home">Orbit design system (admin preview)</a>
+    <div class="topbar__actions"><div class="segmented" role="group" aria-label="Theme"><button type="button" data-theme-toggle="dark" class="is-active">Dark</button><button type="button" data-theme-toggle="light">Light</button></div></div>
+  </div>
+</header>
+<main id="main" class="container section">
+<div class="stack stack--lg">
+  <header>
+    <h1 style="margin-bottom: var(--space-1)">Orbit design system</h1>
+    <p class="muted" style="margin:0">Tokens, layout and components — the shell the rebuilt pages will use. Admin-only, not linked anywhere.</p>
+  </header>
+
+  <section class="card">
+    <div class="card__header"><h2 class="card__title">Colour</h2><span class="pill">tokens.css</span></div>
+    <div class="card__body">
+      <div class="grid grid--4">
+        <div><div style="height:56px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg)"></div><p class="small muted" style="margin:var(--space-2) 0 0"><span class="mono">--bg</span><br>Background</p></div><div><div style="height:56px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface)"></div><p class="small muted" style="margin:var(--space-2) 0 0"><span class="mono">--surface</span><br>Surface</p></div><div><div style="height:56px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface-2)"></div><p class="small muted" style="margin:var(--space-2) 0 0"><span class="mono">--surface-2</span><br>Surface 2</p></div><div><div style="height:56px;border-radius:var(--radius);border:1px solid var(--border);background:var(--border)"></div><p class="small muted" style="margin:var(--space-2) 0 0"><span class="mono">--border</span><br>Border</p></div><div><div style="height:56px;border-radius:var(--radius);border:1px solid var(--border);background:var(--text)"></div><p class="small muted" style="margin:var(--space-2) 0 0"><span class="mono">--text</span><br>Text</p></div><div><div style="height:56px;border-radius:var(--radius);border:1px solid var(--border);background:var(--text-muted)"></div><p class="small muted" style="margin:var(--space-2) 0 0"><span class="mono">--text-muted</span><br>Muted</p></div><div><div style="height:56px;border-radius:var(--radius);border:1px solid var(--border);background:var(--accent)"></div><p class="small muted" style="margin:var(--space-2) 0 0"><span class="mono">--accent</span><br>Accent</p></div><div><div style="height:56px;border-radius:var(--radius);border:1px solid var(--border);background:var(--ok)"></div><p class="small muted" style="margin:var(--space-2) 0 0"><span class="mono">--ok</span><br>Success</p></div><div><div style="height:56px;border-radius:var(--radius);border:1px solid var(--border);background:var(--warn)"></div><p class="small muted" style="margin:var(--space-2) 0 0"><span class="mono">--warn</span><br>Warning</p></div><div><div style="height:56px;border-radius:var(--radius);border:1px solid var(--border);background:var(--danger)"></div><p class="small muted" style="margin:var(--space-2) 0 0"><span class="mono">--danger</span><br>Danger</p></div><div><div style="height:56px;border-radius:var(--radius);border:1px solid var(--border);background:var(--info)"></div><p class="small muted" style="margin:var(--space-2) 0 0"><span class="mono">--info</span><br>Info</p></div>      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h2 class="card__title">Typography</h2><span class="pill">base.css</span></div>
+    <div class="card__body">
+      <h1>Heading 1 — the page promise</h1>
+      <h2>Heading 2 — a section</h2>
+      <h3>Heading 3 — a group</h3>
+      <p class="lead">Lead paragraph for the one sentence that matters most on a screen.</p>
+      <p>Body text at 16px with 1.55 line height. <a href="#">A link looks like this</a>, and
+        <span class="mono">inline code</span> looks like that. <span class="muted">Muted text</span> carries
+        secondary detail; <span class="faint">faint text</span> is for timestamps and captions.</p>
+      <p class="small muted">Small print — terms, footnotes, rate limits.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h2 class="card__title">Buttons</h2><span class="pill">components.css</span></div>
+    <div class="card__body stack">
+      <div class="btn-group">
+        <button class="btn btn--primary" type="button">Primary action</button>
+        <button class="btn" type="button">Secondary</button>
+        <button class="btn btn--ghost" type="button">Ghost</button>
+        <button class="btn btn--danger" type="button">Destructive</button>
+        <button class="btn" type="button" disabled>Disabled</button>
+        <button class="btn btn--link" type="button">Link button</button>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn--sm" type="button">Small</button>
+        <button class="btn btn--primary btn--lg" type="button">Large primary</button>
+        <a class="btn btn--ghost" href="#">Anchor styled as a button</a>
+      </div>
+      <div><button class="btn btn--primary btn--block" type="button">Block button (mobile-first forms)</button></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h2 class="card__title">Forms</h2><span class="pill">components.css</span></div>
+    <div class="card__body">
+      <div class="grid grid--2">
+        <div>
+          <label class="field">
+            <span class="field__label">Email</span>
+            <input class="input" type="email" placeholder="you@example.com">
+            <span class="field__help">We only use this to reach you about orders.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Licence key</span>
+            <input class="input mono input--invalid" value="ORBIT-XXXXX-…" aria-describedby="key-error">
+            <span class="field__error" id="key-error">That key is not valid for this domain.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Quantity</span>
+            <select class="select"><option>1</option><option>5</option><option>10</option></select>
+          </label>
+          <label class="check"><input type="checkbox" checked> Email me when the order is ready</label>
+        </div>
+        <div>
+          <div class="search">
+            <input class="input" type="search" placeholder="Search products…">
+            <button class="btn btn--primary" type="button">Search</button>
+          </div>
+          <div class="copy-row" style="margin-top: var(--space-4)">
+            <input class="input" value="ORBIT-8F2KD-…-QW" readonly>
+            <button class="btn btn--ghost" type="button" data-copy>Copy</button>
+          </div>
+          <p class="field__help">Copy needs JavaScript; without it the value is still selectable.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h2 class="card__title">Alerts &amp; pills</h2></div>
+    <div class="card__body stack">
+      <div class="alert alert--ok"><p class="alert__title">Order completed</p><p>The accounts were delivered to your email.</p></div>
+      <div class="alert alert--warn"><p class="alert__title">Check the amount</p><p>The transfer arrived with a different value; the order stays in manual review.</p></div>
+      <div class="alert alert--danger"><p class="alert__title">Payment not confirmed</p><p>Nothing was credited. Please contact support with the reference.</p></div>
+      <div class="row">
+        <span class="pill pill--ok">active</span>
+        <span class="pill pill--warn">pending</span>
+        <span class="pill pill--danger">revoked</span>
+        <span class="pill pill--accent">new</span>
+        <span class="pill"><span class="dot dot--ok"></span> online</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h2 class="card__title">Table</h2><span class="pill">responsive wrapper</span></div>
+    <div class="card__body" style="padding:0">
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Licence</th><th>Status</th><th>Expires</th><th class="num">Amount</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">ORBIT-8F2KD-****-****-QW</td><td><span class="pill pill--ok">active</span></td><td>2026-12-31</td><td class="num price">1.500.000₫</td></tr>
+            <tr><td class="mono">ORBIT-1PLMQ-****-****-ZR</td><td><span class="pill pill--warn">in 12 days</span></td><td>2026-10-17</td><td class="num price">900.000₫</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid grid--2">
+    <div class="card">
+      <div class="card__header"><h2 class="card__title">Empty state</h2></div>
+      <div class="card__body">
+        <div class="empty">
+          <p class="empty__title">No orders yet</p>
+          <p class="small">When you buy a licence it appears here, with the key and the expiry date.</p>
+          <div class="empty__actions"><button class="btn btn--primary" type="button">Browse products</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card__header"><h2 class="card__title">Loading &amp; key/value</h2></div>
+      <div class="card__body stack">
+        <div class="skeleton skeleton--title"></div>
+        <div class="skeleton skeleton--text"></div>
+        <div class="skeleton skeleton--text" style="width:80%"></div>
+        <hr class="divider">
+        <dl class="kv">
+          <dt>Domain</dt><dd class="mono">shop.example.com</dd>
+          <dt>Hardware ID</dt><dd class="mono">machine-abcdefgh</dd>
+          <dt>Last check-in</dt><dd>2 minutes ago</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h2 class="card__title">KPI tiles &amp; deltas</h2><span class="pill">.stat</span></div>
+    <div class="card__body">
+      <div class="stats">
+        <div class="stat stat--accent">
+          <p class="stat__label">Doanh thu</p>
+          <p class="stat__value">3.600.000đ</p>
+          <p class="stat__foot"><span class="delta delta--up">50,0%</span> <span class="delta__note">so với kỳ trước</span></p>
+        </div>
+        <div class="stat stat--ok">
+          <p class="stat__label">Lợi nhuận</p>
+          <p class="stat__value">1.200.000đ</p>
+          <p class="stat__foot"><span class="delta delta--down">12,5%</span> <span class="delta__note">biên 33,3%</span></p>
+        </div>
+        <div class="stat">
+          <p class="stat__label">Đơn hàng</p>
+          <p class="stat__value">12</p>
+          <p class="stat__foot"><span class="delta delta--flat">chưa có kỳ trước</span></p>
+        </div>
+      </div>
+      <p class="small muted" style="margin-top:var(--space-4)">Một con số, một nhãn, một dòng so sánh. Không có ô nào trống: khi thiếu dữ liệu để so sánh, ô đó nói thẳng là chưa có kỳ trước thay vì hiện +100%.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h2 class="card__title">Charts</h2><span class="pill">libs/chart.php + chart.js</span></div>
+    <div class="card__body stack">
+      <figure class="chart" data-chart>
+<figcaption class="chart__head"><h3 class="chart__title">Doanh thu theo ngày</h3><p class="chart__caption">Sinh từ dữ liệu mẫu trong styleguide — math tính ở PHP, chart.js chỉ vẽ</p></figcaption>
+<div class="chart__canvas" aria-hidden="true"></div>
+<script type="application/json">{"type":"area","suffix":"đ","prefix":"","format":"currency","decimal":".","thousands":",","height":220,"labels":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30],"series":[{"name":"Doanh thu","color":"accent","stats":{"count":30,"sum":34397908.350341804,"average":1146596.9450113934,"max":1534275.3863181835,"min":718365.7790157251,"last":1069592.6111887204,"first":1026518.1438786533},"max":2000000,"points":[{"x":0,"y":48.67,"value":1026518.1438786533},{"x":3.45,"y":42.98,"value":1140429.4310744079},{"x":6.9,"y":38.47,"value":1230514.8446827638},{"x":10.34,"y":35.59,"value":1288178.2654771595},{"x":13.79,"y":34.58,"value":1308392.7852131177},{"x":17.24,"y":35.49,"value":1290254.0993889887},{"x":20.69,"y":38.15,"value":1237080.0586084137},{"x":24.14,"y":42.2,"value":1156045.4193225342},{"x":27.59,"y":47.13,"value":1057392.0028209535},{"x":31.03,"y":52.33,"value":953301.2129935801},{"x":34.48,"y":57.17,"value":856553.0329940794},{"x":37.93,"y":61.04,"value":779119.1266422251},{"x":41.38,"y":63.46,"value":730844.9245552333},{"x":44.83,"y":64.08,"value":718365.7790157251},{"x":48.28,"y":62.78,"value":744376.5038679015},{"x":51.72,"y":59.63,"value":807334.712951347},{"x":55.17,"y":54.92,"value":901630.6153894919},{"x":58.62,"y":49.09,"value":1018204.575630376},{"x":62.07,"y":42.72,"value":1145544.4534587604},{"x":65.52,"y":36.45,"value":1270952.930699927},{"x":68.97,"y":30.9,"value":1381945.3095515762},{"x":72.41,"y":26.62,"value":1467623.9043665822},{"x":75.86,"y":24.01,"value":1519877.7254452305},{"x":79.31,"y":23.29,"value":1534275.3863181835},{"x":82.76,"y":24.47,"value":1510552.937833143},{"x":86.21,"y":27.37,"value":1452642.9252895715},{"x":89.66,"y":31.59,"value":1368241.4698346148},{"x":93.1,"y":36.6,"value":1267961.0324441623},{"x":96.55,"y":41.79,"value":1164162.1294043893},{"x":100,"y":46.52,"value":1069592.6111887204}],"path":"M 0 48.67 C 1.725 48.67, 1.725 42.98, 3.45 42.98 C 5.175 42.98, 5.175 38.47, 6.9 38.47 C 8.62 38.47, 8.62 35.59, 10.34 35.59 C 12.065 35.59, 12.065 34.58, 13.79 34.58 C 15.515 34.58, 15.515 35.49, 17.24 35.49 C 18.965 35.49, 18.965 38.15, 20.69 38.15 C 22.415 38.15, 22.415 42.2, 24.14 42.2 C 25.865 42.2, 25.865 47.13, 27.59 47.13 C 29.31 47.13, 29.31 52.33, 31.03 52.33 C 32.755 52.33, 32.755 57.17, 34.48 57.17 C 36.205 57.17, 36.205 61.04, 37.93 61.04 C 39.655 61.04, 39.655 63.46, 41.38 63.46 C 43.105 63.46, 43.105 64.08, 44.83 64.08 C 46.555 64.08, 46.555 62.78, 48.28 62.78 C 50 62.78, 50 59.63, 51.72 59.63 C 53.445 59.63, 53.445 54.92, 55.17 54.92 C 56.895 54.92, 56.895 49.09, 58.62 49.09 C 60.345 49.09, 60.345 42.72, 62.07 42.72 C 63.795 42.72, 63.795 36.45, 65.52 36.45 C 67.245 36.45, 67.245 30.9, 68.97 30.9 C 70.69 30.9, 70.69 26.62, 72.41 26.62 C 74.135 26.62, 74.135 24.01, 75.86 24.01 C 77.585 24.01, 77.585 23.29, 79.31 23.29 C 81.035 23.29, 81.035 24.47, 82.76 24.47 C 84.485 24.47, 84.485 27.37, 86.21 27.37 C 87.935 27.37, 87.935 31.59, 89.66 31.59 C 91.38 31.59, 91.38 36.6, 93.1 36.6 C 94.825 36.6, 94.825 41.79, 96.55 41.79 C 98.275 41.79, 98.275 46.52, 100 46.52","area":"M 0 48.67 C 1.725 48.67, 1.725 42.98, 3.45 42.98 C 5.175 42.98, 5.175 38.47, 6.9 38.47 C 8.62 38.47, 8.62 35.59, 10.34 35.59 C 12.065 35.59, 12.065 34.58, 13.79 34.58 C 15.515 34.58, 15.515 35.49, 17.24 35.49 C 18.965 35.49, 18.965 38.15, 20.69 38.15 C 22.415 38.15, 22.415 42.2, 24.14 42.2 C 25.865 42.2, 25.865 47.13, 27.59 47.13 C 29.31 47.13, 29.31 52.33, 31.03 52.33 C 32.755 52.33, 32.755 57.17, 34.48 57.17 C 36.205 57.17, 36.205 61.04, 37.93 61.04 C 39.655 61.04, 39.655 63.46, 41.38 63.46 C 43.105 63.46, 43.105 64.08, 44.83 64.08 C 46.555 64.08, 46.555 62.78, 48.28 62.78 C 50 62.78, 50 59.63, 51.72 59.63 C 53.445 59.63, 53.445 54.92, 55.17 54.92 C 56.895 54.92, 56.895 49.09, 58.62 49.09 C 60.345 49.09, 60.345 42.72, 62.07 42.72 C 63.795 42.72, 63.795 36.45, 65.52 36.45 C 67.245 36.45, 67.245 30.9, 68.97 30.9 C 70.69 30.9, 70.69 26.62, 72.41 26.62 C 74.135 26.62, 74.135 24.01, 75.86 24.01 C 77.585 24.01, 77.585 23.29, 79.31 23.29 C 81.035 23.29, 81.035 24.47, 82.76 24.47 C 84.485 24.47, 84.485 27.37, 86.21 27.37 C 87.935 27.37, 87.935 31.59, 89.66 31.59 C 91.38 31.59, 91.38 36.6, 93.1 36.6 C 94.825 36.6, 94.825 41.79, 96.55 41.79 C 98.275 41.79, 98.275 46.52, 100 46.52 L 100 100 L 0 100 Z","showMarkers":false}],"hasData":true,"stats":[],"max":2000000,"ticks":[0,500000,1000000,1500000,2000000]}</script>
+<table class="chart__table" id="chart-table-aee68649">
+<caption>Doanh thu theo ngày</caption>
+<thead><tr><th>Ngày</th><th class="num">Doanh thu</th></tr></thead>
+<tbody>
+<tr><td>1</td><td class="num">0đ</td></tr>
+<tr><td>2</td><td class="num">0đ</td></tr>
+<tr><td>3</td><td class="num">0đ</td></tr>
+<tr><td>4</td><td class="num">0đ</td></tr>
+<tr><td>5</td><td class="num">0đ</td></tr>
+<tr><td>6</td><td class="num">0đ</td></tr>
+<tr><td>7</td><td class="num">0đ</td></tr>
+<tr><td>8</td><td class="num">0đ</td></tr>
+<tr><td>9</td><td class="num">0đ</td></tr>
+<tr><td>10</td><td class="num">0đ</td></tr>
+<tr><td>11</td><td class="num">0đ</td></tr>
+<tr><td>12</td><td class="num">0đ</td></tr>
+<tr><td>13</td><td class="num">0đ</td></tr>
+<tr><td>14</td><td class="num">0đ</td></tr>
+<tr><td>15</td><td class="num">0đ</td></tr>
+<tr><td>16</td><td class="num">0đ</td></tr>
+<tr><td>17</td><td class="num">0đ</td></tr>
+<tr><td>18</td><td class="num">0đ</td></tr>
+<tr><td>19</td><td class="num">0đ</td></tr>
+<tr><td>20</td><td class="num">0đ</td></tr>
+<tr><td>21</td><td class="num">0đ</td></tr>
+<tr><td>22</td><td class="num">0đ</td></tr>
+<tr><td>23</td><td class="num">0đ</td></tr>
+<tr><td>24</td><td class="num">0đ</td></tr>
+<tr><td>25</td><td class="num">0đ</td></tr>
+<tr><td>26</td><td class="num">0đ</td></tr>
+<tr><td>27</td><td class="num">0đ</td></tr>
+<tr><td>28</td><td class="num">0đ</td></tr>
+<tr><td>29</td><td class="num">0đ</td></tr>
+<tr><td>30</td><td class="num">0đ</td></tr>
+</tbody>
+</table>
+</figure>
+      <div class="grid grid--2">
+        <figure class="chart" data-chart>
+<figcaption class="chart__head"><h3 class="chart__title">Số đơn theo ngày</h3></figcaption>
+<div class="chart__canvas" aria-hidden="true"></div>
+<script type="application/json">{"type":"bar","suffix":"","prefix":"","format":"number","decimal":".","thousands":",","height":180,"labels":[1,2,3,4,5,6,7,8,9,10,11,12,13,14],"series":[{"name":"Đơn hàng","color":"info","stats":{"count":14,"sum":88,"average":6.285714285714286,"max":10,"min":3,"last":6,"first":3},"max":10,"bars":[{"x":1.25,"y":70,"width":4.64,"height":30,"value":3},{"x":8.39,"y":50,"width":4.64,"height":50,"value":5},{"x":15.54,"y":60,"width":4.64,"height":40,"value":4},{"x":22.68,"y":40,"width":4.64,"height":60,"value":6},{"x":29.82,"y":20,"width":4.64,"height":80,"value":8},{"x":36.96,"y":30,"width":4.64,"height":70,"value":7},{"x":44.11,"y":50,"width":4.64,"height":50,"value":5},{"x":51.25,"y":10,"width":4.64,"height":90,"value":9},{"x":58.39,"y":40,"width":4.64,"height":60,"value":6},{"x":65.54,"y":60,"width":4.64,"height":40,"value":4},{"x":72.68,"y":30,"width":4.64,"height":70,"value":7},{"x":79.82,"y":0,"width":4.64,"height":100,"value":10},{"x":86.96,"y":20,"width":4.64,"height":80,"value":8},{"x":94.11,"y":40,"width":4.64,"height":60,"value":6}]}],"hasData":true,"stats":[],"max":10,"ticks":[0,2.5,5,7.5,10]}</script>
+<table class="chart__table" id="chart-table-3ed855c8">
+<caption>Số đơn theo ngày</caption>
+<thead><tr><th>Ngày</th><th class="num">Đơn hàng</th></tr></thead>
+<tbody>
+<tr><td>1</td><td class="num">0,00</td></tr>
+<tr><td>2</td><td class="num">0,00</td></tr>
+<tr><td>3</td><td class="num">0,00</td></tr>
+<tr><td>4</td><td class="num">0,00</td></tr>
+<tr><td>5</td><td class="num">0,00</td></tr>
+<tr><td>6</td><td class="num">0,00</td></tr>
+<tr><td>7</td><td class="num">0,00</td></tr>
+<tr><td>8</td><td class="num">0,00</td></tr>
+<tr><td>9</td><td class="num">0,00</td></tr>
+<tr><td>10</td><td class="num">0,00</td></tr>
+<tr><td>11</td><td class="num">0,00</td></tr>
+<tr><td>12</td><td class="num">0,00</td></tr>
+<tr><td>13</td><td class="num">0,00</td></tr>
+<tr><td>14</td><td class="num">0,00</td></tr>
+</tbody>
+</table>
+</figure>
+<figure class="chart" data-chart>
+<figcaption class="chart__head"><h3 class="chart__title">Tiền nạp theo phương thức</h3></figcaption>
+<div class="chart__canvas" aria-hidden="true"></div>
+<ul class="chart__legend">
+<li><span class="chart__swatch c-accent"></span>payOS <span class="chart__legend-value">8.600.000đ</span> <span class="faint">57.83%</span></li>
+<li><span class="chart__swatch c-ok"></span>Ngân hàng <span class="chart__legend-value">4.200.000đ</span> <span class="faint">28.24%</span></li>
+<li><span class="chart__swatch c-warn"></span>MoMo <span class="chart__legend-value">1.350.000đ</span> <span class="faint">9.08%</span></li>
+<li><span class="chart__swatch c-info"></span>Khác <span class="chart__legend-value">720.000đ</span> <span class="faint">4.84%</span></li>
+</ul>
+<script type="application/json">{"type":"donut","suffix":"","prefix":"","format":"currency","decimal":".","thousands":",","height":220,"labels":["payOS","Ngân hàng","MoMo","Khác"],"series":[{"label":"payOS","value":8600000,"share":57.83,"start":0,"end":208.2,"color":"accent"},{"label":"Ngân hàng","value":4200000,"share":28.24,"start":208.2,"end":309.89,"color":"ok"},{"label":"MoMo","value":1350000,"share":9.08,"start":309.89,"end":342.57,"color":"warn"},{"label":"Khác","value":720000,"share":4.84,"start":342.57,"end":360,"color":"info"}],"hasData":true,"stats":[],"total":14870000}</script>
+<table class="chart__table" id="chart-table-1d939a78">
+<caption>Tiền nạp theo phương thức</caption>
+<thead><tr><th>Mục</th><th class="num">Giá trị</th><th class="num">Tỷ lệ</th></tr></thead>
+<tbody>
+<tr><td>payOS</td><td class="num">8.600.000đ</td><td class="num">57.83%</td></tr>
+<tr><td>Ngân hàng</td><td class="num">4.200.000đ</td><td class="num">28.24%</td></tr>
+<tr><td>MoMo</td><td class="num">1.350.000đ</td><td class="num">9.08%</td></tr>
+<tr><td>Khác</td><td class="num">720.000đ</td><td class="num">4.84%</td></tr>
+</tbody>
+</table>
+</figure>
+      </div>
+      <p class="small muted">Không JavaScript: mỗi biểu đồ tự thay bằng bảng số liệu (bảng nằm trong DOM, chỉ bị ẩn về mặt hình ảnh khi biểu đồ vẽ xong). Không có thư viện ngoài, không gọi mạng.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h2 class="card__title">Bảng dữ liệu</h2><span class="pill">table.js (tùy chọn)</span></div>
+    <div class="card__body" style="padding:0">
+      <div class="toolbar">
+        <div class="toolbar__field">
+          <label class="toolbar__label" for="sg-search">Tìm trong bảng</label>
+          <input class="input" type="search" id="sg-search" placeholder="Nhập để lọc…">
+        </div>
+        <div class="toolbar__spacer"></div>
+        <span class="toolbar__count" id="sg-count" data-template="Hiển thị %shown% / %total% dòng"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="table table--zebra table--sticky table--responsive"
+               data-table data-sortable data-table-filter="#sg-search" data-table-count="#sg-count">
+          <caption>Bấm vào tiêu đề để sắp xếp; gõ để lọc. Không có JavaScript thì bảng vẫn đầy đủ.</caption>
+          <thead>
+            <tr>
+              <th><button class="table__sort" type="button">Sản phẩm</button></th>
+              <th class="num"><button class="table__sort" type="button">Đơn</button></th>
+              <th class="num"><button class="table__sort" type="button">Doanh thu</button></th>
+              <th>Tỷ trọng</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="cell-main">Netflix Premium 1 tháng</span><span class="cell-sub mono">#5</span></td>
+              <td class="num" data-sort-value="42">42</td>
+              <td class="num" data-sort-value="5040000">5.040.000đ</td>
+              <td><div class="progress-row"><div class="progress"><span class="progress__bar" style="width:48%"></span></div><span class="progress-row__value">48,0%</span></div></td>
+            </tr>
+            <tr>
+              <td><span class="cell-main">Spotify Premium 3 tháng</span><span class="cell-sub mono">#6</span></td>
+              <td class="num" data-sort-value="28">28</td>
+              <td class="num" data-sort-value="2940000">2.940.000đ</td>
+              <td><div class="progress-row"><div class="progress"><span class="progress__bar progress__bar--ok" style="width:28%"></span></div><span class="progress-row__value">28,0%</span></div></td>
+            </tr>
+            <tr>
+              <td><span class="cell-main">Canva Pro 1 năm</span><span class="cell-sub mono">#7</span></td>
+              <td class="num" data-sort-value="12">12</td>
+              <td class="num" data-sort-value="1500000">1.500.000đ</td>
+              <td><div class="progress-row"><div class="progress"><span class="progress__bar progress__bar--warn" style="width:14%"></span></div><span class="progress-row__value">14,3%</span></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination-bar">
+<span class="pagination-bar__info">Hiển thị 21–40 trong 95</span>
+<nav aria-label="Phân trang ví dụ">
+<ul class="pagination">
+<li><a href="?module=common&amp;amp;action=orbit-styleguide&amp;amp;page=1" rel="prev" aria-label="Trang trước">‹</a></li>
+<li><a href="?module=common&amp;amp;action=orbit-styleguide&amp;amp;page=1" aria-label="Trang 1">1</a></li>
+<li><span aria-current="page">2</span></li>
+<li><a href="?module=common&amp;amp;action=orbit-styleguide&amp;amp;page=3" aria-label="Trang 3">3</a></li>
+<li><span class="pagination__ellipsis" aria-hidden="true">…</span></li>
+<li><a href="?module=common&amp;amp;action=orbit-styleguide&amp;amp;page=5" aria-label="Trang 5">5</a></li>
+<li><a href="?module=common&amp;amp;action=orbit-styleguide&amp;amp;page=3" rel="next" aria-label="Trang sau">›</a></li>
+</ul>
+</nav>
+</div>
+    </div>
+  </section>
+
+  <section class="grid grid--2">
+    <div class="card">
+      <div class="card__header"><h2 class="card__title">Timeline</h2></div>
+      <div class="card__body">
+        <ol class="timeline">
+          <li class="timeline__item timeline__item--done">
+            <p class="timeline__title">Đơn hàng đã tạo</p>
+            <p class="timeline__meta">09:15 · mã ORD9001</p>
+          </li>
+          <li class="timeline__item timeline__item--done">
+            <p class="timeline__title">Thanh toán đã nhận</p>
+            <p class="timeline__meta">09:16 · payOS</p>
+          </li>
+          <li class="timeline__item timeline__item--active">
+            <p class="timeline__title">Đang giao tài khoản</p>
+            <p class="timeline__meta">09:16 · tự động</p>
+          </li>
+          <li class="timeline__item">
+            <p class="timeline__title">Hoàn tất</p>
+            <p class="timeline__meta">chờ hệ thống xác nhận</p>
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__header"><h2 class="card__title">Công tắc, accordion, tooltip</h2></div>
+      <div class="card__body stack">
+        <label class="switch">
+          <input type="checkbox" checked>
+          <span class="switch__track"></span>
+          <span class="switch__label">Bật thông báo đơn mới</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox">
+          <span class="switch__track"></span>
+          <span class="switch__label">Tắt thông báo (đang tắt)</span>
+        </label>
+        <details class="accordion" open>
+          <summary class="accordion__summary">Tuỳ chọn nâng cao</summary>
+          <div class="accordion__body"><p class="small muted" style="margin:0">Nội dung ẩn mặc định vẫn nằm trong DOM và đọc được bằng bàn phím — dùng <span class="mono">&lt;details&gt;</span>, không cần JavaScript.</p></div>
+        </details>
+        <p class="small muted" style="margin:0">Di chuột hoặc tab vào đây:
+          <span class="pill" data-tip="Tooltip thuần CSS, hiện cả khi dùng bàn phím" tabindex="0">?</span>
+        </p>
+        <div class="alert alert--warn" style="margin:0"><p style="margin:0">Cảnh báo dùng cho việc cần chú ý nhưng không chặn: ví dụ tiền nạp lệch, đơn đang chờ duyệt.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h2 class="card__title">Music player</h2><span class="pill">off until a licensed track exists</span></div>
+    <div class="card__body stack">
+      <p class="muted">The player renders nothing at all while <span class="mono">public/music/playlist.json</span>
+        is empty. Below is the collapsed control and the expanded panel, drawn statically — this preview has no audio
+        and never autoplays.</p>
+      <div class="row" style="gap: var(--space-6)">
+        <div class="om om--static" style="align-items:flex-start">
+          <button class="om__toggle" type="button" aria-label="Music player">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 16V9l5-1v7"/></svg>
+          </button>
+          <div class="om__panel">
+            <div class="om__head">
+              <div><p class="om__title">Calm theme 01</p><p class="om__meta">Orbit Studio · CC0 · 1/3</p></div>
+              <button type="button" class="om__close" aria-label="Close player">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
+            </div>
+            <div class="om__controls">
+              <button type="button" class="om__btn" aria-label="Previous track"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6v12L9 12z" fill="currentColor"/><path d="M7 6v12" stroke="currentColor" stroke-width="1.8"/></svg></button>
+              <button type="button" class="om__btn om__btn--main" aria-label="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg></button>
+              <button type="button" class="om__btn" aria-label="Next track"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6v12l9-6z" fill="currentColor"/><path d="M17 6v12" stroke="currentColor" stroke-width="1.8"/></svg></button>
+            </div>
+            <div class="om__row"><span aria-hidden="true">Vol</span><input type="range" min="0" max="1" step="0.05" value="0.6" aria-label="Volume"><button type="button" class="btn--link">Mute</button></div>
+            <p class="om__status"></p>
+          </div>
+        </div>
+        <div>
+          <button class="om__resume" type="button">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+            <span>Continue listening</span>
+          </button>
+          <p class="field__help">Shown after a page change when the visitor had music playing — one click, never autoplay.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__header"><h2 class="card__title">Rules this system encodes</h2></div>
+    <div class="card__body">
+      <ul class="small muted">
+        <li>Only tokens: no page invents a colour, a spacing value or a font size.</li>
+        <li>No third-party requests, no build step, no JavaScript in the critical path.</li>
+        <li>Every interactive element is reachable by keyboard with a visible focus ring.</li>
+        <li>Motion only when the visitor has not asked for reduced motion.</li>
+        <li>Images carry width/height; the player reserves its own space, so nothing shifts.</li>
+      </ul>
+      <p class="small faint" style="margin-top: var(--space-4)">Next: pages adopt <span class="mono">tokens.css → base.css → components.css</span> and compose these classes. Nothing in the existing client views changes until you ask for it.</p>
+    </div>
+  </section>
+
+</div><!-- /.stack -->
+
+</main>
+<footer class="footer">
+  <div class="container footer__inner">
+    <p style="margin:0">Orbit design system (admin preview)</p>
+  </div>
+</footer>
+<script>(function(){document.querySelectorAll("[data-theme-toggle]").forEach(function(b){b.addEventListener("click",function(){document.documentElement.setAttribute("data-theme",b.getAttribute("data-theme-toggle"));document.querySelectorAll("[data-theme-toggle]").forEach(function(o){o.classList.toggle("is-active",o===b);});});});document.querySelectorAll("[data-copy]").forEach(function(b){b.addEventListener("click",function(){var i=b.parentNode.querySelector("input");if(!i)return;i.select();if(navigator.clipboard)navigator.clipboard.writeText(i.value);b.textContent="Copied";window.setTimeout(function(){b.textContent="Copy";},1500);});});})();</script></body>
+</html>

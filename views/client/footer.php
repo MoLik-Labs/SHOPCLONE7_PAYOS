@@ -106,6 +106,8 @@ echo BASE_URL("public/client/");
 echo "js/main.js\"></script>\n<script src=\"https://cdn.jsdelivr.net/npm/flatpickr\"></script>\n<script>\nflatpickr(\"#example-flatpickr-range\");\n</script>\n<script src=\"https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js\"></script>\n\n";
 echo $body["footer"];
 echo $CMSNT->site("javascript_footer");
+/* Orbit music player: renders nothing at all while public/music/playlist.json is empty. */
+require_once __DIR__ . "/../common/music_player.php";
 echo "</body>\n\n</html>";
 
 ?>

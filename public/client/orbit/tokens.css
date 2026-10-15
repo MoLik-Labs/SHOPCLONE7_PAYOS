@@ -1,0 +1,151 @@
+/*
+ * Orbit design tokens — the single source of truth for colour, type, space, motion.
+ *
+ * Rules this file exists to enforce:
+ *  - One spacing scale, one type scale, one accent colour. No page invents its own values.
+ *  - Dark is the default (this shop's theme is dark); light is a supported override, not an extra design.
+ *  - Nothing here depends on a CDN, a build step or JavaScript: it is plain CSS custom properties.
+ *
+ * Adoption (a page opts in by loading three files):
+ *   tokens.css -> base.css -> components.css
+ *
+ * Keep the two colour blocks in sync when changing a colour: they are the same variable list, once for
+ * `data-theme="light"` and once for the automatic `prefers-color-scheme: light` case.
+ */
+
+:root {
+  color-scheme: dark light;
+
+  /* --- spacing: 4px base, 8 steps (the only distances a layout may use) ------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* --- type ----------------------------------------------------------------- */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
+    "Liberation Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+  --text-3xl: 40px;
+  --leading-tight: 1.2;
+  --leading-normal: 1.55;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* --- colour (dark default) ------------------------------------------------ */
+  --bg: #0b1020;
+  --surface: #121a2e;
+  --surface-2: #17203a;
+  --surface-3: #1e2947;
+  --border: #24304d;
+  --border-strong: #33436b;
+  --text: #e9eefb;
+  --text-muted: #9fb0cf;
+  --text-faint: #7186a8;
+  --accent: #5b8def;
+  --accent-strong: #3f74dd;
+  --accent-soft: rgba(91, 141, 239, 0.14);
+  --accent-contrast: #071227;
+  --ok: #34c98a;
+  --ok-soft: rgba(52, 201, 138, 0.14);
+  --warn: #f0b45c;
+  --warn-soft: rgba(240, 180, 92, 0.14);
+  --danger: #f2767a;
+  --danger-soft: rgba(242, 118, 122, 0.14);
+  --info: #6fb3ff;
+  --focus: #8ab4ff;
+  --overlay: rgba(6, 10, 22, 0.66);
+
+  /* --- shape ---------------------------------------------------------------- */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+
+  /* --- motion (every transition uses these, and only these) ------------------ */
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* --- layout --------------------------------------------------------------- */
+  --container: 1200px;
+  --gutter: 16px;
+  --control-h: 44px; /* minimum touch target, also the standard button height */
+  --ring: 0 0 0 3px rgba(138, 180, 255, 0.35);
+  --z-sticky: 40;
+  --z-player: 60;
+  --z-modal: 80;
+}
+
+/* Light theme, explicit: <html data-theme="light"> */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f7fc;
+  --surface: #ffffff;
+  --surface-2: #eef2fa;
+  --surface-3: #e4eaf6;
+  --border: #d8e0ef;
+  --border-strong: #b9c6de;
+  --text: #101828;
+  --text-muted: #55637d;
+  --text-faint: #74829b;
+  --accent: #2f66d0;
+  --accent-strong: #2456b4;
+  --accent-soft: rgba(47, 102, 208, 0.1);
+  --accent-contrast: #ffffff;
+  --ok: #12805c;
+  --ok-soft: rgba(18, 128, 92, 0.12);
+  --warn: #9a6508;
+  --warn-soft: rgba(154, 101, 8, 0.12);
+  --danger: #b4232a;
+  --danger-soft: rgba(180, 35, 42, 0.1);
+  --info: #1f5fa8;
+  --focus: #2f66d0;
+  --overlay: rgba(16, 24, 40, 0.45);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.08);
+  --shadow: 0 10px 28px rgba(16, 24, 40, 0.12);
+}
+
+/* Light theme, automatic: beware — keep this list identical to the block above. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]):not([data-theme="light"]) {
+    color-scheme: light;
+    --bg: #f5f7fc;
+    --surface: #ffffff;
+    --surface-2: #eef2fa;
+    --surface-3: #e4eaf6;
+    --border: #d8e0ef;
+    --border-strong: #b9c6de;
+    --text: #101828;
+    --text-muted: #55637d;
+    --text-faint: #74829b;
+    --accent: #2f66d0;
+    --accent-strong: #2456b4;
+    --accent-soft: rgba(47, 102, 208, 0.1);
+    --accent-contrast: #ffffff;
+    --ok: #12805c;
+    --ok-soft: rgba(18, 128, 92, 0.12);
+    --warn: #9a6508;
+    --warn-soft: rgba(154, 101, 8, 0.12);
+    --danger: #b4232a;
+    --danger-soft: rgba(180, 35, 42, 0.1);
+    --info: #1f5fa8;
+    --focus: #2f66d0;
+    --overlay: rgba(16, 24, 40, 0.45);
+    --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.08);
+    --shadow: 0 10px 28px rgba(16, 24, 40, 0.12);
+  }
+}

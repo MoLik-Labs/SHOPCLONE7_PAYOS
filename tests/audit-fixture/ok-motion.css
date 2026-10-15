@@ -1,0 +1,8 @@
+/* right: the same declaration with the guard */
+.ok-motion {
+  transition: opacity 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ok-motion { transition: none; }
+}

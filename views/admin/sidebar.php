@@ -39,7 +39,11 @@ echo "\" alt=\"logo\" class=\"toggle-white\">\n                </a>\n           
 echo base_url_admin("home");
 echo "\"\n                                class=\"side-menu__item ";
 echo active_sidebar(["home", ""]);
-echo "\">\n                                <i class=\"bx bxs-dashboard side-menu__icon\"></i>\n                                <span class=\"side-menu__label\">Dashboard</span>\n                            </a>\n                        </li>\n                        <li class=\"slide has-sub ";
+echo "\">\n                                <i class=\"bx bxs-dashboard side-menu__icon\"></i>\n                                <span class=\"side-menu__label\">Dashboard</span>\n                            </a>\n                        </li>\n                        <li class=\"slide\">\n                            <a href=\"";
+echo base_url_admin("sales");
+echo "\"\n                                class=\"side-menu__item ";
+echo active_sidebar(["sales"]);
+echo "\">\n                                <i class=\"bx bx-line-chart side-menu__icon\"></i>\n                                <span class=\"side-menu__label\">Thống kê bán hàng</span>\n                            </a>\n                        </li>\n                        <li class=\"slide has-sub ";
 echo show_sidebar(["logs", "transactions", "log-auto-bank"]);
 echo "\">\n                            <a href=\"javascript:void(0);\"\n                                class=\"side-menu__item ";
 echo show_sidebar(["logs", "transactions"]);
@@ -146,14 +150,16 @@ if(checkPermission($getUser["admin"], "view_role")) {
 echo "                        ";
 if(checkPermission($getUser["admin"], "view_recharge")) {
     echo "                        <li\n                            class=\"slide has-sub ";
-    echo show_sidebar(["recharge-payos", "recharge-flutterwave", "recharge-momo", "recharge-card", "recharge-bank", "recharge-crypto", "recharge-bank-edit", "recharge-paypal", "recharge-perfectmoney", "recharge-toyyibpay", "recharge-squadco", "recharge-bank-config", "recharge-manual", "recharge-manual-edit"]);
+    echo show_sidebar(["recharge-payos", "recharge-gtf", "recharge-flutterwave", "recharge-momo", "recharge-card", "recharge-bank", "recharge-crypto", "recharge-bank-edit", "recharge-paypal", "recharge-perfectmoney", "recharge-toyyibpay", "recharge-squadco", "recharge-bank-config", "recharge-manual", "recharge-manual-edit"]);
     echo "\">\n                            <a href=\"javascript:void(0);\"\n                                class=\"side-menu__item ";
-    echo active_sidebar(["recharge-payos", "recharge-flutterwave", "recharge-momo", "recharge-card", "recharge-bank", "recharge-crypto", "recharge-bank-edit", "recharge-paypal", "recharge-perfectmoney", "recharge-toyyibpay", "recharge-squadco", "recharge-bank-config", "recharge-manual", "recharge-manual-edit"]);
+    echo active_sidebar(["recharge-payos", "recharge-gtf", "recharge-flutterwave", "recharge-momo", "recharge-card", "recharge-bank", "recharge-crypto", "recharge-bank-edit", "recharge-paypal", "recharge-perfectmoney", "recharge-toyyibpay", "recharge-squadco", "recharge-bank-config", "recharge-manual", "recharge-manual-edit"]);
     echo "\">\n                                <i class='bx bxs-wallet-alt side-menu__icon'></i>\n                                <span class=\"side-menu__label\">Nạp tiền</span>\n                                <i class=\"fe fe-chevron-right side-menu__angle\"></i>\n                            </a>\n                            <ul class=\"slide-menu child1\">\n                                <li class=\"slide\">\n                                    <a href=\"";
     echo base_url_admin("recharge-payos");
     echo '" class="side-menu__item ';
     echo active_sidebar(["recharge-payos"]);
     echo '">payOS</a></li><li class="slide"><a href="';
+    echo base_url_admin("recharge-gtf");
+    echo '">GachtheFast</a></li><li class="slide"><a href="';
     echo base_url_admin("recharge-bank");
     echo "\"\n                                        class=\"side-menu__item ";
     echo active_sidebar(["recharge-bank", "recharge-bank-edit", "recharge-bank-config"]);

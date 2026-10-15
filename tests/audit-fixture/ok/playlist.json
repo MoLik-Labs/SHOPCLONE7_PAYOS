@@ -1,0 +1,5 @@
+{
+  "tracks": [
+    { "title": "Bản thu có giấy phép", "url": "https://media.example/a.mp3", "file": "public/music/a.mp3", "license": "CC BY 4.0 — chủ sở hữu cung cấp" }
+  ]
+}
