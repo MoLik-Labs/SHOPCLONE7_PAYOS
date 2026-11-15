@@ -12,6 +12,9 @@ if(isset($_GET["id"])) {
     if(!($supplier = $CMSNT->get_row("SELECT * FROM `suppliers` WHERE `id` = '" . $id . "' "))) {
         redirect(base_url_admin("product-api"));
     }
+    /* Re-use the id the database actually returned: it is interpolated unquoted below (numeric
+       context), so a request string must never reach it even after the equality check above. */
+    $id = (int) $supplier["id"];
 } else {
     redirect(base_url_admin("product-api"));
 }

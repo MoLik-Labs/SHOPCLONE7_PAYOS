@@ -236,9 +236,20 @@ if (!function_exists("chart_donut")) {
         }
         /* Guard against rounding drift making the last slice land at 359.98°. */
         if ($slices) {
-            $slices[count($slices) - 1]["end"] = 360.0;
-            $slices[count($slices) - 1]["start"] = $slices[count($slices) - 1]["start"] >= 360.0
-                ? 0.0 : $slices[count($slices) - 1]["start"];
+            $last = count($slices) - 1;
+            $slices[$last]["end"] = 360.0;
+            /*
+             * A very small last slice (99.9999% + 0.0001%) rounds its start to exactly 360. Turning
+             * that start into 0 — which is what this used to do — gave the slice a 360° sweep and
+             * painted it over the whole ring. Keep a hairline sliver instead: start < end, and the
+             * renderer draws 0.01° rather than a second full circle.
+             */
+            if ($slices[$last]["start"] >= 360.0) {
+                $slices[$last]["start"] = 359.99;
+            }
+            if ($slices[$last]["start"] >= $slices[$last]["end"]) {
+                $slices[$last]["start"] = $slices[$last]["end"] - 0.01;
+            }
         }
         return array("total" => $total, "slices" => $slices);
     }
@@ -305,8 +316,10 @@ if (!function_exists("chart_payload")) {
     function chart_payload($config)
     {
         $type = isset($config["type"]) ? (string) $config["type"] : "bar";
-        $decimalsSeparator = isset($config["decimal"]) ? (string) $config["decimal"] : ".";
-        $thousandsSeparator = isset($config["thousands"]) ? (string) $config["thousands"] : ",";
+        /* Defaults match orbit_chart_format()/number_format($v, $n, ",", ".") used by the server
+           table, so the JavaScript tooltip and the no-JavaScript table print the same number. */
+        $decimalsSeparator = isset($config["decimal"]) ? (string) $config["decimal"] : ",";
+        $thousandsSeparator = isset($config["thousands"]) ? (string) $config["thousands"] : ".";
         $payload = array(
             "type" => $type,
             "suffix" => isset($config["suffix"]) ? (string) $config["suffix"] : "",

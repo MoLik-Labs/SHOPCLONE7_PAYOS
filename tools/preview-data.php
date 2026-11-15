@@ -99,6 +99,12 @@ class DB
         if (strpos($sql, "LEFT JOIN `users`") !== false) {
             return $f["top_customers"];
         }
+        if (strpos($sql, "GROUP BY `product_id`") !== false) {
+            /* The dashboard ranks products over the whole window in SQL. Answering this with the
+               raw rows (as this stub used to, via the product_id match below) made the preview show
+               40 products with 0 orders each and shares far below the real ones. */
+            return $f["top_products"];
+        }
         if (strpos($sql, "FROM `product_order`") !== false) {
             return strpos($sql, "`product_id`") !== false ? $f["orders"] : $f["mine_orders"];
         }
@@ -124,6 +130,7 @@ if (!function_exists("preview_fixtures")) {
         /* 30 days of daily revenue: a gentle upward trend with a quiet mid-month patch */
         $byDay = array();
         $orders = array();
+        $productTotals = array();
         $orderId = 9000;
         $products = array(
             array("id" => 5, "name" => "Netflix Premium 1 tháng", "price" => 120000, "cost" => 84000, "weight" => 4),
@@ -151,6 +158,16 @@ if (!function_exists("preview_fixtures")) {
                 $orderCost = $product["cost"] * $amount;
                 $revenue += $pay;
                 $cost += $orderCost;
+                if (!isset($productTotals[$product["id"]])) {
+                    $productTotals[$product["id"]] = array(
+                        "product_id" => $product["id"], "name" => $product["name"],
+                        "orders" => 0, "quantity" => 0, "revenue" => 0, "cost" => 0,
+                    );
+                }
+                $productTotals[$product["id"]]["orders"]++;
+                $productTotals[$product["id"]]["quantity"] += $amount;
+                $productTotals[$product["id"]]["revenue"] += $pay;
+                $productTotals[$product["id"]]["cost"] += $orderCost;
                 if ($i < 8 && count($orders) < 40) {
                     $orders[] = array(
                         "id" => ++$orderId,
@@ -178,6 +195,13 @@ if (!function_exists("preview_fixtures")) {
         }
         $previousRevenue = (int) round($currentRevenue * 0.78);
         $previousCost = (int) round($currentCost * 0.8);
+
+        /* Month-wide totals per product, matching what sales_sql_top_products() aggregates. */
+        $topProducts = array_values($productTotals);
+        usort($topProducts, function ($a, $b) {
+            return $b["revenue"] - $a["revenue"];
+        });
+        $topProducts = array_slice($topProducts, 0, 8);
 
         $mineOrders = array();
         foreach ($orders as $order) {
@@ -210,6 +234,7 @@ if (!function_exists("preview_fixtures")) {
             "all_time" => array("orders" => 1840, "revenue" => 412000000, "cost" => 289000000),
             "by_day" => $byDay,
             "orders" => array_reverse($orders),
+            "top_products" => $topProducts,
             "top_customers" => array(
                 array("buyer_id" => 9, "username" => "minhanh", "email" => "m@example.com", "orders" => 14, "revenue" => 3120000),
                 array("buyer_id" => 12, "username" => "quanghuy", "email" => "q@example.com", "orders" => 11, "revenue" => 2480000),
@@ -232,10 +257,13 @@ if (!function_exists("preview_fixtures")) {
                 "revenue" => array_sum(array_column($mineOrders, "pay")),
                 "cost" => array_sum(array_column($mineOrders, "cost")),
             ),
+            /* $byDay already holds exactly the 30 days that were generated. The old slice asked for
+               "the 30 days after index 30" — off the end of the array — so the buyer chart had no
+               points and rendered its empty state next to a KPI that showed real money. */
             "mine_by_day" => array_map(function ($row) {
                 return array("day" => $row["day"], "orders" => (int) ceil($row["orders"] / 5),
                     "revenue" => (int) round($row["revenue"] / 5), "cost" => (int) round($row["cost"] / 5));
-            }, array_slice($byDay, 60 - 30)),
+            }, array_slice($byDay, -30)),
             "mine_orders" => array_slice($mineOrders, 0, 20),
             "previous_from" => $period["previous_from"],
         );

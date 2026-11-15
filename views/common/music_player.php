@@ -90,20 +90,26 @@ $orbitAssetVersion = function ($relativePath) {
     $absolute = __DIR__ . "/../../" . $relativePath;
     return is_file($absolute) ? (string) filemtime($absolute) : "1";
 };
+
+/* A playlist title with invalid UTF-8 (possible after a restore) would make json_encode() return
+   false; the player would then print an empty box. Substitute, and if even that fails, render
+   nothing at all. */
+$orbitMusicConfig = json_encode(
+    array(
+        "site" => $orbitMusicSiteName,
+        "base" => BASE_URL("public/music/"),
+        "tracks" => $orbitMusicTracks,
+    ),
+    JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_INVALID_UTF8_SUBSTITUTE
+);
+if (!is_string($orbitMusicConfig)) {
+    return;
+}
 ?>
 <link rel="stylesheet" href="<?php echo BASE_URL("public/client/orbit/music-player.css"); ?>?v=<?php echo $orbitAssetVersion("public/client/orbit/music-player.css"); ?>">
 <div id="orbit-music" class="om"></div>
-<script type="application/json" id="om-config"><?php
-    echo json_encode(
-        array(
-            "site" => $orbitMusicSiteName,
-            "base" => BASE_URL("public/music/"),
-            "tracks" => $orbitMusicTracks,
-        ),
-        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP
-    );
-?></script>
+<script type="application/json" id="om-config"><?php echo $orbitMusicConfig; ?></script>
 <script src="<?php echo BASE_URL("public/client/orbit/music-player.js"); ?>?v=<?php echo $orbitAssetVersion("public/client/orbit/music-player.js"); ?>" defer></script>
 <?php
-unset($orbitMusicPlaylistFile, $orbitMusicRaw, $orbitMusicJson, $orbitMusicTracks, $orbitMusicTrack, $orbitMusicEntry, $orbitMusicCut, $orbitMusicSiteName);
+unset($orbitMusicPlaylistFile, $orbitMusicRaw, $orbitMusicJson, $orbitMusicTracks, $orbitMusicTrack, $orbitMusicEntry, $orbitMusicCut, $orbitMusicSiteName, $orbitMusicConfig);
 ?>

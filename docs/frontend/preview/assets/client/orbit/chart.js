@@ -6,7 +6,7 @@
  * that can be wrong are unit-tested in PHP, and this stays small enough to read in one sitting.
  *
  * Contract with the markup (see views/common/chart.php):
- *   <div class="chart" data-chart><script type="application/json">{payload}</script>
+ *   <div class="chart" data-chart><script type="application/json">{payload}<\/script>
  *     <div class="chart__canvas"></div>
  *     <table class="chart__table">…</table>   ← the no-JavaScript / screen-reader version
  *   </div>
@@ -26,26 +26,31 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  /* Group digits with the separators the server sent (payload.decimal / payload.thousands), so the
+     tooltip prints 1.234.567 exactly like the PHP table does. Intl.NumberFormat was locale-driven:
+     the same page read 1,234,567 on an English browser and 1.234.567 on a Vietnamese one. */
+  function groupNumber(value, decimals, decimalSeparator, thousandsSeparator) {
+    var negative = value < 0;
+    var fixed = Math.abs(value).toFixed(decimals);
+    var parts = fixed.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, thousandsSeparator);
+    return (negative ? '-' : '') + (parts.length > 1 ? parts[0] + decimalSeparator + parts[1] : parts[0]);
+  }
+
   function fmtNumber(value, payload) {
     var decimals = payload.format === 'currency' ? 0 : (Math.abs(value) < 10 && value % 1 !== 0 ? 1 : 0);
-    var text;
-    try {
-      text = new Intl.NumberFormat(undefined, {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals
-      }).format(value);
-    } catch (err) {
-      text = String(Math.round(value));
-    }
+    var text = groupNumber(value, decimals, payload.decimal || ',', payload.thousands || '.');
     return (payload.prefix || '') + text + (payload.suffix || '');
   }
 
-  function fmtShort(value) {
+  function fmtShort(value, payload) {
+    var decimal = (payload && payload.decimal) || ',';
+    var thousands = (payload && payload.thousands) || '.';
     var absolute = Math.abs(value);
-    if (absolute >= 1000000000) return (value / 1000000000).toFixed(1).replace('.0', '') + 'B';
-    if (absolute >= 1000000) return (value / 1000000).toFixed(1).replace('.0', '') + 'M';
-    if (absolute >= 1000) return (value / 1000).toFixed(1).replace('.0', '') + 'k';
-    return String(Math.round(value));
+    if (absolute >= 1000000000) return groupNumber(value / 1000000000, 1, decimal, thousands).replace(/[.,]0$/, '') + 'B';
+    if (absolute >= 1000000) return groupNumber(value / 1000000, 1, decimal, thousands).replace(/[.,]0$/, '') + 'M';
+    if (absolute >= 1000) return groupNumber(value / 1000, 1, decimal, thousands).replace(/[.,]0$/, '') + 'k';
+    return groupNumber(Math.round(value), 0, decimal, thousands);
   }
 
   function niceLabel(label) {
@@ -84,7 +89,7 @@
         y: y + 3.5,
         'text-anchor': 'end'
       });
-      text.textContent = fmtShort(tick);
+      text.textContent = fmtShort(tick, payload);
       svg.appendChild(text);
     });
     svg.appendChild(group);
@@ -156,17 +161,38 @@
 
   function plotWidth(plot) { return plot.width; }
 
+  var DONUT_STROKE = 22;
+
+  /*
+   * The ring has to fit inside the plot box: radius + half the stroke may never exceed the shorter
+   * half-axis. The first version sized it from plot.height * 2.2, which made a 180px-tall plot ask
+   * for a 180px radius and painted the donut outside its viewBox. chart.css sets overflow:visible on
+   * the SVG, so the ring then overlapped the legend and the next card instead of being clipped.
+   */
+  function donutGeometry(plot, stroke) {
+    var strokeWidth = stroke || DONUT_STROKE;
+    var limit = Math.min(plot.width, plot.height) / 2;
+    var radius = Math.max(8, limit - (strokeWidth / 2) - 4);
+    return {
+      cx: plot.left + plot.width / 2,
+      cy: plot.top + plot.height / 2,
+      radius: radius,
+      stroke: strokeWidth,
+      fits: radius + (strokeWidth / 2) <= limit + 0.01
+    };
+  }
+
   function drawDonut(svg, plot, payload) {
-    var size = Math.min(plot.width, plot.height * 2.2);
-    var cx = plot.left + plot.width / 2;
-    var cy = plot.top + plot.height / 2;
-    var radius = Math.max(20, size / 2 - 18);
+    var geometry = donutGeometry(plot);
+    var cx = geometry.cx;
+    var cy = geometry.cy;
+    var radius = geometry.radius;
     var circumference = 2 * Math.PI * radius;
     var group = el('g', { transform: 'rotate(-90 ' + cx + ' ' + cy + ')' });
 
     group.appendChild(el('circle', {
       cx: cx, cy: cy, r: radius, 'class': 'chart__donut-track',
-      'stroke-width': 22, 'fill': 'none'
+      'stroke-width': geometry.stroke, 'fill': 'none'
     }));
 
     var offset = 0;
@@ -175,6 +201,7 @@
       group.appendChild(el('circle', {
         cx: cx, cy: cy, r: radius,
         'class': 'chart__slice c-' + slice.color,
+        'stroke-width': geometry.stroke,
         'stroke-dasharray': length + ' ' + (circumference - length),
         'stroke-dashoffset': -offset,
         'data-index': payload.series.indexOf(slice)
@@ -184,7 +211,7 @@
     svg.appendChild(group);
 
     var total = el('text', { 'class': 'chart__donut-total', x: cx, y: cy + 2 });
-    total.textContent = fmtShort(payload.total);
+    total.textContent = fmtShort(payload.total, payload);
     svg.appendChild(total);
     var label = el('text', { 'class': 'chart__donut-sub', x: cx, y: cy + 16 });
     label.textContent = payload.totalLabel || 'total';
@@ -363,6 +390,15 @@
       }
     }
   }
+
+  /* Exposed so a zero-dependency test can check the geometry and the number formatting without a
+     browser (tests/js/orbit_script_test.mjs). Nothing on the page depends on this object. */
+  window.orbitCharts = {
+    donutGeometry: donutGeometry,
+    groupNumber: groupNumber,
+    fmtNumber: fmtNumber,
+    fmtShort: fmtShort
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

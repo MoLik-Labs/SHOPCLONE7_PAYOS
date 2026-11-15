@@ -186,7 +186,7 @@ orbit_chart_assets();
   <section class="card">
     <div class="card__header">
       <h2 class="card__title">Đơn hàng của bạn</h2>
-      <span class="toolbar__count" id="mine-count" data-template="Hiển thị %shown% / %total% đơn"></span>
+      <span class="toolbar__count"><?php echo number_format($state["total"]); ?> đơn</span>
     </div>
 
     <div class="toolbar">

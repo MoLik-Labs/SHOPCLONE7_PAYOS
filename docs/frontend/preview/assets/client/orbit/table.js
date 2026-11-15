@@ -29,19 +29,32 @@
     /* keep digits, separators and a leading sign; drop currency symbols, units and spaces */
     var cleaned = raw.replace(/[^\d.,\-]/g, '');
     if (!/\d/.test(cleaned)) return null;
+    var sign = 1;
+    if (cleaned.charAt(0) === '-') {
+      sign = -1;
+      cleaned = cleaned.slice(1);
+    }
+    /*
+     * A pure thousands group ("1.234.567", "1,234,567", "1.234") has no decimal part. The old code
+     * only recognised that for a single separator, so "1.234.567" was read as 1234.567 and could
+     * sort a 12,345 order above a 1,234,567 one.
+     */
+    if (/^\d{1,3}([.,]\d{3})+$/.test(cleaned)) {
+      return sign * parseFloat(cleaned.replace(/[.,]/g, ''));
+    }
     var lastDot = cleaned.lastIndexOf('.');
     var lastComma = cleaned.lastIndexOf(',');
     var decimalAt = -1;
     if (lastDot > -1 && lastComma > -1) decimalAt = Math.max(lastDot, lastComma);
-    else if (lastDot > -1) decimalAt = (cleaned.length - lastDot - 1) === 3 && cleaned.indexOf('.') !== lastDot ? lastDot : (cleaned.length - lastDot - 1) === 3 && /^\d{1,3}(\.\d{3})+$/.test(cleaned) ? -1 : lastDot;
-    else if (lastComma > -1) decimalAt = /^\d{1,3}(,\d{3})+$/.test(cleaned) ? -1 : lastComma;
+    else if (lastDot > -1) decimalAt = lastDot;
+    else if (lastComma > -1) decimalAt = lastComma;
 
     var integerPart = decimalAt === -1 ? cleaned : cleaned.slice(0, decimalAt);
     var fraction = decimalAt === -1 ? '' : cleaned.slice(decimalAt + 1);
     integerPart = integerPart.replace(/[.,]/g, '');
     fraction = fraction.replace(/[.,]/g, '');
     var value = parseFloat((integerPart || '0') + (fraction ? '.' + fraction : ''));
-    return isNaN(value) ? null : value;
+    return isNaN(value) ? null : sign * value;
   }
 
   function isNumericColumn(cell) {

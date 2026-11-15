@@ -263,7 +263,7 @@ check("the search is a LIKE against fixed identifiers, never a column from the r
     $likeStatement !== "" && strpos($likeStatement, "`trans_id`") !== false
     && strpos($likeStatement, "`product_name`") !== false);
 check("no request value is interpolated into the LIKE clause",
-    $likeStatement !== "" && strpos($likeStatement, "$_GET") === false);
+    $likeStatement !== "" && strpos($likeStatement, '$_GET') === false);
 
 /* ------------------------------------------------------------- 4. no sharp edges */
 

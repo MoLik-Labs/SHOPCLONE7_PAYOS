@@ -35,20 +35,29 @@ if (!function_exists("orbit_chart_assets")) {
     /**
      * Prints the chart stylesheet/script once per request (the dashboard may draw a dozen charts).
      */
-    function orbit_chart_assets()
+    function orbit_chart_assets($reset = false)
     {
         static $printed = false;
+        if ($reset) {
+            /* The static guard is correct for one HTTP request, but the static preview builder renders
+               three pages in a single CLI process; without a reset only the first page got chart.js. */
+            $printed = false;
+            return;
+        }
         if ($printed) {
             return;
         }
         $printed = true;
-        $base = BASE_URL("public/client/orbit/");
         $version = function ($relative) {
             $absolute = __DIR__ . "/../../" . ltrim($relative, "/");
             return is_file($absolute) ? (string) filemtime($absolute) : "1";
         };
-        echo '<link rel="stylesheet" href="' . $base . 'chart.css?v=' . $version("public/client/orbit/chart.css") . '">' . "\n";
-        echo '<script src="' . $base . 'chart.js?v=' . $version("public/client/orbit/chart.js") . '" defer></script>' . "\n";
+        /* A full path per file (see the same note in orbit-shell.php): a directory URL may be treated
+           as a route by a URL builder, which broke the static preview's charts. The ?v= and defer stay
+           on the same source line as the asset path: tools/frontend-audit.php reads PHP one line at a
+           time by design. */
+        echo '<link rel="stylesheet" href="' . htmlspecialchars(BASE_URL("public/client/orbit/chart.css") . "?v=" . $version("public/client/orbit/chart.css"), ENT_QUOTES, "UTF-8") . '">' . "\n";
+        echo '<script src="' . htmlspecialchars(BASE_URL("public/client/orbit/chart.js") . "?v=" . $version("public/client/orbit/chart.js"), ENT_QUOTES, "UTF-8") . '" defer></script>' . "\n";
     }
 }
 
@@ -84,7 +93,11 @@ if (!function_exists("orbit_chart")) {
         $payload = chart_payload($config);
         $hasData = !empty($payload["hasData"]);
         $emptyText = isset($config["empty"]) ? (string) $config["empty"] : "";
-        $tableId = "chart-table-" . substr(md5((string) ($title . $type . mt_rand())), 0, 8);
+        /* Deterministic per request: mt_rand() made identical pages differ on every load (bad for
+           caching, ETags and any diff), and there is no reason for the id to be random. */
+        static $chartIndex = 0;
+        $chartIndex++;
+        $tableId = "chart-table-" . $chartIndex;
 
         echo '<figure class="chart" data-chart';
         if (!empty($config["summary"])) {
@@ -132,11 +145,22 @@ if (!function_exists("orbit_chart")) {
             echo '</ul>' . "\n";
         }
 
-        /* The payload the renderer consumes. JSON_HEX_TAG keeps it inside the script element. */
+        /* The payload the renderer consumes. JSON_HEX_TAG keeps it inside the script element;
+           JSON_INVALID_UTF8_SUBSTITUTE keeps a legacy row with a broken encoding (common after an
+           import) from making json_encode() return false, which would ship an empty payload and
+           leave the chart blank. */
+        $json = json_encode(
+            $payload,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP
+            | JSON_INVALID_UTF8_SUBSTITUTE
+        );
+        if (!is_string($json)) {
+            $json = '{"type":"bar","labels":[],"series":[],"hasData":false}';
+        }
         echo '<script type="application/json">' . str_replace(
             array("</"),
             array("<\\/"),
-            json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP)
+            $json
         ) . '</script>' . "\n";
 
         if ($withTable) {

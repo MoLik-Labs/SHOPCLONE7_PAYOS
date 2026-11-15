@@ -132,9 +132,72 @@ check("orders are counted per product", $tops[0]["orders"] === 2 && $tops[1]["or
 check("quantity is summed per product", $tops[0]["quantity"] === 2);
 check("profit is per product", $tops[0]["profit"] == 80000 && $tops[1]["profit"] == 50000);
 check("a nameless product still gets a row", $tops[2]["name"] === "(không có tên)");
-check("shares are computed over the listed products", $tops[0]["share"] > $tops[1]["share"]);
+check("shares are computed over every row, not just the limit", $tops[0]["share"] > $tops[1]["share"]);
+check("a limited ranking still reports a truthful share",
+    round(sales_top_products($orderRows, 1)[0]["share"], 1) === round(200000 / 360000 * 100, 1));
 check("the limit is respected", count(sales_top_products($orderRows, 1)) === 1);
 check("an empty order list yields no products", sales_top_products(array()) === array());
+
+/* The dashboard ranks in SQL now, because the on-screen list is only the newest 500 rows. */
+$productRows = array(
+    array("product_id" => 5, "name" => "Netflix", "orders" => 2, "quantity" => 3, "revenue" => 200000, "cost" => 120000),
+    array("product_id" => 6, "name" => "", "orders" => 1, "quantity" => 1, "revenue" => 100000, "cost" => 40000),
+);
+$ranked = sales_product_rows($productRows, 1000000);
+check("SQL product rows keep their counts", $ranked[0]["orders"] === 2 && $ranked[0]["quantity"] === 3);
+check("profit is derived from SQL revenue and cost", $ranked[0]["profit"] == 80000);
+check("share is measured against the period revenue", $ranked[0]["share"] == 20.0 && $ranked[1]["share"] == 10.0);
+check("a nameless product is still labelled", $ranked[1]["name"] === "(không có tên)");
+$fallback = sales_product_rows($productRows, 0);
+check("a missing period total falls back to the rows instead of dividing by zero",
+    abs($fallback[0]["share"] - (200000 / 300000) * 100) < 0.0001);
+check("an empty product list is empty", sales_product_rows(array()) === array());
+
+/* ------------------------------------------------------- SQL builders (whole period) */
+
+$topSql = sales_sql_top_products("2026-09-01", "2026-09-30", 8);
+check("the ranking is aggregated over the whole window",
+    strpos($topSql, "GROUP BY `product_id`") !== false && strpos($topSql, "LIMIT 8") !== false);
+check("…and filtered by the same valid-order rule as the KPI",
+    strpos($topSql, "`refund` = 0 AND `trash` = 0") !== false);
+check("the ranking limit is clamped", strpos(sales_sql_top_products("2026-09-01", "2026-09-30", 9999), "LIMIT 100") !== false);
+check("the ranking refuses an injected date",
+    strpos(sales_sql_top_products("2026-09-01' OR 1=1 --", "2026-09-30"), "OR 1=1") === false);
+
+$pageSql = sales_sql_orders_page("2026-09-01", "2026-09-30", 42, 500);
+check("the export page is keyset-filtered by id",
+    strpos($pageSql, "`id` > 42") !== false && strpos($pageSql, "ORDER BY `id` ASC") !== false);
+$clampedPage = sales_sql_orders_page("2026-09-01", "2026-09-30", -9, 999999);
+check("the export page cannot be asked for a huge or negative keyset",
+    strpos($clampedPage, "`id` > 0") !== false && strpos($clampedPage, "LIMIT 2000") !== false);
+
+/* A fake shop of 1,234 orders: the export must walk all of them, page after page. */
+$everyOrder = array();
+for ($i = 1; $i <= 1234; $i++) {
+    $everyOrder[] = array("id" => $i, "trans_id" => "ORD" . $i);
+}
+$fetchPage = function ($sql) use (&$everyOrder) {
+    preg_match("/`id` > (\\d+)/", $sql, $afterMatch);
+    preg_match("/LIMIT (\\d+)/", $sql, $limitMatch);
+    return array_slice($everyOrder, (int) $afterMatch[1], (int) $limitMatch[1]);
+};
+$seen = array();
+$export = sales_each_order($fetchPage, "2026-09-01", "2026-09-30", function ($row) use (&$seen) {
+    $seen[] = (int) $row["id"];
+}, 500);
+check("the export walks every order, not just the first page", $export["rows"] === 1234 && count($seen) === 1234);
+check("…in id order and without duplicates", $seen === range(1, 1234));
+check("…and reports that it reached the end", $export["complete"] === true);
+$capped = sales_each_order($fetchPage, "2026-09-01", "2026-09-30", function () {
+}, 500, 700);
+check("the safety cap is a hard limit and is reported as incomplete",
+    $capped["rows"] === 700 && $capped["complete"] === false);
+$noIds = sales_each_order(function () {
+    return array_fill(0, 500, array("trans_id" => "X"));
+}, "2026-09-01", "2026-09-30", function () {
+}, 500);
+check("rows without ids cannot make the export loop forever",
+    $noIds["rows"] === 500 && $noIds["complete"] === false);
 
 $totals = sales_totals($orderRows);
 check("totals count every row", $totals["orders"] === 4);
@@ -153,6 +216,16 @@ check("small slices are merged into one 'other' slice", count($slices) === 3);
 check("the merged slice keeps the total", array_sum($slices) == 1250);
 check("the biggest slice is first", array_keys($slices)[0] === "payos");
 check("a missing method lands in 'other'", isset(sales_slices(array(array("method" => "", "amount" => 5)), "method", "amount")["Khác"]));
+$collision = sales_slices(array(
+    array("method" => "payos", "amount" => 700),
+    array("method" => "bank", "amount" => 200),
+    array("method" => "Khác", "amount" => 50),
+    array("method" => "momo", "amount" => 30),
+    array("method" => "crypto", "amount" => 20),
+), "method", "amount", 3);
+check("a real slice named 'Khác' is not overwritten by the merged remainder",
+    $collision["Khác"] == 100);
+check("…and the donut still holds the whole ledger", array_sum($collision) == 1000);
 check("percentages never divide by zero", sales_percent(10, 0) == 0.0);
 check("percentages are rounded to whole numbers by default", sales_percent(1, 3) == 33.0);
 check("percentages can keep decimals", sales_percent(1, 3, 2) == 33.33);
@@ -161,19 +234,43 @@ check("percentages can keep decimals", sales_percent(1, 3, 2) == 33.33);
 
 check("a plain value is unchanged", sales_csv_cell("Netflix") === "Netflix");
 $formula = sales_csv_cell('=HYPERLINK("http://evil")');
-check("a formula in a quoted cell is neutralised (apostrophe precedes the formula)", strpos($formula, "\"'=") === 0);
+check("a formula cell starts with the neutralising apostrophe", strpos($formula, "'=") === 0);
 check("a plus formula is neutralised", strpos(sales_csv_cell("+1+1"), "'+1+1") === 0);
 check("a formula with a leading space is still neutralised", strpos(sales_csv_cell("  =SUM(A1:A9)"), "'") === 0);
 check("a pipe/cmd formula is neutralised", strpos(sales_csv_cell("|cmd"), "'") === 0);
 check("a minus formula is neutralised", strpos(sales_csv_cell("-2+3"), "'-2+3") === 0);
 check("a negative amount stays a plain number (sortable in a spreadsheet)", sales_csv_cell("-500.00") === "-500.00");
 check("a positive amount stays a plain number", sales_csv_cell("1234.5") === "1234.5");
-check("a value with a comma is quoted", sales_csv_cell("a,b") === '"a,b"');
-check("a value with a quote is quoted and doubled", sales_csv_cell('say "hi"') === '"say ""hi"""');
-check("a value with a semicolon is quoted", sales_csv_cell("a;b") === '"a;b"');
+check("quoting is left to the writer (comma)", sales_csv_cell("a,b") === "a,b");
+check("quoting is left to the writer (quote)", sales_csv_cell('say "hi"') === 'say "hi"');
+check("quoting is left to the writer (semicolon)", sales_csv_cell("a;b") === "a;b");
+check("tabs and line breaks cannot start a new row", sales_csv_cell("a\tb\r\nc") === "a b  c");
 $row = sales_csv_row(array("id", "=1+1", "a,b"), ",");
 check("a row keeps three fields (two separators plus the comma inside the quoted value)", substr_count($row, ",") === 3 && strpos($row, "\"a,b\"") !== false);
 check("a formula inside a row is still neutralised", strpos($row, "'=1+1") !== false);
+
+/* The export writes fputcsv(sales_csv_cell(...)): quoted exactly once, and readable back. This is
+   the regression for the double-quoting bug (a cell "a;b" used to reach the file as """a;b"""). */
+$csvHandle = fopen("php://temp", "w+");
+fputcsv($csvHandle, array(sales_csv_cell("a;b"), sales_csv_cell('say "hi"'), sales_csv_cell("plain")), ";");
+rewind($csvHandle);
+$written = (string) stream_get_contents($csvHandle);
+fclose($csvHandle);
+$roundTrip = str_getcsv(rtrim($written, "\r\n"), ";", '"', "\\");
+check("fputcsv quotes a semicolon cell exactly once",
+    $roundTrip === array("a;b", 'say "hi"', "plain"));
+check("the value is not enclosed twice (the old bug wrote \"\"\"a;b\"\"\")",
+    strpos($written, '"""a;b"""') === false && strpos($written, '"a;b"') === 0);
+
+/* A cell that looks like a formula survives the same round-trip as text. */
+$csvHandle = fopen("php://temp", "w+");
+fputcsv($csvHandle, array(sales_csv_cell("=SUM(A1:A9)")), ";");
+rewind($csvHandle);
+$written = (string) stream_get_contents($csvHandle);
+fclose($csvHandle);
+$roundTrip = str_getcsv(rtrim($written, "\r\n"), ";", '"', "\\");
+check("a formula reaches the spreadsheet as an apostrophe-prefixed string",
+    $roundTrip[0] === "'=SUM(A1:A9)");
 
 /* ------------------------------------------------------------------- SQL */
 
@@ -200,6 +297,15 @@ check("deposits are filtered by a numeric timestamp", strpos($deposits, "`create
 check("virtual deposits are excluded", strpos($deposits, "`is_virtual` = 0") !== false);
 check("deposits are grouped by method", strpos($deposits, "GROUP BY `method`") !== false);
 
+$newUsers = sales_sql_new_users("2026-09-01", "2026-09-30");
+check("new users are read from create_date, the column registration writes — not create_gettime",
+    strpos($newUsers, "`create_date`") !== false && strpos($newUsers, "create_gettime") === false);
+check("new-user bounds use the shop's Y/m/d time format",
+    strpos($newUsers, "'2026/09/01 00:00:00'") !== false && strpos($newUsers, "'2026/09/30 23:59:59'") !== false);
+$badNewUsers = sales_sql_new_users("2026-09-01' OR 1=1 --", "not-a-date");
+check("a hostile new-users date cannot reach SQL",
+    strpos($badNewUsers, "OR 1=1") === false && strpos($badNewUsers, "1970/01/01") !== false);
+
 /* ------------------------------------------- schema identifiers really exist */
 
 $root = dirname(__DIR__);
@@ -214,7 +320,7 @@ foreach (array("install.php", "views/admin/product-orders.php", "views/client/pr
 $required = array(
     "product_order" => array("cost", "product_name", "product_id", "amount", "pay", "cost", "create_gettime", "buyer", "refund", "trash", "trans_id"),
     "deposit_log" => array("method", "amount", "received", "create_time", "is_virtual"),
-    "users" => array("id", "username", "email", "admin"),
+    "users" => array("id", "username", "email", "admin", "create_date"),
 );
 $missing = array();
 foreach ($required as $table => $columns) {

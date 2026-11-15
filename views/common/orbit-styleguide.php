@@ -34,7 +34,10 @@ $orbit = array(
         . 'document.querySelectorAll("[data-theme-toggle]").forEach(function(o){o.classList.toggle("is-active",o===b);});});});'
         . 'document.querySelectorAll("[data-copy]").forEach(function(b){b.addEventListener("click",function(){'
         . 'var i=b.parentNode.querySelector("input");if(!i)return;i.select();if(navigator.clipboard)navigator.clipboard.writeText(i.value);'
-        . 'b.textContent="Copied";window.setTimeout(function(){b.textContent="Copy";},1500);});});})();</script>',
+        . 'b.textContent="Copied";window.setTimeout(function(){b.textContent="Copy";},1500);});});})();</script>'
+        /* The table section advertises sorting/filtering; without this file its buttons did nothing. */
+        . '<script defer src="' . BASE_URL("public/client/orbit/table.js") . '?v='
+        . orbit_shell_asset_version("public/client/orbit/table.js") . '"></script>',
 );
 orbit_shell_open($orbit);
 orbit_chart_assets();

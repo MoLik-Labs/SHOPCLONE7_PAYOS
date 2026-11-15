@@ -57,7 +57,11 @@ foreach ($series as $entry) {
 }
 
 $orderRows = $CMSNT->get_list(sales_sql_orders($period["from"], $period["to"], 500));
-$topProducts = sales_top_products($orderRows, 8);
+/* Rank over the whole window in SQL: the newest 500 rows above are a sample, not the period. */
+$topProducts = sales_product_rows(
+    $CMSNT->get_list(sales_sql_top_products($period["from"], $period["to"], 8)),
+    $current["revenue"]
+);
 $topCustomers = $CMSNT->get_list(sales_sql_top_customers($period["from"], $period["to"], 8));
 $depositRows = $CMSNT->get_list(sales_sql_deposits_by_method($period["from"], $period["to"]));
 $depositSlices = array();
@@ -80,8 +84,7 @@ $depositSlices = sales_slices(
 );
 
 $userCount = $CMSNT->get_row(sales_sql_counts()["users"]);
-$newUsers = $CMSNT->get_row("SELECT COUNT(`id`) AS total FROM `users` WHERE `admin` = 0 AND `create_gettime` >= '"
-    . $period["from"] . " 00:00:00' AND `create_gettime` <= '" . $period["to"] . " 23:59:59'");
+$newUsers = $CMSNT->get_row(sales_sql_new_users($period["from"], $period["to"]));
 $newUsersCount = $newUsers && isset($newUsers["total"]) ? (int) $newUsers["total"] : 0;
 $allUsers = $userCount && isset($userCount["total"]) ? (int) $userCount["total"] : 0;
 
@@ -143,17 +146,33 @@ if ($export === "csv") {
     fputcsv($out, array(), ";");
     fputcsv($out, array("Đơn hàng trong kỳ"), ";");
     fputcsv($out, array("Mã đơn", "Khách", "Sản phẩm", "Số lượng", "Thanh toán", "Chi phí", "Lợi nhuận", "Thời gian"), ";");
-    foreach ($orderRows as $row) {
-        fputcsv($out, array(
-            sales_csv_cell($row["trans_id"]),
-            (int) $row["buyer"],
-            sales_csv_cell($row["product_name"]),
-            (int) $row["amount"],
-            (float) $row["pay"],
-            (float) $row["cost"],
-            (float) $row["pay"] - (float) $row["cost"],
-            sales_csv_cell($row["create_gettime"]),
-        ), ";");
+    /*
+     * Every order in the window, page by page. The old loop wrote the 500 rows fetched for the
+     * on-screen table, so a busy period produced a file that looked complete but was not.
+     */
+    $orderExport = sales_each_order(
+        function ($sql) use ($CMSNT) {
+            return $CMSNT->get_list($sql);
+        },
+        $period["from"],
+        $period["to"],
+        function ($row) use ($out) {
+            fputcsv($out, array(
+                sales_csv_cell($row["trans_id"]),
+                (int) $row["buyer"],
+                sales_csv_cell($row["product_name"]),
+                (int) $row["amount"],
+                (float) $row["pay"],
+                (float) $row["cost"],
+                (float) $row["pay"] - (float) $row["cost"],
+                sales_csv_cell($row["create_gettime"]),
+            ), ";");
+        }
+    );
+    fputcsv($out, array("Tổng cộng", (int) $orderExport["rows"], "đơn"), ";");
+    if (!$orderExport["complete"]) {
+        fputcsv($out, array("CẢNH BÁO", "Tệp dừng ở " . (int) $orderExport["rows"]
+            . " đơn vì vượt giới hạn xuất an toàn. Hãy chia kỳ báo cáo thành nhiều khoảng ngắn hơn."), ";");
     }
     fclose($out);
     exit;
@@ -417,7 +436,7 @@ orbit_chart_assets();
     <div class="card__header">
       <h2 class="card__title">Đơn hàng gần đây</h2>
       <div class="row">
-        <span class="toolbar__count" id="orders-count"></span>
+        <span class="toolbar__count"><?php echo number_format($current["orders"]); ?> đơn trong kỳ</span>
         <a class="btn btn--sm btn--ghost" href="<?php echo base_url_admin("product-orders"); ?>">Tất cả đơn hàng</a>
       </div>
     </div>
@@ -428,7 +447,7 @@ orbit_chart_assets();
           <input class="input" type="search" id="orders-search" placeholder="Mã đơn, sản phẩm, khách…">
         </div>
         <div class="toolbar__spacer"></div>
-        <span class="toolbar__count" id="orders-count-inline" data-template="Hiển thị %shown% / %total% đơn"></span>
+        <span class="toolbar__count" id="orders-count-inline" data-template="Hiển thị %shown% / %total% đơn gần nhất"></span>
       </div>
       <div class="table-wrap">
         <table class="table table--zebra table--sticky table--responsive"

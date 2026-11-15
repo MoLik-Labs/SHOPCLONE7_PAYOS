@@ -201,7 +201,9 @@ if (!function_exists("sales_series")) {
 
 if (!function_exists("sales_top_products")) {
     /**
-     * Group already-fetched order rows by product and rank them.
+     * Group already-fetched order rows by product and rank them. The share of each listed product
+     * is measured against every row passed in (not just the limited slice), so it stays meaningful
+     * when the caller shows only the top few.
      * $rows: array of array("product_name" => …, "product_id" => …, "pay" => …, "cost" => …)
      */
     function sales_top_products($rows, $limit = 10)
@@ -236,14 +238,63 @@ if (!function_exists("sales_top_products")) {
             }
             return $a["revenue"] < $b["revenue"] ? 1 : -1;
         });
-        $products = array_slice($products, 0, $limit);
         $total = 0.0;
         foreach ($products as $product) {
             $total += $product["revenue"];
         }
+        $products = array_slice($products, 0, $limit);
+        /*
+         * Share uses every product in $rows, not just the ones left after the limit. Dividing by
+         * the top N made the column add up to 100% even when the N shown were a small part of sales.
+         */
+        return sales_product_rows($products, $total);
+    }
+}
+
+if (!function_exists("sales_product_rows")) {
+    /**
+     * Normalise product rows that were aggregated in SQL (see sales_sql_top_products()).
+     *
+     * The share is measured against the period's revenue, not just the rows on screen: the previous
+     * version divided by the sum of the top N, so the displayed percentages always added up to 100%
+     * even when those eight products were half of what the shop sold. A period total of 0 falls back
+     * to the sum of the rows, so a caller that has no summary never divides by zero.
+     */
+    function sales_product_rows($rows, $totalRevenue = null)
+    {
+        $products = array();
+        $sum = 0.0;
+        foreach ((array) $rows as $row) {
+            $name = "";
+            if (isset($row["name"])) {
+                $name = trim((string) $row["name"]);
+            } elseif (isset($row["product_name"])) {
+                $name = trim((string) $row["product_name"]);
+            }
+            if ($name === "") {
+                $name = "(không có tên)";
+            }
+            $revenue = isset($row["revenue"]) ? (float) $row["revenue"]
+                : (isset($row["pay"]) ? (float) $row["pay"] : 0.0);
+            $cost = isset($row["cost"]) ? (float) $row["cost"] : 0.0;
+            $products[] = array(
+                "product_id" => isset($row["product_id"]) ? $row["product_id"] : null,
+                "name" => $name,
+                "orders" => isset($row["orders"]) ? (int) $row["orders"] : 0,
+                "quantity" => isset($row["quantity"]) ? (int) $row["quantity"]
+                    : (isset($row["amount"]) ? (int) $row["amount"] : 0),
+                "revenue" => $revenue,
+                "cost" => $cost,
+                "profit" => $revenue - $cost,
+            );
+            $sum += $revenue;
+        }
+        $total = $totalRevenue === null ? $sum : (float) $totalRevenue;
+        if ($total <= 0.0) {
+            $total = $sum;
+        }
         foreach ($products as $index => $product) {
-            $products[$index]["profit"] = $product["revenue"] - $product["cost"];
-            $products[$index]["share"] = $total > 0 ? ($product["revenue"] / $total) * 100 : 0.0;
+            $products[$index]["share"] = $total > 0.0 ? ($product["revenue"] / $total) * 100 : 0.0;
         }
         return $products;
     }
@@ -295,8 +346,13 @@ if (!function_exists("sales_slices")) {
                 $rest += $value;
             }
         }
-        if ($rest > 0) {
-            $slices[$otherLabel] = $rest;
+        if ($rest != 0.0) {
+            /*
+             * Add to an existing slice instead of overwriting it: a deposit method (or a product)
+             * could legitimately be called "Khác", and the old assignment silently replaced its
+             * amount with the remainder, so the donut showed less money than the ledger.
+             */
+            $slices[$otherLabel] = isset($slices[$otherLabel]) ? $slices[$otherLabel] + $rest : $rest;
         }
         return $slices;
     }
@@ -323,11 +379,16 @@ if (!defined("SALES_CSV_RISKY")) {
 
 if (!function_exists("sales_csv_cell")) {
     /**
-     * One CSV cell, safe to open in Excel or Google Sheets.
+     * One CSV cell *value*, safe to open in Excel or Google Sheets.
      *
      * A cell that starts with = + - @ | is a formula to a spreadsheet: a customer named
      * "=HYPERLINK(...)" would execute on the accountant's machine. Prefixing with an apostrophe makes
      * the spreadsheet treat the value as text — the classic CSV-injection fix.
+     *
+     * Quoting is deliberately NOT done here. The writer owns it: fputcsv() quotes exactly once, and
+     * pre-quoting a value here made fputcsv() escape the quotes again, so "a;b" reached the file as
+     * """a;b""" and Excel showed the quote characters. sales_csv_row() is the writer for callers that
+     * do not use fputcsv().
      */
     function sales_csv_cell($value)
     {
@@ -343,18 +404,31 @@ if (!function_exists("sales_csv_cell")) {
             $value = "'" . $value;
         }
         /* Also neutralise tab/CR injection, which some parsers treat as a new row. */
-        $value = str_replace(array("\t", "\r", "\n"), array(" ", " ", " "), $value);
-        if (strpos($value, '"') !== false || strpos($value, ";") !== false || strpos($value, ",") !== false) {
-            return '"' . str_replace('"', '""', $value) . '"';
-        }
-        return $value;
+        return str_replace(array("\t", "\r", "\n"), array(" ", " ", " "), $value);
     }
 }
 
 if (!function_exists("sales_csv_row")) {
+    /**
+     * A complete CSV line for callers that write directly instead of using fputcsv(). Quotes each cell
+     * exactly once (RFC 4180), after sales_csv_cell() has neutralised formula shapes.
+     */
     function sales_csv_row($cells, $delimiter = ",")
     {
-        return implode($delimiter, array_map("sales_csv_cell", (array) $cells));
+        $encoded = array();
+        foreach ((array) $cells as $cell) {
+            $value = sales_csv_cell($cell);
+            $needsQuotes = $delimiter === ""
+                || strpos($value, '"') !== false
+                || strpos($value, $delimiter) !== false
+                || strpos($value, "\r") !== false
+                || strpos($value, "\n") !== false;
+            if ($needsQuotes) {
+                $value = '"' . str_replace('"', '""', $value) . '"';
+            }
+            $encoded[] = $value;
+        }
+        return implode($delimiter, $encoded);
     }
 }
 
@@ -408,7 +482,8 @@ if (!function_exists("sales_sql_by_day")) {
 
 if (!function_exists("sales_sql_orders")) {
     /**
-     * The order rows the dashboard groups in PHP (top products, per-status views, CSV export).
+     * The newest order rows for the on-screen "recent orders" table. Not used for ranking or the
+     * export any more: a bounded newest-first list is not the period (see sales_sql_orders_page()).
      * $limit is clamped, so this can never dump an unbounded table.
      */
     function sales_sql_orders($from, $to, $limit = 200)
@@ -417,6 +492,91 @@ if (!function_exists("sales_sql_orders")) {
         return "SELECT `id`, `trans_id`, `buyer`, `product_id`, `product_name`, `amount`, `pay`, `cost`,"
             . " `create_gettime` FROM `product_order` WHERE " . sales_sql_valid() . " AND " . sales_sql_range($from, $to)
             . " ORDER BY `id` DESC LIMIT " . $limit;
+    }
+}
+
+if (!function_exists("sales_sql_orders_page")) {
+    /**
+     * One page of order rows for a whole-period export, ordered by id and filtered with a keyset
+     * (`id` > last seen) rather than OFFSET. The CSV used to reuse the screen's 500-row query, so a
+     * period with more orders silently exported a fraction of them under a "orders in the period"
+     * heading. Keyset paging keeps every row reachable without loading the table at once.
+     */
+    function sales_sql_orders_page($from, $to, $afterId = 0, $limit = 500)
+    {
+        $afterId = max(0, (int) $afterId);
+        $limit = sales_limit($limit, 500, 1, 2000);
+        return "SELECT `id`, `trans_id`, `buyer`, `product_id`, `product_name`, `amount`, `pay`, `cost`,"
+            . " `create_gettime` FROM `product_order` WHERE " . sales_sql_valid() . " AND " . sales_sql_range($from, $to)
+            . " AND `id` > " . $afterId . " ORDER BY `id` ASC LIMIT " . $limit;
+    }
+}
+
+if (!function_exists("sales_each_order")) {
+    /**
+     * Walk every order in a period, one keyset page at a time, calling $callback for each row.
+     *
+     * $fetch receives a SQL string and returns an array of rows (the shop's get_list). The result says
+     * how many rows were handed over and whether the shop was read to the end. $max is a safety stop:
+     * if a period contains more rows than that, the caller must say so rather than pretend the export
+     * is complete. A page of rows without usable ids also stops instead of looping forever.
+     *
+     * Returns array("rows" => int, "complete" => bool).
+     */
+    function sales_each_order($fetch, $from, $to, $callback, $chunk = 500, $max = 100000)
+    {
+        $chunk = sales_limit($chunk, 500, 1, 2000);
+        $max = sales_limit($max, 100000, 1, 1000000);
+        $afterId = 0;
+        $rows = 0;
+        while ($rows < $max) {
+            $page = call_user_func($fetch, sales_sql_orders_page($from, $to, $afterId, $chunk));
+            if (!is_array($page) || empty($page)) {
+                return array("rows" => $rows, "complete" => true);
+            }
+            foreach ($page as $row) {
+                if ($rows >= $max) {
+                    /* the safety stop is a hard cap, even if a page would push past it */
+                    return array("rows" => $rows, "complete" => false);
+                }
+                call_user_func($callback, $row);
+                $rows++;
+                if (isset($row["id"])) {
+                    $afterId = (int) $row["id"];
+                }
+            }
+            if (count($page) < $chunk) {
+                return array("rows" => $rows, "complete" => true);
+            }
+            if ($afterId <= 0) {
+                /* no ids to page on: stop rather than re-reading the same page forever */
+                return array("rows" => $rows, "complete" => false);
+            }
+        }
+        return array("rows" => $rows, "complete" => false);
+    }
+}
+
+if (!function_exists("sales_sql_top_products")) {
+    /**
+     * Best-selling products over the whole reporting window, ranked by revenue in SQL.
+     *
+     * The dashboard used to rank the 500 newest order rows it had fetched for the "recent orders"
+     * table. On a period with more than 500 orders that ranking was not the period's ranking: a
+     * product that sold heavily earlier in the window could be missing even though its money was in
+     * the revenue KPI. Aggregating in SQL makes the table and the KPI describe the same rows.
+     *
+     * Grouping by product_id merges a product's rows; MAX(product_name) supplies a display name when
+     * the product was renamed (the most recent name is not tracked, so the alphabetically last is used).
+     */
+    function sales_sql_top_products($from, $to, $limit = 8)
+    {
+        $limit = sales_limit($limit, 8, 1, 100);
+        return "SELECT `product_id`, MAX(`product_name`) AS name, COUNT(`id`) AS orders,"
+            . " COALESCE(SUM(`amount`), 0) AS quantity, COALESCE(SUM(`pay`), 0) AS revenue,"
+            . " COALESCE(SUM(`cost`), 0) AS cost"
+            . " FROM `product_order` WHERE " . sales_sql_valid() . " AND " . sales_sql_range($from, $to)
+            . " GROUP BY `product_id` ORDER BY revenue DESC LIMIT " . $limit;
     }
 }
 
@@ -463,6 +623,27 @@ if (!function_exists("sales_sql_counts")) {
             "users" => "SELECT COUNT(`id`) AS total FROM `users` WHERE `admin` = 0",
             "orders_all" => "SELECT COUNT(`id`) AS total FROM `product_order` WHERE " . sales_sql_valid(),
         );
+    }
+}
+
+if (!function_exists("sales_sql_new_users")) {
+    /**
+     * Customers who registered inside the window.
+     *
+     * `users` has no `create_gettime`: the shop writes registration time to `create_date` through
+     * gettime(), which formats it as "Y/m/d H:i:s". The bounds therefore use slashes too, so the
+     * comparison is correct whether the column is DATETIME (MySQL parses the literal) or a string
+     * (byte comparison against the format the shop itself writes).
+     */
+    function sales_sql_new_users($from, $to)
+    {
+        $from = sales_date($from, "1970-01-01");
+        $to = sales_date($to, date("Y-m-d"));
+        $fromStamp = str_replace("-", "/", $from) . " 00:00:00";
+        $toStamp = str_replace("-", "/", $to) . " 23:59:59";
+        return "SELECT COUNT(`id`) AS total FROM `users` WHERE `admin` = 0"
+            . " AND `create_date` >= '" . $fromStamp . "'"
+            . " AND `create_date` <= '" . $toStamp . "'";
     }
 }
 

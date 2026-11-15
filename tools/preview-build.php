@@ -173,6 +173,10 @@ function preview_render($root, $relativeView, array $session, array $get, array 
     $CMSNT = new DB();
     $GLOBALS["CMSNT"] = $CMSNT;
 
+    /* Each page is a separate request in production, but this process renders all of them: reset the
+       once-per-request chart asset guard, or only the first page links chart.js. */
+    orbit_chart_assets(true);
+
     ob_start();
     include $root . "/" . $relativeView;
     return ob_get_clean();
@@ -301,18 +305,27 @@ echo "wrote index.html\n";
    disk, or the preview opens broken for whoever receives it. */
 $references = array();
 foreach (glob($outDir . "/*.html") as $page) {
-    if (preg_match_all('~(?:href|src)="(assets/[^"?#]+)"~i', (string) file_get_contents($page), $matches)) {
+    if (preg_match_all('~(?:href|src)="([^"]+)"~i', (string) file_get_contents($page), $matches)) {
         foreach ($matches[1] as $reference) {
-            $references[$reference] = true;
+            /* Every asset-looking URL is checked, not only the ones that start with assets/: the
+               first check only looked at assets/… and therefore blessed a page whose stylesheets
+               were inert "#preview-…" anchors. */
+            $path = preg_split('/[?#]/', $reference);
+            $path = $path[0];
+            if (!preg_match('#\.(css|js|json|png|jpe?g|svg|webp|gif|woff2?|ico)$#i', $path)) {
+                continue; /* a link to a shop route, not an asset */
+            }
+            if (preg_match('#^(https?:)?//#i', $reference) || stripos($reference, 'data:') === 0) {
+                continue; /* external/self-contained by design; the preview itself never requests it */
+            }
+            $references[$reference] = $path;
         }
     }
 }
 $missing = array();
-foreach (array_keys($references) as $reference) {
-    if (!preg_match('#\.(css|js|json|png|jpe?g|svg|webp|gif|woff2?|ico)$#i', $reference)) {
-        continue; /* a link to a shop route, not an asset */
-    }
-    if (!is_file($outDir . "/" . $reference)) {
+foreach ($references as $reference => $path) {
+    $local = ltrim($path, "/");
+    if ($local === "" || $local[0] === "#" || !is_file($outDir . "/" . $local)) {
         $missing[] = $reference;
     }
 }

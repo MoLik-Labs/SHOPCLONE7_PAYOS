@@ -53,7 +53,7 @@ if(!empty($_GET["api_transid"])) {
     $where .= " AND `api_transid` LIKE \"%" . $api_transid . "%\" ";
 }
 if(!empty($_GET["supplier_id"])) {
-    $supplier_id = check_string($_GET["supplier_id"]);
+    $supplier_id = (int) check_string($_GET["supplier_id"]); /* it is an id; keep the filter numeric */
     $where .= " AND `supplier_id` = \"" . $supplier_id . "\" ";
 }
 if(!empty($_GET["username"])) {

@@ -135,10 +135,13 @@ class DB
             return $f["current"];
         }
         if (strpos($sql, "FROM `users`") !== false && strpos($sql, "COUNT(`id`) AS total") !== false) {
-            return array("total" => $f["user_total"]);
-        }
-        if (strpos($sql, "FROM `users`") !== false && strpos($sql, "COUNT(`id`) AS total") !== false) {
-            return array("total" => $f["new_users"]);
+            /* Two different counters share this projection: the all-time total and the window's new
+               users. The window query is the one filtered by create_date. (The branch below used to
+               repeat the same condition, so the new-users fixture was dead and the KPI silently
+               asserted the all-time number twice.) */
+            return strpos($sql, "`create_date`") !== false
+                ? array("total" => $f["new_users"])
+                : array("total" => $f["user_total"]);
         }
         return false;
     }
@@ -155,6 +158,9 @@ class DB
         }
         if (strpos($sql, "LEFT JOIN `users`") !== false) {
             return $f["top_customers"];
+        }
+        if (strpos($sql, "GROUP BY `product_id`") !== false) {
+            return $f["top_products"];
         }
         if (strpos($sql, "FROM `product_order`") !== false) {
             /* Both projections contain `buyer`; the admin one also selects `product_id`,
@@ -226,6 +232,12 @@ DB::$fixtures = array(
     ),
     "user_total" => 42,
     "new_users" => 5,
+    "top_products" => array(
+        array("product_id" => 5, "name" => "Netflix 1 tháng", "orders" => 2, "quantity" => 4,
+            "revenue" => 400000, "cost" => 280000),
+        array("product_id" => 6, "name" => "Spotify 1 tháng", "orders" => 1, "quantity" => 2,
+            "revenue" => 300000, "cost" => 200000),
+    ),
     "mine_total" => 3,
     "mine_summary" => array("orders" => 3, "revenue" => 700000, "cost" => 480000),
     "mine_by_day" => array(array("day" => $today, "orders" => 2, "revenue" => 400000, "cost" => 280000)),
@@ -263,6 +275,10 @@ check("growth versus the previous period is shown", strpos($adminHtml, "50,0%") 
 check("the average order value is derived", strpos($adminHtml, "300.000đ") !== false);
 check("the all-time block is present", strpos($adminHtml, "27.000.000đ") !== false);
 check("the customer page total is not shown for admin", strpos($adminHtml, "Khách mới / tổng") !== false);
+check("the new-user KPI comes from the window query, not the all-time count",
+    strpos($adminHtml, ">5 <span") !== false && strpos($adminHtml, "/ 42") !== false);
+check("the recent-orders header states the period's order count",
+    strpos($adminHtml, "12 đơn trong kỳ") !== false);
 
 /* charts */
 check("the revenue chart is rendered", strpos($adminHtml, 'class="chart__canvas"') !== false);
@@ -276,6 +292,12 @@ check("the day labels reach the chart", strpos($adminHtml, $today) !== false);
 check("the product ranking is computed from the orders", strpos($adminHtml, "Sản phẩm bán chạy") !== false);
 check("Netflix ranks above Spotify", strpos($adminHtml, "Netflix 1 tháng") < strpos($adminHtml, "Spotify 1 tháng"));
 check("per-product order counts are shown", strpos($adminHtml, 'data-sort-value="2"') !== false);
+check("the best-seller rows carry the SQL aggregates", strpos($adminHtml, ">2</td>") !== false
+    && strpos($adminHtml, ">4</td>") !== false);
+check("the share column is measured against the period revenue, not the shown rows",
+    strpos($adminHtml, "11,1%") !== false && strpos($adminHtml, "8,3%") !== false);
+check("the ranking was aggregated over the whole window in SQL",
+    strpos(implode("\n", DB::$log), "GROUP BY `product_id`") !== false);
 check("the top customer list is rendered", strpos($adminHtml, "alice") !== false);
 check("the deposit table is rendered", strpos($adminHtml, "payOS") !== false);
 check("the CSV export link is offered", strpos($adminHtml, "export=csv") !== false);
@@ -316,6 +338,7 @@ DB::$fixtures["previous"] = array("orders" => 0, "revenue" => 0, "cost" => 0);
 DB::$fixtures["all_time"] = array("orders" => 0, "revenue" => 0, "cost" => 0);
 DB::$fixtures["by_day"] = array();
 DB::$fixtures["orders"] = array();
+DB::$fixtures["top_products"] = array();
 DB::$fixtures["top_customers"] = array();
 DB::$fixtures["deposits"] = array();
 
@@ -357,6 +380,8 @@ check("…with no PHP error", strpos($mineHtml, "Fatal error") === false && strp
 check("…and no leaked PHP tag", strpos($mineHtml, "<?php") === false);
 check("the customer's own spend is shown", strpos($mineHtml, "700.000đ") !== false);
 check("the customer's wallet balance is shown", strpos($mineHtml, "250.000đ") !== false);
+check("the orders card counts the rows instead of leaving an empty JS-only slot",
+    strpos($mineHtml, 'toolbar__count">3 đơn') !== false);
 check("the customer sees their own orders", strpos($mineHtml, "ORD103") !== false && strpos($mineHtml, "ORD101") !== false);
 check("another buyer's order is not on the page", strpos($mineHtml, "ORD102") === false);
 check("the favourite product is derived from their rows", strpos($mineHtml, "Netflix 1 tháng") !== false);

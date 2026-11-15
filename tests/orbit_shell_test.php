@@ -104,6 +104,9 @@ check("no third-party request appears in the shell head", strpos($head, "cdn") =
 
 /* --- footer --------------------------------------------------------------- */
 check("the footer prints the provided links only", strpos($foot, "https://t.me/example") !== false && strpos($foot, "facebook") === false);
+check("the footer repeats the shell's brand instead of a page label",
+    preg_match('#topbar__brand[^>]*>([^<]+)<#u', $head, $m) === 1
+    && strpos($foot, ">" . trim($m[1]) . "<") !== false);
 check("page-owned scripts are passed through raw", strpos($foot, 'src="https://shop.example/x.js"') !== false);
 check("the document is closed once", substr_count($foot, "</html>") === 1);
 check("the footer closes what open() opened", strpos($foot, "</main>") !== false && strpos($foot, "</body>") !== false);

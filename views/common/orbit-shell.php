@@ -101,7 +101,10 @@ if (!function_exists("orbit_shell_open")) {
     function orbit_shell_open($overrides = array())
     {
         $o = orbit_shell_config($overrides);
-        $base = BASE_URL("public/client/orbit/");
+        /* One BASE_URL() call per file, not a directory prefix concatenated with a filename: URL
+           builders are allowed to treat a directory as a route, and a tooling stub (the static
+           preview) then turned every stylesheet into an inert "#preview-…" anchor. A full path that
+           ends in .css is unambiguous for every builder. */
         $styles = array("tokens.css", "base.css", "components.css", "shell.css");
         $title = trim((string) $o["title"]);
         $image = (string) $o["image"];
@@ -133,8 +136,10 @@ if (!function_exists("orbit_shell_open")) {
 <?php } ?>
 <?php if ($favicon !== "") { ?><link rel="icon" href="<?php echo orbit_shell_text($favicon); ?>">
 <?php } ?>
-<?php foreach ($styles as $file) { ?>
-<link rel="stylesheet" href="<?php echo $base . $file; ?>?v=<?php echo orbit_shell_asset_version("public/client/orbit/" . $file); ?>">
+<?php foreach ($styles as $file) {
+    $relative = "public/client/orbit/" . $file;
+    ?>
+<link rel="stylesheet" href="<?php echo orbit_shell_text(BASE_URL($relative) . "?v=" . orbit_shell_asset_version($relative)); ?>">
 <?php } ?>
 <?php
         /* The CMS header/footer blocks are raw HTML owned by the shop: print them unchanged. */

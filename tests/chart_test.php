@@ -115,6 +115,25 @@ check("zero slices are dropped from the ring", count($mixed["slices"]) === 2);
 check("a dropped slice is not counted in the total", near($mixed["total"], 40));
 check("the total is the sum of positive values, not the array length", near($mixed["total"], 40));
 
+/* A last slice this small rounds its start to exactly 360°. It used to be rewritten to start 0,
+   which gave it a full 360° sweep and painted it over every other slice. */
+$sliver = chart_donut(array("Almost all" => 99.9999, "A sliver" => 0.0001));
+$lastSlice = $sliver["slices"][count($sliver["slices"]) - 1];
+check("a rounded-to-360 last slice starts before it ends",
+    $lastSlice["start"] < $lastSlice["end"]);
+check("a rounded-to-360 last slice is a hairline, not a second full ring",
+    $lastSlice["start"] >= 359 && $lastSlice["end"] === 360.0);
+check("the sliver keeps a positive sweep", $lastSlice["end"] - $lastSlice["start"] > 0);
+
+/* The payload's separators must match number_format(..., ",", ".") used by the server table. */
+$separators = chart_payload(array("type" => "bar", "labels" => array("a"), "series" => array(array("values" => array(1)))));
+check("payload decimal separator matches the server format", $separators["decimal"] === ",");
+check("payload thousands separator matches the server format", $separators["thousands"] === ".");
+check("a caller can still override the separators", chart_payload(array(
+    "type" => "bar", "labels" => array("a"), "series" => array(array("values" => array(1))),
+    "decimal" => ".", "thousands" => ",",
+))["thousands"] === ",");
+
 /* ------------------------------------------------------------------- stats */
 
 $stats = chart_series_stats(array(10, 20, 30));
