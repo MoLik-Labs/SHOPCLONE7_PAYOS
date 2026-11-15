@@ -150,6 +150,13 @@ function generate_csrf_token()
     }
     return $_SESSION["csrf_token"];
 }
+function verify_csrf_token($token)
+{
+    /* hash_equals: constant-time, and a missing session token is always a failure. */
+    return isset($_SESSION["csrf_token"]) && is_string($_SESSION["csrf_token"])
+        && is_string($token) && $token !== ""
+        && hash_equals($_SESSION["csrf_token"], $token);
+}
 function display_camp($status)
 {
     if($status == 0) {

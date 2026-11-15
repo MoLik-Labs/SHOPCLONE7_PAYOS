@@ -4,6 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 include_once __DIR__ . "/../vendor/autoload.php";
+require_once __DIR__ . "/settings_cache.php";
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . "/../");
 $dotenv->load();
 session_start();
@@ -25,9 +26,31 @@ class DB
     }
     public function site($data)
     {
-        $this->connect();
-        $row = $this->ketnoi->query("SELECT * FROM `settings` WHERE `name` = '" . $data . "' ")->fetch_array();
-        return $row["value"];
+        $key = (string) $data;
+        /* One query per distinct setting per request instead of one query per read. Writes to the
+           settings table flush this cache (see update()/insert()/remove()). */
+        return $this->site_cache()->remember($key, function () use ($key) {
+            $this->connect();
+            $result = $this->ketnoi->query("SELECT * FROM `settings` WHERE `name` = '" . $key . "' ");
+            $row = $result ? $result->fetch_array() : null;
+            return ($row && isset($row["value"])) ? $row["value"] : "";
+        });
+    }
+
+    private static $site_cache_shared = null;
+
+    private function site_cache()
+    {
+        if (self::$site_cache_shared === null) {
+            self::$site_cache_shared = new SettingsCache();
+        }
+        return self::$site_cache_shared;
+    }
+
+    /** Public hook for long-running workers and tests; a normal request never needs it. */
+    public function flush_site_cache()
+    {
+        $this->site_cache()->flush();
     }
     public function query($sql)
     {
@@ -57,7 +80,11 @@ class DB
             $value_list .= ",'" . mysqli_real_escape_string($this->ketnoi, $value) . "'";
         }
         $sql = "INSERT INTO " . $table . "(" . trim($field_list, ",") . ") VALUES (" . trim($value_list, ",") . ")";
-        return mysqli_query($this->ketnoi, $sql);
+        $result = mysqli_query($this->ketnoi, $sql);
+        if ($table === "settings") {
+            $this->site_cache()->flush();
+        }
+        return $result;
     }
     public function update($table, $data, $where)
     {
@@ -67,7 +94,11 @@ class DB
             $sql .= $key . " = '" . mysqli_real_escape_string($this->ketnoi, $value) . "',";
         }
         $sql = "UPDATE " . $table . " SET " . trim($sql, ",") . " WHERE " . $where;
-        return mysqli_query($this->ketnoi, $sql);
+        $result = mysqli_query($this->ketnoi, $sql);
+        if ($table === "settings") {
+            $this->site_cache()->flush();
+        }
+        return $result;
     }
     public function update_value($table, $data, $where, $value1)
     {
@@ -83,7 +114,11 @@ class DB
     {
         $this->connect();
         $sql = "DELETE FROM " . $table . " WHERE " . $where;
-        return mysqli_query($this->ketnoi, $sql);
+        $result = mysqli_query($this->ketnoi, $sql);
+        if ($table === "settings") {
+            $this->site_cache()->flush();
+        }
+        return $result;
     }
     public function get_list($sql)
     {

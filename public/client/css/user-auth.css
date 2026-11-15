@@ -228,3 +228,47 @@
         margin: 50px 0px
     }
 }
+/* Social sign-in (Google/GitHub). Neutral so it inherits any client theme. */
+.oauth-buttons {
+    margin-top: 18px
+}
+
+.oauth-buttons__divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 14px;
+    color: #8a8f98;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .04em
+}
+
+.oauth-buttons__divider::before,
+.oauth-buttons__divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border, #e6e8ec)
+}
+
+.oauth-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 46px;
+    font-weight: 600
+}
+
+.oauth-button svg {
+    flex: none
+}
+
+.oauth-button span {
+    line-height: 1.2
+}
+
+.oauth-alert {
+    margin-bottom: 16px
+}

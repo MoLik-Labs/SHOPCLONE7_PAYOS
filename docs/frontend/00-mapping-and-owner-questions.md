@@ -1,7 +1,7 @@
 # Frontend reconciliation — mapping table and owner questions
 
 **Status: the shop-page rebuild is still gated; the surrounding work is built.** Round 2 resolved the
-*approach* (see §8). Rounds 4–7 then answered the remaining questions and produced, with the owner's
+*approach* (see §8). Rounds 4–8 then answered the remaining questions and produced, with the owner's
 go-ahead, the pieces that need no brand or copy: the design system, shell, music player, the licence client
 and the round-7 sales-tracking layer (recorded in `08`, `09` and `10`). What this document blocks is the
 **per-page rebuild of the shop itself** — the five supplied prompts are **not** combined, guessed at, or
@@ -234,3 +234,4 @@ contact details, products, CTAs).
 | 5 | licence data on Neon free Postgres (one connection URL); portal accounts owner-created; free HWID reset cool-down 30 days; shop-side licence client next; admin-editable support/sales links | `03` §8, `04`, `05`–`07` |
 | 6 | build the content-free design system + shell now; source protection level 4 (free hygiene) only; hybrid design direction; music = direct extracted audio URLs | `08`, `09` |
 | 7 | polish and complete what feels unfinished, for **both** admin and user, **with sales tracking and visually appealing tables and charts** | `10` |
+| 8 | Round-8 brief (translated): go deeper on **performance and security**; add **Google/GitHub login through Supabase** with setup inside admin Settings; make the project properly professional | `11` |
