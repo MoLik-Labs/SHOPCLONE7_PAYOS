@@ -148,12 +148,12 @@ Harness: PHP 7.4 WASM, checkout mounted at `/app`, tests wrapped only to provide
 
 ```
 node /home/user/harness/batch.mjs /home/user/SHOPCLONE7_PAYOS /tmp/sweep_new.json
-=== LINT 215 files ===
-LINT 215 files, 0 parse errors
+=== LINT 277 files ===
+LINT 277 files, 0 parse errors
 settings_cache_test: 15 passed, 0 failed
 oauth_pages_test: 33 passed, 0 failed
 oauth_test: 120 passed, 0 failed
-=== SUMMARY: 3 runs, 0 harness-level failures ===
+=== SUMMARY: 15 runs, 0 harness-level failures ===   (863 assertions)
 ```
 
 `oauth_test.php` (120) covers the RFC 7636 vector, PKCE randomness, URL/key refusal list, one-query
