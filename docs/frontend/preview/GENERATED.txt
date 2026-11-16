@@ -2,9 +2,10 @@ Orbit — static UI preview (generated)
 =====================================
 
 Built by: php tools/preview-build.php
-Built at: 2026-11-16 12:24 UTC
+Built at: 2026-11-16 12:26 UTC
 
-Contents: index.html, sales.html (admin), purchase-history.html (buyer), styleguide.html, assets/.
+Contents: index.html, home.html (storefront home), sales.html (admin), purchase-history.html (buyer),
+styleguide.html, assets/, and the review screenshots (*.png).
 Every page is rendered from the same code the shop runs, with SAMPLE data — there is no real customer,
 order or balance in this folder, no database behind it, and no network call made by it. Route links are
 inert (#preview-…) on purpose. The music player is shown but never plays.
