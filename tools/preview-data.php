@@ -98,6 +98,9 @@ class DB
             }
             return false;
         }
+        if (strpos($sql, "FROM `payment_manual`") !== false) {
+            return $f["payment_manual"];
+        }
         if (strpos($sql, "FROM `product_sold`") !== false && strpos($sql, "COUNT(") !== false) {
             return array("total" => count($f["order_accounts"]));
         }
@@ -426,6 +429,17 @@ if (!function_exists("preview_fixtures")) {
             "store_total" => 8,
             "new_users" => 23,
             "mine_total" => count($mineOrders),
+            "payment_manual" => array("id" => 3, "slug" => "bank", "display" => 1,
+                "title" => "Chuyển khoản ngân hàng",
+                "description" => "Hướng dẫn chuyển khoản và xác nhận số dư",
+                "content" => base64_encode(
+                    "<p><strong>Ngân hàng:</strong> Vietcombank — Chi nhánh Sài Gòn</p>"
+                    . "<p><strong>Số tài khoản:</strong> 0000 1111 2222 3333</p>"
+                    . "<p><strong>Chủ tài khoản:</strong> ORBIT OFFICE</p>"
+                    . "<p><strong>Nội dung chuyển khoản:</strong> {username} - {id}</p>"
+                    . "<p>Ghi đúng nội dung để hệ thống đối chiếu. Sau khi chuyển, gửi ảnh giao dịch cho "
+                    . "<a href=\"mailto:{email}\">{email}</a> nếu số dư chưa cập nhật trong 15 phút.</p>"
+                )),
             "order_accounts" => array(
                 array("id" => 1, "trans_id" => $mineOrders[0]["trans_id"], "uid" => "NF-001",
                     "account" => "preview01@orbit.example|mat-khau-mau-1"),

@@ -324,6 +324,20 @@ $pages["recharge.html"] = array(
         array("module" => "client", "action" => "recharge-bank"), $fixtures),
 );
 
+/* 6d. the owner's manual instructions and the closed GachtheFast channel */
+putenv("PAYOS_ENABLED=false"); /* the manual page defers to payOS when it is on */
+$pages["recharge-manual.html"] = array(
+    "title" => "Nạp tiền thủ công — bản xem trước",
+    "html" => preview_render($root, "views/client/recharge-manual.php", array("login" => "tok"),
+        array("module" => "client", "action" => "recharge-manual", "slug" => "bank"), $fixtures),
+);
+putenv("PAYOS_ENABLED=true");
+$pages["recharge-gtf-bank.html"] = array(
+    "title" => "Nạp tiền ngân hàng GachtheFast (đang đóng) — bản xem trước",
+    "html" => preview_render($root, "views/client/recharge-gtf-bank.php", array("login" => "tok"),
+        array("module" => "client", "action" => "recharge-gtf-bank"), $fixtures),
+);
+
 /* 7. the styleguide (design system reference) */
 $pages["styleguide.html"] = array(
     "title" => "Orbit design system — bản xem trước",
@@ -452,6 +466,12 @@ $index = '<!doctype html><html lang="vi" data-theme="light"><head><meta charset=
     . '<a class="card card--interactive preview-tile" href="recharge.html">'
     . '<h3>Nạp tiền qua payOS</h3>'
     . '<p class="small muted">Số dư, số tiền trong giới hạn, ba bước thanh toán, trạng thái giao dịch và lịch sử nạp.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="recharge-manual.html">'
+    . '<h3>Nạp tiền thủ công</h3>'
+    . '<p class="small muted">Hướng dẫn do quản trị nhập, điền sẵn tên đăng nhập và mã khách vào nội dung chuyển khoản.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="recharge-gtf-bank.html">'
+    . '<h3>Kênh GachtheFast (đóng)</h3>'
+    . '<p class="small muted">Trang giải thích vì sao kênh ngân hàng chưa dùng được và lối sang phương thức khác.</p></a>'
     . '<a class="card card--interactive preview-tile" href="styleguide.html">'
     . '<h3>Design system</h3>'
     . '<p class="small muted">Màu, chữ, nút, biểu mẫu, thẻ KPI, bảng, phân trang, timeline, '

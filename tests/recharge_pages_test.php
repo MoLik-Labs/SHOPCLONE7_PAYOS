@@ -87,10 +87,16 @@ class RechargeStub
 {
     public $user;
 
+    public $manual;
+
     public function __construct()
     {
         $this->user = array("id" => 7, "username" => "khachhang7", "token" => "tok", "money" => 250000,
             "banned" => 0, "token_forgot_password" => null);
+        $this->manual = array("id" => 3, "slug" => "bank", "title" => "Chuyển khoản ngân hàng",
+            "description" => "Hướng dẫn chuyển khoản", "display" => 1,
+            "content" => base64_encode("<p>Chuyển tới STK 0000 1111 2222.</p>"
+                . "<p>Nội dung: {username} - {id}</p>"));
     }
 
     public function site($key)
@@ -107,7 +113,13 @@ class RechargeStub
 
     public function get_row($sql)
     {
-        return strpos($sql, "FROM `users`") !== false ? $this->user : false;
+        if (strpos($sql, "FROM `users`") !== false) {
+            return $this->user;
+        }
+        if (strpos($sql, "FROM `payment_manual`") !== false) {
+            return $this->manual;
+        }
+        return false;
     }
 
     public function get_list($sql)
@@ -198,6 +210,50 @@ check("no PHP warning reached the page", $warnings === array());
 if ($warnings) {
     echo "  warnings: " . implode(" | ", $warnings) . "\n";
 }
+
+/* --- manual instructions ------------------------------------------------- */
+
+echo "\nrecharge (manual instructions)\n";
+$_GET = array("module" => "client", "action" => "recharge-manual", "slug" => "bank");
+$warnings = array();
+set_error_handler(function ($severity, $message, $file, $line) use (&$warnings) {
+    $warnings[] = $message . " @ " . basename($file) . ":" . $line;
+    return true;
+});
+ob_start();
+include __DIR__ . "/../views/client/recharge-manual.php";
+$manualHtml = ob_get_clean();
+restore_error_handler();
+
+check("the owner's title becomes the page heading", strpos($manualHtml, ">Chuyển khoản ngân hàng<") !== false);
+check("the owner's instructions are printed", strpos($manualHtml, "STK 0000 1111 2222") !== false);
+check("placeholders are filled with the real buyer", strpos($manualHtml, "khachhang7 - 7") !== false
+    && strpos($manualHtml, "{username}") === false && strpos($manualHtml, "{id}") === false);
+check("the manual page keeps the balance", strpos($manualHtml, "250.000đ") !== false);
+check("the manual page is on the store shell", strpos($manualHtml, 'data-theme="light"') !== false);
+check("no third-party clipboard script", stripos($manualHtml, "clipboard.min.js") === false
+    && stripos($manualHtml, "cdnjs") === false);
+check("no PHP warning on the manual page", $warnings === array());
+
+/* --- the closed GachtheFast bank channel --------------------------------- */
+
+echo "\nrecharge (GachtheFast bank closed)\n";
+$_GET = array("module" => "client", "action" => "recharge-gtf-bank");
+$warnings = array();
+set_error_handler(function ($severity, $message, $file, $line) use (&$warnings) {
+    $warnings[] = $message . " @ " . basename($file) . ":" . $line;
+    return true;
+});
+ob_start();
+include __DIR__ . "/../views/client/recharge-gtf-bank.php";
+$gtfHtml = ob_get_clean();
+restore_error_handler();
+
+check("the closed channel says it is closed", strpos($gtfHtml, "Chưa khả dụng") !== false
+    && strpos($gtfHtml, "chưa khả dụng") !== false);
+check("it points at another method instead of a dead end", strpos($gtfHtml, "Chọn phương thức khác") !== false);
+check("the closed channel is on the store shell", strpos($gtfHtml, 'data-theme="light"') !== false);
+check("no PHP warning on the closed channel", $warnings === array());
 
 echo "\nrecharge_pages_test: " . $pass . " passed, " . $fail . " failed\n";
 if ($fail > 0) {
