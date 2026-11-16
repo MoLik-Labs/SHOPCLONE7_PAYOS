@@ -19,6 +19,9 @@ if(!isset($_SESSION["login"])) {
     if(!$getUser) {
         redirect(base_url("client/login"));
     }
+    /* One copy for everything that runs after this file: the shell's balance chip reads it, and a view
+       that is re-rendered in the same process (tests, previews) still sees the signed-in user. */
+    $GLOBALS["getUser"] = $getUser;
     if($getUser["banned"] != 0) {
         redirect(base_url("common/banned"));
     }

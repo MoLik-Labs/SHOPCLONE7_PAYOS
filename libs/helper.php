@@ -611,37 +611,48 @@ function format_currency2($amount)
 }
 function format_currency($amount)
 {
+    /* The two currency look-ups are cached for the request: a product grid used to ask the database
+       for the same default-currency row once per price it printed. */
+    static $rows = array();
     $CMSNT = new DB();
     if(isset($_COOKIE["currency"])) {
         $currency = check_string($_COOKIE["currency"]);
-        $rowCurrency = $CMSNT->get_row("SELECT * FROM `currencies` WHERE `id` = '" . $currency . "' AND `display` = 1 ");
+        $cacheKey = "id:" . $currency;
+        if(!array_key_exists($cacheKey, $rows)) {
+            $rows[$cacheKey] = $CMSNT->get_row("SELECT * FROM `currencies` WHERE `id` = '" . $currency . "' AND `display` = 1 ");
+        }
+        $rowCurrency = $rows[$cacheKey];
         if($rowCurrency) {
-            if($rowCurrency["seperator"] == "comma") {
-                $seperator = ",";
-            }
-            if($rowCurrency["seperator"] == "space") {
-                $seperator = "";
-            }
-            if($rowCurrency["seperator"] == "dot") {
-                $seperator = ".";
-            }
-            return $rowCurrency["symbol_left"] . number_format($amount / $rowCurrency["rate"], $rowCurrency["decimal_currency"], ".", $seperator) . $rowCurrency["symbol_right"];
+            return format_currency_row($amount, $rowCurrency);
         }
     }
-    $rowCurrency = $CMSNT->get_row("SELECT * FROM `currencies` WHERE `default_currency` = 1 ");
+    if(!array_key_exists("default", $rows)) {
+        $rows["default"] = $CMSNT->get_row("SELECT * FROM `currencies` WHERE `default_currency` = 1 ");
+    }
+    $rowCurrency = $rows["default"];
     if($rowCurrency) {
-        if($rowCurrency["seperator"] == "comma") {
-            $seperator = ",";
-        }
-        if($rowCurrency["seperator"] == "space") {
-            $seperator = "";
-        }
-        if($rowCurrency["seperator"] == "dot") {
-            $seperator = ".";
-        }
-        return $rowCurrency["symbol_left"] . number_format($amount / $rowCurrency["rate"], $rowCurrency["decimal_currency"], ".", $seperator) . $rowCurrency["symbol_right"];
+        return format_currency_row($amount, $rowCurrency);
     }
     return format_cash($amount) . "đ";
+}
+function format_currency_row($amount, $rowCurrency)
+{
+    $seperator = "";
+    if($rowCurrency["seperator"] == "comma") {
+        $seperator = ",";
+    }
+    if($rowCurrency["seperator"] == "space") {
+        $seperator = "";
+    }
+    if($rowCurrency["seperator"] == "dot") {
+        $seperator = ".";
+    }
+    $rate = (float) $rowCurrency["rate"];
+    if($rate <= 0) {
+        $rate = 1;
+    }
+    $decimals = isset($rowCurrency["decimal_currency"]) ? (int) $rowCurrency["decimal_currency"] : 0;
+    return $rowCurrency["symbol_left"] . number_format($amount / $rate, $decimals, ".", $seperator) . $rowCurrency["symbol_right"];
 }
 function myip()
 {

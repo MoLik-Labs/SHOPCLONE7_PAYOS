@@ -225,6 +225,14 @@
   }
 }
 
+/* A 390px bar fits the brand and the menu button; the recharge button lives in the sheet and on the
+   page itself, so letting it squeeze here only broke its label onto two lines. */
+@media (max-width: 480px) {
+  .topbar__cta {
+    display: none;
+  }
+}
+
 /* --- footer --------------------------------------------------------------- */
 
 .footer {

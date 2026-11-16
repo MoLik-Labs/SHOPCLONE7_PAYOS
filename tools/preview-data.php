@@ -32,6 +32,10 @@ class DB
             "product_hide_outstock" => "0",
             "product_sold_display" => "1",
             "order_by_product_home" => "1",
+            "product_photo_display" => "0",
+            "api_status" => "0",
+            "affiliate_status" => "0",
+            "product_selling" => "1",
             "bank_status" => "1",
             "momo_status" => "0",
             "card_status" => "0",
@@ -107,6 +111,47 @@ class DB
                 }
             }
             return false;
+        }
+        if (strpos($sql, "FROM `categories`") !== false) {
+            if (preg_match("~`id` = '(\d+)'~", $sql, $match)) {
+                foreach ($f["store_categories"] as $category) {
+                    if ((int) $category["id"] === (int) $match[1]) {
+                        return $category;
+                    }
+                }
+            }
+            return false;
+        }
+        if (strpos($sql, "FROM `products`") !== false && strpos($sql, "`slug`") !== false) {
+            foreach ($f["store_products"] as $product) {
+                if (strpos($sql, "'" . $product["slug"] . "'") !== false) {
+                    return $product;
+                }
+            }
+            return false;
+        }
+        if (strpos($sql, "FROM `products`") !== false && preg_match("~`id` = '(\d+)'~", $sql, $match)) {
+            foreach ($f["store_products"] as $product) {
+                if ((int) $product["id"] === (int) $match[1]) {
+                    return $product;
+                }
+            }
+            return false;
+        }
+        if (strpos($sql, "FROM `product_stock`") !== false && strpos($sql, "COUNT(") !== false) {
+            if (preg_match("~`product_code` = '([^']+)'~", $sql, $match)) {
+                foreach ($f["store_stock_rows"] as $row) {
+                    if ($row["product_code"] === $match[1]) {
+                        return array("COUNT(id)" => $row["c"]);
+                    }
+                }
+            }
+            return array("COUNT(id)" => 0);
+        }
+        if (strpos($sql, "FROM `currencies`") !== false) {
+            return array("id" => 1, "name" => "VND", "code" => "VND", "symbol_left" => "",
+                "symbol_right" => "đ", "rate" => 1, "decimal_currency" => 0, "seperator" => "dot",
+                "default_currency" => 1, "display" => 1);
         }
         return false;
     }
@@ -270,6 +315,10 @@ if (!function_exists("preview_fixtures")) {
 
         return array(
             "user" => array("id" => 7, "username" => "khachhang7", "email" => "khach7@example.com", "money" => 250000,
+                "total_money" => 900000, "fullname" => "Khách Hàng 7", "phone" => "0909 000 007",
+                "telegram_chat_id" => "khachhang7", "api_key" => "preview-api-key",
+                "ip" => "203.0.113.7", "device" => "Chrome · macOS",
+                "create_date" => "2025-11-02 09:14:00", "update_date" => "2026-10-01 18:02:00",
                 "admin" => 0, "banned" => 0, "token_forgot_password" => null, "token" => "tok"),
             "admin_user" => array("id" => 1, "username" => "orbit", "email" => "ops@example.com", "money" => 0,
                 "admin" => 1, "banned" => 0, "token_forgot_password" => null, "token" => "admintok"),

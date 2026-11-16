@@ -102,6 +102,12 @@ if (!function_exists("redirect")) {
         return true;
     }
 }
+if (!function_exists("generate_csrf_token")) {
+    function generate_csrf_token()
+    {
+        return "csrf-preview-token";
+    }
+}
 if (!function_exists("myip")) {
     function myip()
     {
@@ -174,6 +180,18 @@ function preview_render($root, $relativeView, array $session, array $get, array 
     unset($GLOBALS["getUser"]);
     $CMSNT = new DB();
     $GLOBALS["CMSNT"] = $CMSNT;
+    /* Each page is a separate request in production. Here one process renders many pages, so a view's
+       require_once of models/is_user.php is a no-op after the first page that needed it: resolve the
+       signed-in row up front exactly as that model would, or every later page sees no user. */
+    $getUser = null;
+    if (isset($session["login"])) {
+        $getUser = $CMSNT->get_row(
+            " SELECT * FROM `users` WHERE `token` = '" . check_string($session["login"]) . "'  "
+        );
+    }
+    /* models/is_user.php publishes the row for the shell; when its require_once is skipped, publish the
+       same row here so the balance chip and the buy panel agree about who is signed in. */
+    $GLOBALS["getUser"] = $getUser;
 
     /* Each page is a separate request in production, but this process renders all of them: reset the
        once-per-request chart asset guard, or only the first page links chart.js. */
@@ -186,6 +204,21 @@ function preview_render($root, $relativeView, array $session, array $get, array 
 
 $period = sales_period(30);
 $fixtures = preview_fixtures();
+
+/* Two columns every real product row has and the sample rows do not need: the base64 description the
+   owner writes in the admin, and the per-order quantity limits. Filled here once rather than repeated. */
+$sampleDescription = base64_encode(
+    "<p>Tài khoản chính chủ, giao ngay sau khi thanh toán. Bạn nhận thông tin đăng nhập trong mục "
+    . "Lịch sử mua hàng và có thể đổi mật khẩu lần đầu.</p>"
+    . "<p>Bảo hành trong suốt thời hạn. Nếu tài khoản có sự cố, gửi mã đơn cho hỗ trợ để được cấp lại.</p>"
+);
+foreach ($fixtures["store_products"] as $index => $sampleProduct) {
+    if (!isset($sampleProduct["description"]) || trim((string) $sampleProduct["description"]) === "") {
+        $fixtures["store_products"][$index]["description"] = $sampleDescription;
+    }
+    $fixtures["store_products"][$index]["min"] = isset($sampleProduct["min"]) ? $sampleProduct["min"] : 1;
+    $fixtures["store_products"][$index]["max"] = isset($sampleProduct["max"]) ? $sampleProduct["max"] : 10;
+}
 
 $pages = array();
 
@@ -210,7 +243,40 @@ $pages["home.html"] = array(
         array("module" => "client", "action" => "home", "sort" => "price-asc"), $fixtures),
 );
 
-/* 4. the styleguide (design system reference) */
+/* 4. a product page (guest: the panel shows the sign-in path, not a live form) */
+$pages["product.html"] = array(
+    "title" => "Trang sản phẩm — bản xem trước",
+    "html" => preview_render($root, "views/client/product.php", array(),
+        array("module" => "client", "action" => "product", "slug" => "netflix-premium-1-thang"), $fixtures),
+);
+
+/* 4b. the same page signed in: balance chip, quantity stepper and the buy button as a buyer sees them */
+$pages["product-signed.html"] = array(
+    "title" => "Trang sản phẩm, đã đăng nhập — bản xem trước",
+    "html" => preview_render($root, "views/client/product.php", array("login" => "tok"),
+        array("module" => "client", "action" => "product", "slug" => "netflix-premium-1-thang"), $fixtures),
+);
+
+/* 5. sign-in and registration */
+$pages["login.html"] = array(
+    "title" => "Đăng nhập — bản xem trước",
+    "html" => preview_render($root, "views/client/login.php", array(),
+        array("module" => "client", "action" => "login"), $fixtures),
+);
+$pages["register.html"] = array(
+    "title" => "Đăng ký — bản xem trước",
+    "html" => preview_render($root, "views/client/register.php", array(),
+        array("module" => "client", "action" => "register"), $fixtures),
+);
+
+/* 6. the account overview, signed in with the sample buyer */
+$pages["account.html"] = array(
+    "title" => "Tài khoản — bản xem trước",
+    "html" => preview_render($root, "views/client/profile.php", array("login" => "tok"),
+        array("module" => "client", "action" => "profile"), $fixtures),
+);
+
+/* 7. the styleguide (design system reference) */
 $pages["styleguide.html"] = array(
     "title" => "Orbit design system — bản xem trước",
     "html" => preview_render($root, "views/common/orbit-styleguide.php", array("admin_login" => "admintok"),
@@ -316,6 +382,19 @@ $index = '<!doctype html><html lang="vi" data-theme="light"><head><meta charset=
     . '<a class="card card--interactive preview-tile" href="purchase-history.html">'
     . '<h3>Lịch sử mua hàng (khách)</h3>'
     . '<p class="small muted">Số tiền đã chi, biểu đồ chi tiêu, tìm kiếm đơn của chính mình và phân trang.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="product.html">'
+    . '<h3>Trang sản phẩm</h3>'
+    . '<p class="small muted">Ảnh hoặc ký tự đại diện, giá và tồn kho thật, bảng mua, mô tả do quản trị '
+    . 'nhập và phần API/tiếp thị khi shop bật.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="product-signed.html">'
+    . '<h3>Trang sản phẩm (đã đăng nhập)</h3>'
+    . '<p class="small muted">Số dư trong thanh trên, ô số lượng, mã giảm giá và nút thanh toán bằng số dư.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="login.html">'
+    . '<h3>Đăng nhập & đăng ký</h3>'
+    . '<p class="small muted">Biểu mẫu có nhãn, trạng thái trong dòng, nút đăng nhập mạng xã hội khi bật.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="account.html">'
+    . '<h3>Tài khoản</h3>'
+    . '<p class="small muted">Số dư, tổng đã nạp, đã sử dụng, lối tắt tới đơn hàng và biểu mẫu liên hệ.</p></a>'
     . '<a class="card card--interactive preview-tile" href="styleguide.html">'
     . '<h3>Design system</h3>'
     . '<p class="small muted">Màu, chữ, nút, biểu mẫu, thẻ KPI, bảng, phân trang, timeline, '

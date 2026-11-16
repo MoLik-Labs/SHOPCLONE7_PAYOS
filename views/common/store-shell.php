@@ -288,7 +288,12 @@ if (!function_exists("store_brand_html")) {
         if ((string) $o["brand_html"] !== "") {
             return $o["brand_html"];
         }
-        $title = (string) $o["title"];
+        /* The bar belongs to the shop, not to the page: a product called "Netflix…" must not rename the
+           header. Fall back to the page title only when the owner has not set a shop name. */
+        $title = trim((string) store_site("title", $cmsnt));
+        if ($title === "") {
+            $title = (string) $o["title"];
+        }
         $logo = store_site("logo_dark", $cmsnt);
         if ($logo === "") {
             $logo = store_site("logo_light", $cmsnt);

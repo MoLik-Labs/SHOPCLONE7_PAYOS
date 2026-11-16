@@ -1,103 +1,131 @@
 <?php
+/*
+ * Account overview — Orbit v3.
+ *
+ * One page that answers "where is my money, my orders and my profile". Numbers come from the user row;
+ * the edit form posts to the same endpoint as before (`ChangeProfile`) and keeps the same field names.
+ */
 
-if(!defined("IN_SITE")) {
+if (!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
-$body = ["title" => __("Profile") . " | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/client/") . "css/wallet.css\">\n";
-$body["footer"] = "\n\n";
-require_once __DIR__ . "/../../models/is_user.php";
-require_once __DIR__ . "/header.php";
-require_once __DIR__ . "/nav.php";
-echo "\n<section class=\"py-5 inner-section profile-part\">\n    <div class=\"container\">\n        <div class=\"row content-reverse\">\n            <div class=\"col-lg-3\">\n                ";
-require_once __DIR__ . "/sidebar.php";
-echo "            </div>\n            <div class=\"col-lg-9\">\n                <div class=\"row\">\n\n                    <div class=\"col-lg-12\">\n                        <div class=\"account-card\">\n                            <h4 class=\"account-title\">";
-echo __("Ví của tôi");
-echo "</h4>\n                            <div class=\"my-wallet\">\n                                <p>";
-echo __("Số dư hiện tại");
-echo "</p>\n                                <h3>";
-echo format_currency($getUser["money"]);
-echo "</h3>\n                            </div>\n                            <div class=\"wallet-card-group\">\n                                <div class=\"wallet-card\">\n                                    <p>";
-echo __("Tổng tiền nạp");
-echo "</p>\n                                    <h3>";
-echo format_currency($getUser["total_money"]);
-echo "</h3>\n                                </div>\n                                <div class=\"wallet-card\">\n                                    <p>";
-echo __("Số dư đã sử dụng");
-echo "</p>\n                                    <h3>";
-echo format_currency($getUser["total_money"] - $getUser["money"]);
-echo "</h3>\n                                </div>\n                            </div>\n                        </div>\n                    </div>\n                    <div class=\"col-lg-12\">\n                    <div class=\"account-card\">\n                        <div class=\"account-title\">\n                            <h4>";
-echo __("Hồ sơ của bạn");
-echo "</h4>\n                            <button data-bs-toggle=\"modal\"\n                                data-bs-target=\"#profile-edit\">";
-echo __("Chỉnh sửa thông tin");
-echo "</button>\n                        </div>\n                        <div class=\"account-content\">\n                            <div class=\"row\">\n                                <div class=\"col-md-6 col-lg-4\">\n                                    <div class=\"form-group\">\n                                        <label class=\"form-label\">";
-echo __("Tên đăng nhập");
-echo "</label>\n                                        <input type=\"text\" class=\"form-control\" value=\"";
-echo $getUser["username"];
-echo "\"\n                                            readonly>\n                                    </div>\n                                </div>\n                                <div class=\"col-md-6 col-lg-4\">\n                                    <div class=\"form-group\">\n                                        <label class=\"form-label\">";
-echo __("Địa chỉ Email");
-echo "</label>\n                                        <input type=\"email\" class=\"form-control\" placeholder=\"Enter your email..\"\n                                            value=\"";
-echo $getUser["email"];
-echo "\" readonly>\n                                    </div>\n                                </div>\n                                <div class=\"col-md-6 col-lg-4\">\n                                    <div class=\"form-group\"><label class=\"form-label\">";
-echo __("Số điện thoại");
-echo "</label>\n                                        <input type=\"text\" class=\"form-control\" value=\"";
-echo $getUser["phone"];
-echo "\"\n                                            readonly>\n                                    </div>\n                                </div>\n                                <div class=\"col-md-6 col-lg-4\">\n                                    <div class=\"form-group\"><label class=\"form-label\">";
-echo __("Họ và Tên");
-echo "</label>\n                                        <input type=\"text\" class=\"form-control\" value=\"";
-echo $getUser["fullname"];
-echo "\"\n                                            readonly>\n                                    </div>\n                                </div>\n                                <div class=\"col-md-6 col-lg-4\">\n                                    <div class=\"form-group\"><label\n                                            class=\"form-label\">";
-echo __("Telegram Chat ID");
-echo "</label>\n                                        <input type=\"text\" class=\"form-control\"\n                                            value=\"";
-echo $getUser["telegram_chat_id"];
-echo "\" readonly>\n                                    </div>\n                                </div>\n                                <div class=\"col-md-6 col-lg-4\">\n                                    <div class=\"form-group\"><label class=\"form-label\">";
-echo __("Địa chỉ IP");
-echo "</label>\n                                        <input type=\"text\" class=\"form-control\" value=\"";
-echo $getUser["ip"];
-echo "\" readonly>\n                                    </div>\n                                </div>\n                                <div class=\"col-md-6 col-lg-4\">\n                                    <div class=\"form-group\"><label class=\"form-label\">";
-echo __("Thiết bị");
-echo "</label>\n                                        <input type=\"text\" class=\"form-control\" value=\"";
-echo $getUser["device"];
-echo "\"\n                                            readonly>\n                                    </div>\n                                </div>\n                                <div class=\"col-md-6 col-lg-4\">\n                                    <div class=\"form-group\"><label\n                                            class=\"form-label\">";
-echo __("Đăng ký vào lúc");
-echo "</label>\n                                        <input type=\"text\" class=\"form-control\" value=\"";
-echo $getUser["create_date"];
-echo "\"\n                                            readonly>\n                                    </div>\n                                </div>\n                                <div class=\"col-md-6 col-lg-4\">\n                                    <div class=\"form-group\"><label\n                                            class=\"form-label\">";
-echo __("Đăng nhập gần nhất");
-echo "</label>\n                                        <input type=\"text\" class=\"form-control\" value=\"";
-echo $getUser["update_date"];
-echo "\"\n                                            readonly>\n                                    </div>\n                                </div>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</section>\n\n<div class=\"modal fade\" id=\"profile-edit\">\n    <div class=\"modal-dialog modal-dialog-centered\">\n        <div class=\"modal-content\"><button class=\"modal-close\" data-bs-dismiss=\"modal\"><i\n                    class=\"icofont-close\"></i></button>\n            <form class=\"modal-form\">\n                <div class=\"form-title\">\n                    <h3>";
-echo __("Chỉnh sửa thông tin");
-echo "</h3>\n                </div>\n                <div class=\"form-group\"><label class=\"form-label\">";
-echo __("Số điện thoại");
-echo "</label>\n                    <input type=\"hidden\" class=\"form-control\" value=\"";
-echo $getUser["token"];
-echo "\" id=\"token\">\n                    <input type=\"text\" class=\"form-control\" value=\"";
-echo $getUser["phone"];
-echo "\" id=\"phone\">\n                </div>\n                <div class=\"form-group\"><label class=\"form-label\">";
-echo __("Họ và Tên");
-echo "</label>\n                    <input type=\"text\" class=\"form-control\" value=\"";
-echo $getUser["fullname"];
-echo "\" id=\"fullname\">\n                </div>\n                <div class=\"form-group\"><label class=\"form-label\">";
-echo __("Telegram Chat ID");
-echo "</label>\n                    <input type=\"text\" class=\"form-control\" value=\"";
-echo $getUser["telegram_chat_id"];
-echo "\"\n                        id=\"telegram_chat_id\">\n                </div>\n                <button class=\"form-btn\" id=\"btnSaveProfile\" type=\"button\">";
-echo __("Lưu");
-echo "</button>\n            </form>\n        </div>\n    </div>\n</div>\n<script type=\"text/javascript\">\n\$(\"#btnSaveProfile\").on(\"click\", function() {\n    \$('#btnSaveProfile').html('<i class=\"fa fa-spinner fa-spin\"></i> ";
-echo __("Processing...");
-echo "')\n        .prop('disabled',\n            true);\n    \$.ajax({\n        url: \"";
-echo base_url("ajaxs/client/auth.php");
-echo "\",\n        method: \"POST\",\n        dataType: \"JSON\",\n        data: {\n            action: 'ChangeProfile',\n            token: \$(\"#token\").val(),\n            phone: \$(\"#phone\").val(),\n            fullname: \$(\"#fullname\").val(),\n            telegram_chat_id: \$(\"#telegram_chat_id\").val()\n        },\n        success: function(respone) {\n            if (respone.status == 'success') {\n                Swal.fire('";
-echo __("Successful!");
-echo "', respone.msg, 'success');\n            } else {\n                Swal.fire('";
-echo __("Failure!");
-echo "', respone.msg, 'error');\n            }\n            \$('#btnSaveProfile').html(\n                '";
-echo __("Lưu");
-echo "'\n            ).prop('disabled',\n                false);\n        },\n        error: function() {\n            showMessage('";
-echo __("Không thể xử lý");
-echo "', 'error');\n            \$('#btnSaveProfile').html(\n                '";
-echo __("Lưu");
-echo "'\n            ).prop('disabled',\n                false);\n        }\n\n    });\n});\n</script>\n\n\n\n\n";
-require_once __DIR__ . "/footer.php";
 
+require_once __DIR__ . "/../common/store-shell.php";
+require_once __DIR__ . "/../../models/is_user.php";
+if (!isset($getUser) || !is_array($getUser)) {
+    $getUser = store_current_user();
+}
+
+$storeMethods = store_payment_methods($CMSNT);
+$storeRecharge = !empty($storeMethods) ? $storeMethods[0]["href"] : BASE_URL("client/login");
+$storeSpent = (float) $getUser["total_money"] - (float) $getUser["money"];
+if ($storeSpent < 0) {
+    $storeSpent = 0;
+}
+$storeDisplayName = trim((string) $getUser["fullname"]) !== "" ? $getUser["fullname"] : $getUser["username"];
+
+$storeShell = array(
+    "title" => __("Tài khoản") . " | " . $CMSNT->site("title"),
+    "desc" => $CMSNT->site("description"),
+    "nav" => store_nav_default($CMSNT, $storeMethods),
+    "body_class" => "page-account",
+);
+store_shell_open($storeShell);
+?>
+
+<section class="section section--tight" aria-labelledby="account-title">
+  <div class="container">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Tài khoản</p>
+        <h1 id="account-title">Xin chào, <?php echo store_e($storeDisplayName); ?></h1>
+        <p class="muted m0">Số dư, đơn hàng và thông tin cá nhân của bạn ở một nơi.</p>
+      </div>
+      <a class="btn" href="<?php echo store_e($storeRecharge); ?>">Nạp tiền</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat stat--accent">
+        <p class="stat__label">Số dư hiện tại</p>
+        <p class="stat__value"><?php echo format_currency($getUser["money"]); ?></p>
+        <p class="stat__foot">Dùng để thanh toán đơn hàng</p>
+      </div>
+      <div class="stat">
+        <p class="stat__label">Tổng tiền đã nạp</p>
+        <p class="stat__value stat__value--sm"><?php echo format_currency($getUser["total_money"]); ?></p>
+        <p class="stat__foot">Cộng dồn từ trước đến nay</p>
+      </div>
+      <div class="stat">
+        <p class="stat__label">Đã sử dụng</p>
+        <p class="stat__value stat__value--sm"><?php echo format_currency($storeSpent); ?></p>
+        <p class="stat__foot">Chênh lệch giữa đã nạp và số dư</p>
+      </div>
+    </div>
+
+    <nav class="account-nav" aria-label="Khu vực tài khoản">
+      <a href="<?php echo BASE_URL("client/purchase-history"); ?>">Lịch sử mua hàng</a>
+      <a href="<?php echo BASE_URL("product-orders"); ?>">Đơn hàng</a>
+      <a href="<?php echo BASE_URL("client/transactions"); ?>">Biến động số dư</a>
+      <a href="<?php echo BASE_URL("client/security"); ?>">Bảo mật</a>
+      <a href="<?php echo BASE_URL("client/change-password"); ?>">Đổi mật khẩu</a>
+      <a href="<?php echo BASE_URL("client/favorites"); ?>">Yêu thích</a>
+    </nav>
+
+    <div class="account-grid">
+      <section class="panel" aria-labelledby="profile-title">
+        <div class="panel__head">
+          <h2 id="profile-title" class="panel__title">Thông tin liên hệ</h2>
+        </div>
+        <div class="panel__body">
+          <form class="stack" data-profile-form
+            data-endpoint="<?php echo store_e(BASE_URL("ajaxs/client/auth.php")); ?>">
+            <input type="hidden" name="token" value="<?php echo store_e($getUser["token"]); ?>">
+            <div class="field">
+              <label class="field__label" for="fullname">Họ và tên</label>
+              <input class="input" id="fullname" name="fullname" type="text" autocomplete="name"
+                value="<?php echo store_e($getUser["fullname"]); ?>">
+            </div>
+            <div class="field">
+              <label class="field__label" for="phone">Số điện thoại</label>
+              <input class="input" id="phone" name="phone" type="tel" autocomplete="tel"
+                value="<?php echo store_e($getUser["phone"]); ?>">
+            </div>
+            <div class="field">
+              <label class="field__label" for="telegram_chat_id">Telegram Chat ID</label>
+              <input class="input" id="telegram_chat_id" name="telegram_chat_id" type="text"
+                value="<?php echo store_e($getUser["telegram_chat_id"]); ?>">
+              <p class="field__help">Chỉ dùng khi shop gửi thông báo qua Telegram.</p>
+            </div>
+            <div class="row">
+              <button class="btn btn--primary" type="submit">Lưu thay đổi</button>
+              <span class="small faint">Email liên hệ shop để đổi.</span>
+            </div>
+            <p class="auth__status" role="status" aria-live="polite" data-profile-status></p>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="facts-title">
+        <div class="panel__head">
+          <h2 id="facts-title" class="panel__title">Tài khoản</h2>
+        </div>
+        <div class="panel__body">
+          <dl class="kv">
+            <dt>Tên đăng nhập</dt><dd><?php echo store_e($getUser["username"]); ?></dd>
+            <dt>Email</dt><dd><?php echo store_e($getUser["email"]); ?></dd>
+            <dt>Địa chỉ IP</dt><dd><?php echo store_e($getUser["ip"]); ?></dd>
+            <dt>Thiết bị</dt><dd class="truncate"><?php echo store_e($getUser["device"]); ?></dd>
+            <dt>Đăng ký lúc</dt><dd><?php echo store_e($getUser["create_date"]); ?></dd>
+            <dt>Đăng nhập gần nhất</dt><dd><?php echo store_e($getUser["update_date"]); ?></dd>
+          </dl>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<?php
+store_shell_close(array(
+    "footer_note" => $CMSNT->site("description"),
+));
 ?>
