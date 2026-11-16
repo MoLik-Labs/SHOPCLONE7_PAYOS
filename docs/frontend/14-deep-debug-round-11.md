@@ -90,7 +90,25 @@ test list was correct and is unchanged.
 - CSRF on legacy `token`-authenticated endpoints is unchanged by design; it is an owner decision, not
   a silent rewrite.
 
-## 5. Where the evidence lives
+## 5. Follow-up in the same round
+
+While reviewing the rendered previews (now served over HTTP by `.harness/browser.mjs`, because
+`file://` blocks the self-hosted font and silently falls back to a system face), two presentation bugs
+were found and fixed:
+
+- **The footer legal line printed the page title.** `store_shell_close()` used `$o["title"]`, which is
+  the document title ("Bài viết | Orbit Shop", "Câu hỏi thường gặp | Orbit Shop"). It now resolves the
+  shop name from `site("title")`, so the footer always says `© 2026 Orbit Shop`.
+- **Owner-authored `h2`s rendered as page titles.** `.prose h2` inherited the global `clamp(28px, 2.8vw,
+  36px)` heading size and competed with the `h1`. Inside running text an `h2` is now 22 px and an `h3`
+  18 px.
+
+The same review completed the phase-4/5 content pages (`faq.php`, `policy.php`, `blogs.php`,
+`blog.php`) on the Orbit shell. The blog index now answers its category counts with one `GROUP BY`
+query instead of one `COUNT` per category, keeps the old filters/page sizes, and the four pages have
+honest empty states. `tests/content_pages_test.php` covers them (41 checks).
+
+## 6. Where the evidence lives
 
 - Harness (git-excluded): `.harness/phpcl.mjs`, `.harness/run.sh`, `.harness/lintlist.php`,
   `.harness/legacy-gate.sh`, `.harness/specs/all.json`.
