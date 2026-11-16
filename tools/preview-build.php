@@ -212,12 +212,29 @@ $sampleDescription = base64_encode(
     . "Lịch sử mua hàng và có thể đổi mật khẩu lần đầu.</p>"
     . "<p>Bảo hành trong suốt thời hạn. Nếu tài khoản có sự cố, gửi mã đơn cho hỗ trợ để được cấp lại.</p>"
 );
+/* The dashboard's sample orders use their own product ids; point them at the storefront rows with the
+   same name so the order detail can resolve the product (and its delivery note) like production does. */
+$storeProductsByName = array();
+foreach ($fixtures["store_products"] as $sampleProduct) {
+    $storeProductsByName[$sampleProduct["name"]] = $sampleProduct["id"];
+}
+foreach ($fixtures["mine_orders"] as $index => $sampleOrder) {
+    if (isset($storeProductsByName[$sampleOrder["product_name"]])) {
+        $fixtures["mine_orders"][$index]["product_id"] = $storeProductsByName[$sampleOrder["product_name"]];
+    }
+}
+
 foreach ($fixtures["store_products"] as $index => $sampleProduct) {
     if (!isset($sampleProduct["description"]) || trim((string) $sampleProduct["description"]) === "") {
         $fixtures["store_products"][$index]["description"] = $sampleDescription;
     }
     $fixtures["store_products"][$index]["min"] = isset($sampleProduct["min"]) ? $sampleProduct["min"] : 1;
     $fixtures["store_products"][$index]["max"] = isset($sampleProduct["max"]) ? $sampleProduct["max"] : 10;
+    if (!isset($sampleProduct["note"]) || trim((string) $sampleProduct["note"]) === "") {
+        $fixtures["store_products"][$index]["note"] = base64_encode(
+            "<p>Đổi mật khẩu trong lần đăng nhập đầu tiên và không chia sẻ tài khoản cho người ngoài.</p>"
+        );
+    }
 }
 
 $pages = array();
@@ -274,6 +291,19 @@ $pages["account.html"] = array(
     "title" => "Tài khoản — bản xem trước",
     "html" => preview_render($root, "views/client/profile.php", array("login" => "tok"),
         array("module" => "client", "action" => "profile"), $fixtures),
+);
+
+/* 6b. order history and one order, signed in */
+$sampleTrans = $fixtures["mine_orders"][0]["trans_id"];
+$pages["orders.html"] = array(
+    "title" => "Lịch sử đơn hàng — bản xem trước",
+    "html" => preview_render($root, "views/client/product-orders.php", array("login" => "tok"),
+        array("module" => "client", "action" => "product-orders"), $fixtures),
+);
+$pages["order.html"] = array(
+    "title" => "Chi tiết đơn hàng — bản xem trước",
+    "html" => preview_render($root, "views/client/product-order.php", array("login" => "tok"),
+        array("module" => "client", "action" => "product-order", "trans_id" => $sampleTrans), $fixtures),
 );
 
 /* 7. the styleguide (design system reference) */
@@ -395,6 +425,12 @@ $index = '<!doctype html><html lang="vi" data-theme="light"><head><meta charset=
     . '<a class="card card--interactive preview-tile" href="account.html">'
     . '<h3>Tài khoản</h3>'
     . '<p class="small muted">Số dư, tổng đã nạp, đã sử dụng, lối tắt tới đơn hàng và biểu mẫu liên hệ.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="orders.html">'
+    . '<h3>Lịch sử đơn hàng</h3>'
+    . '<p class="small muted">Lọc theo mã, khoảng ngày; ghi chú riêng, tải .txt và xóa đơn; đơn đã xóa vẫn hiện.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="order.html">'
+    . '<h3>Chi tiết đơn hàng</h3>'
+    . '<p class="small muted">Tài khoản đã giao, UID, chép từng dòng hoặc tải cả đơn; ghi chú giao hàng của shop.</p></a>'
     . '<a class="card card--interactive preview-tile" href="styleguide.html">'
     . '<h3>Design system</h3>'
     . '<p class="small muted">Màu, chữ, nút, biểu mẫu, thẻ KPI, bảng, phân trang, timeline, '

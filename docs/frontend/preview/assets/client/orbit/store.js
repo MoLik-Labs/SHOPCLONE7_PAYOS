@@ -499,11 +499,305 @@
     });
   }
 
+  /* --- order history ------------------------------------------------------ */
+
+  function downloadText(filename, text) {
+    var blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = filename || "don-hang.txt";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 1000);
+  }
+
+  function setupOrders() {
+    var root = document.querySelector("[data-orders]");
+    if (!root) {
+      return;
+    }
+    var token = root.getAttribute("data-token") || "";
+    var statusEl = root.querySelector("[data-orders-status]");
+    var updateUrl = root.getAttribute("data-update-endpoint");
+    var removeUrl = root.getAttribute("data-remove-endpoint");
+    var viewUrl = root.getAttribute("data-view-endpoint");
+    var allBox = root.querySelector("[data-orders-all]");
+    var bulkDelete = root.querySelector("[data-orders-delete]");
+    var checks = function () {
+      return Array.prototype.slice.call(root.querySelectorAll("[data-order-check]"));
+    };
+    var selected = function () {
+      return checks().filter(function (box) {
+        return box.checked;
+      });
+    };
+    var syncBulk = function () {
+      if (bulkDelete) {
+        bulkDelete.disabled = selected().length === 0;
+      }
+    };
+    if (allBox) {
+      allBox.addEventListener("change", function () {
+        checks().forEach(function (box) {
+          box.checked = allBox.checked;
+        });
+        syncBulk();
+      });
+    }
+    root.addEventListener("change", function (event) {
+      if (event.target && event.target.hasAttribute("data-order-check")) {
+        syncBulk();
+      }
+    });
+
+    root.querySelectorAll("[data-order-note]").forEach(function (input) {
+      var previous = input.value;
+      input.addEventListener("change", function () {
+        var id = input.getAttribute("data-order-note");
+        setStatus(statusEl, "Đang lưu ghi chú…");
+        postForm(updateUrl, { action: "saveNoteOrder", id: id, note: input.value, token: token })
+          .then(function (response) {
+            if (response.status === "success") {
+              previous = input.value;
+              setStatus(statusEl, "Đã lưu ghi chú.", "ok");
+            } else {
+              input.value = previous;
+              setStatus(statusEl, response.msg || "Không lưu được ghi chú.", "error");
+            }
+          })
+          .catch(function () {
+            input.value = previous;
+            setStatus(statusEl, "Không kết nối được máy chủ. Ghi chú chưa được lưu.", "error");
+          });
+      });
+    });
+
+    root.addEventListener("click", function (event) {
+      var button = event.target.closest("button");
+      if (!button) {
+        return;
+      }
+      if (button.hasAttribute("data-order-download")) {
+        var trans = button.getAttribute("data-order-download");
+        button.disabled = true;
+        postForm(viewUrl, { action: "download_order", trans_id: trans, token: token })
+          .then(function (response) {
+            button.disabled = false;
+            if (response.status === "success" && response.accounts != null) {
+              downloadText(response.filename || trans + ".txt", response.accounts);
+              setStatus(statusEl, "Đã tải đơn hàng.", "ok");
+            } else {
+              setStatus(statusEl, response.msg || "Không tải được đơn hàng.", "error");
+            }
+          })
+          .catch(function () {
+            button.disabled = false;
+            setStatus(statusEl, "Không kết nối được máy chủ. Vui lòng thử lại.", "error");
+          });
+      }
+      if (button.hasAttribute("data-order-remove")) {
+        var id = button.getAttribute("data-order-remove");
+        if (!window.confirm("Xóa đơn này khỏi lịch sử của bạn? Nội dung tài khoản sẽ không mở lại được.")) {
+          return;
+        }
+        button.disabled = true;
+        postForm(removeUrl, { action: "removeOrder", id: id, token: token })
+          .then(function (response) {
+            if (response.status === "success") {
+              window.location.reload();
+              return;
+            }
+            button.disabled = false;
+            setStatus(statusEl, response.msg || "Không xóa được đơn hàng.", "error");
+          })
+          .catch(function () {
+            button.disabled = false;
+            setStatus(statusEl, "Không kết nối được máy chủ. Vui lòng thử lại.", "error");
+          });
+      }
+      if (button.hasAttribute("data-orders-delete")) {
+        var chosen = selected();
+        if (!chosen.length) {
+          return;
+        }
+        if (!window.confirm("Xóa " + chosen.length + " đơn đã chọn khỏi lịch sử?")) {
+          return;
+        }
+        setStatus(statusEl, "Đang xóa…");
+        var chain = Promise.resolve();
+        chosen.forEach(function (box) {
+          chain = chain.then(function () {
+            return postForm(removeUrl, { action: "removeOrder", id: box.value, token: token });
+          });
+        });
+        chain
+          .then(function () {
+            window.location.reload();
+          })
+          .catch(function () {
+            setStatus(statusEl, "Có đơn chưa xóa được. Tải lại trang để xem kết quả.", "error");
+          });
+      }
+    });
+  }
+
+  function setupOrderDetail() {
+    var root = document.querySelector("[data-order-detail]");
+    if (!root) {
+      return;
+    }
+    var token = root.getAttribute("data-token") || "";
+    var viewUrl = root.getAttribute("data-view-endpoint");
+    var removeUrl = root.getAttribute("data-remove-endpoint");
+    var trans = root.getAttribute("data-trans") || "";
+    var pageStatus = root.querySelector("[data-accounts-status]");
+    var allBox = root.querySelector("[data-accounts-all]");
+    var copyButton = root.querySelector("[data-accounts-copy]");
+    var uidButton = root.querySelector("[data-accounts-uids]");
+    var downloadButton = root.querySelector("[data-accounts-download]");
+    var checks = function () {
+      return Array.prototype.slice.call(root.querySelectorAll("[data-account-check]"));
+    };
+    var selected = function () {
+      return checks().filter(function (box) {
+        return box.checked;
+      });
+    };
+    var sync = function () {
+      var count = selected().length;
+      [copyButton, uidButton, downloadButton].forEach(function (button) {
+        if (button) {
+          button.disabled = count === 0;
+        }
+      });
+    };
+    if (allBox) {
+      allBox.addEventListener("change", function () {
+        checks().forEach(function (box) {
+          box.checked = allBox.checked;
+        });
+        sync();
+      });
+    }
+    root.addEventListener("change", function (event) {
+      if (event.target && event.target.hasAttribute("data-account-check")) {
+        sync();
+      }
+    });
+
+    var copyText = function (text, okMessage) {
+      if (!text) {
+        return;
+      }
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function () {
+          setStatus(pageStatus, okMessage, "ok");
+        });
+        return;
+      }
+      downloadText("tai-khoan.txt", text);
+      setStatus(pageStatus, "Trình duyệt không cho chép; tệp .txt đã được tải.", "ok");
+    };
+
+    if (copyButton) {
+      copyButton.addEventListener("click", function () {
+        copyText(selected().map(function (box) {
+          return box.getAttribute("data-account");
+        }).join("\n"), "Đã chép " + selected().length + " tài khoản.");
+      });
+    }
+    if (uidButton) {
+      uidButton.addEventListener("click", function () {
+        copyText(selected().map(function (box) {
+          return box.getAttribute("data-uid");
+        }).join("\n"), "Đã chép " + selected().length + " UID.");
+      });
+    }
+    if (downloadButton) {
+      downloadButton.addEventListener("click", function () {
+        var lines = selected().map(function (box) {
+          return box.getAttribute("data-account");
+        }).join("\n");
+        downloadText(trans + "-" + selected().length + ".txt", lines);
+        setStatus(pageStatus, "Đã tải " + selected().length + " tài khoản.", "ok");
+      });
+    }
+    var copyAll = document.querySelector("[data-accounts-copy-all]");
+    if (copyAll) {
+      copyAll.addEventListener("click", function () {
+        var everything = checks().map(function (box) {
+          return box.getAttribute("data-account");
+        }).join("\n");
+        copyText(everything, "Đã chép tài khoản trên trang này.");
+      });
+    }
+
+    var downloadAll = root.querySelector("[data-order-download]");
+    if (downloadAll) {
+      downloadAll.addEventListener("click", function () {
+        downloadAll.disabled = true;
+        postForm(viewUrl, { action: "download_order", trans_id: trans, token: token })
+          .then(function (response) {
+            downloadAll.disabled = false;
+            if (response.status === "success" && response.accounts != null) {
+              downloadText(response.filename || trans + ".txt", response.accounts);
+              setStatus(pageStatus, "Đã tải toàn bộ đơn.", "ok");
+            } else {
+              setStatus(pageStatus, response.msg || "Không tải được đơn hàng.", "error");
+            }
+          })
+          .catch(function () {
+            downloadAll.disabled = false;
+            setStatus(pageStatus, "Không kết nối được máy chủ. Vui lòng thử lại.", "error");
+          });
+      });
+    }
+    var removeButton = root.querySelector("[data-order-remove]");
+    if (removeButton) {
+      removeButton.addEventListener("click", function () {
+        if (!window.confirm("Xóa đơn này khỏi lịch sử của bạn? Nội dung tài khoản sẽ không mở lại được.")) {
+          return;
+        }
+        removeButton.disabled = true;
+        postForm(removeUrl, {
+          action: "removeOrder",
+          id: root.getAttribute("data-order-id"),
+          token: token
+        }).then(function (response) {
+          if (response.status === "success") {
+            window.location.href = root.getAttribute("data-orders-url") || window.location.href;
+            return;
+          }
+          removeButton.disabled = false;
+          setStatus(pageStatus, response.msg || "Không xóa được đơn hàng.", "error");
+        }).catch(function () {
+          removeButton.disabled = false;
+          setStatus(pageStatus, "Không kết nối được máy chủ. Vui lòng thử lại.", "error");
+        });
+      });
+    }
+  }
+
   /* --- copy buttons ------------------------------------------------------- */
 
   function setupCopy() {
     document.querySelectorAll("[data-copy]").forEach(function (button) {
       button.addEventListener("click", function () {
+        var literal = button.getAttribute("data-copy-value");
+        if (literal !== null) {
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(literal).then(function () {
+              var was = button.textContent;
+              button.textContent = "Đã chép";
+              window.setTimeout(function () { button.textContent = was; }, 1500);
+            });
+          }
+          return;
+        }
         var input = document.querySelector(button.getAttribute("data-copy"));
         if (!input) {
           return;
@@ -528,6 +822,8 @@
     setupBuy();
     setupAuth();
     setupProfile();
+    setupOrders();
+    setupOrderDetail();
     setupCopy();
   });
 })();

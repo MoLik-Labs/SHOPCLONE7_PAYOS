@@ -89,6 +89,18 @@ class DB
         if (strpos($sql, "FROM `product_order`") !== false && strpos($sql, "COUNT(`id`) AS total") !== false) {
             return array("total" => $f["mine_total"]);
         }
+        if (strpos($sql, "FROM `product_order`") !== false && strpos($sql, "COUNT(") === false
+            && preg_match("~`trans_id` = '([^']+)'~", $sql, $match)) {
+            foreach ($f["mine_orders"] as $mineOrder) {
+                if ($mineOrder["trans_id"] === $match[1]) {
+                    return $mineOrder;
+                }
+            }
+            return false;
+        }
+        if (strpos($sql, "FROM `product_sold`") !== false && strpos($sql, "COUNT(") !== false) {
+            return array("total" => count($f["order_accounts"]));
+        }
         if (strpos($sql, "FROM `product_order`") !== false && strpos($sql, "COUNT(`id`) AS orders") !== false) {
             if (strpos($sql, "1970-01-01") !== false) {
                 return $f["all_time"];
@@ -160,6 +172,9 @@ class DB
     {
         self::$log[] = $sql;
         $f = self::$fixtures;
+        if (strpos($sql, "FROM `product_sold`") !== false) {
+            return $f["order_accounts"];
+        }
         if (strpos($sql, "FROM `deposit_log`") !== false) {
             return $f["deposits"];
         }
@@ -298,19 +313,31 @@ if (!function_exists("preview_fixtures")) {
                 $mineOrders[] = array(
                     "id" => $order["id"],
                     "trans_id" => $order["trans_id"],
+                    "buyer" => 7,
+                    "product_id" => $order["product_id"],
                     "product_name" => $order["product_name"],
                     "amount" => $order["amount"],
                     "pay" => $order["pay"],
                     "cost" => $order["cost"],
                     "create_gettime" => $order["create_gettime"],
+                    "trash" => 0,
+                    "note" => "",
+                    "ip" => "203.0.113.7",
+                    "device" => "Chrome · macOS",
                     "status_view_order" => 0,
                 );
             }
         }
         if (!$mineOrders) {
-            $mineOrders[] = array("id" => 9001, "trans_id" => "ORD9001", "product_name" => "Netflix Premium 1 tháng",
-                "amount" => 1, "pay" => 120000, "cost" => 84000, "create_gettime" => $today . " 09:15:00",
-                "status_view_order" => 0);
+            $mineOrders[] = array("id" => 9001, "trans_id" => "ORD9001", "buyer" => 7, "product_id" => 101,
+                "product_name" => "Netflix Premium 1 tháng", "amount" => 1, "pay" => 120000, "cost" => 84000,
+                "create_gettime" => $today . " 09:15:00", "trash" => 0, "note" => "",
+                "ip" => "203.0.113.7", "device" => "Chrome · macOS", "status_view_order" => 0);
+        }
+        /* One deleted order and one private note, so the preview shows both states honestly. */
+        if (count($mineOrders) > 1) {
+            $mineOrders[1]["note"] = "Tài khoản dùng cho gia đình";
+            $mineOrders[1]["trash"] = 1;
         }
 
         return array(
@@ -399,6 +426,14 @@ if (!function_exists("preview_fixtures")) {
             "store_total" => 8,
             "new_users" => 23,
             "mine_total" => count($mineOrders),
+            "order_accounts" => array(
+                array("id" => 1, "trans_id" => $mineOrders[0]["trans_id"], "uid" => "NF-001",
+                    "account" => "preview01@orbit.example|mat-khau-mau-1"),
+                array("id" => 2, "trans_id" => $mineOrders[0]["trans_id"], "uid" => "NF-002",
+                    "account" => "preview02@orbit.example|mat-khau-mau-2"),
+                array("id" => 3, "trans_id" => $mineOrders[0]["trans_id"], "uid" => "NF-003",
+                    "account" => "preview03@orbit.example|mat-khau-mau-3"),
+            ),
             "mine_summary" => array(
                 "orders" => count($mineOrders),
                 "revenue" => array_sum(array_column($mineOrders, "pay")),

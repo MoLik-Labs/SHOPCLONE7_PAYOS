@@ -1,234 +1,283 @@
 <?php
+/*
+ * Buyer order history — Orbit v3.
+ *
+ *   /product-orders                      every order of the signed-in buyer
+ *   /product-orders?trans_id=…           one order code
+ *   /product-orders?from=2026-11-01&to=2026-11-16
+ *   /product-orders?shortByDate=1|2|3    today / this week / this month
+ *
+ * Every query is bound to `buyer = <session id>`; the request can only narrow that set. Deleted orders
+ * stay visible (as the legacy page did) so a buyer can tell an order was removed instead of lost.
+ * Notes, per-order download and deletion still call the same three AJAX handlers as before
+ * (update.php saveNoteOrder, view.php download_order, remove.php removeOrder).
+ */
 
-if(!defined("IN_SITE")) {
+if (!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
-require_once __DIR__ . "/../../models/is_user.php";
-$body = ["title" => __("Lịch sử đơn hàng") . " | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/client/") . "css/wallet.css\">\n\n";
-$body["footer"] = "\n \n";
-require_once __DIR__ . "/header.php";
-require_once __DIR__ . "/nav.php";
-if(isset($_GET["limit"])) {
-    $limit = (int) check_string($_GET["limit"]);
-} else {
-    $limit = 10;
-}
-if(isset($_GET["page"])) {
-    $page = check_string((int) $_GET["page"]);
-} else {
-    $page = 1;
-}
-$from = ($page - 1) * $limit;
-$where = " `buyer` = '" . $getUser["id"] . "' ";
-$shortByDate = "";
-$trans_id = "";
-$time = "";
-if(!empty($_GET["trans_id"])) {
-    $trans_id = check_string($_GET["trans_id"]);
-    $where .= " AND `trans_id` = \"" . $trans_id . "\" ";
-}
-if(!empty($_GET["time"])) {
-    $time = check_string($_GET["time"]);
-    $create_date_1 = str_replace("-", "/", $time);
-    $create_date_1 = explode(" to ", $create_date_1);
-    if($create_date_1[0] != $create_date_1[1]) {
-        $create_date_1 = [$create_date_1[0] . " 00:00:00", $create_date_1[1] . " 23:59:59"];
-        $where .= " AND `create_gettime` >= '" . $create_date_1[0] . "' AND `create_gettime` <= '" . $create_date_1[1] . "' ";
-    }
-}
-if(isset($_GET["shortByDate"])) {
-    $shortByDate = check_string($_GET["shortByDate"]);
-    $yesterday = date("Y-m-d", strtotime("-1 day"));
-    $currentWeek = date("W");
-    $currentMonth = date("m");
-    $currentYear = date("Y");
-    $currentDate = date("Y-m-d");
-    if($shortByDate == 1) {
-        $where .= " AND `create_gettime` LIKE '%" . $currentDate . "%' ";
-    }
-    if($shortByDate == 2) {
-        $where .= " AND YEAR(create_gettime) = " . $currentYear . " AND WEEK(create_gettime, 1) = " . $currentWeek . " ";
-    }
-    if($shortByDate == 3) {
-        $where .= " AND MONTH(create_gettime) = '" . $currentMonth . "' AND YEAR(create_gettime) = '" . $currentYear . "' ";
-    }
-}
-$listDatatable = $CMSNT->get_list(" SELECT * FROM `product_order` WHERE " . $where . " ORDER BY `id` DESC LIMIT " . $from . "," . $limit . " ");
-$totalDatatable = $CMSNT->num_rows(" SELECT * FROM `product_order` WHERE " . $where . " ORDER BY id DESC ");
-$urlDatatable = pagination_client(base_url("?action=product-orders&limit=" . $limit . "&trans_id=" . $trans_id . "&shortByDate=" . $shortByDate . "&time=" . $time . "&"), $from, $totalDatatable, $limit);
-echo "\n\n<div style=\"margin-bottom:40px;\"></div>\n<section class=\"inner-section\">\n    <div class=\"container\">\n        ";
-if($CMSNT->site("notice_orders") != "") {
-    echo "        <div class=\"col-md-12\">\n            <div class=\"account-card pt-3\">\n                ";
-    echo $CMSNT->site("notice_orders");
-    echo "            </div>\n        </div>\n        ";
-}
-echo "        <div class=\"row\">\n            <div class=\"col-lg-12\">\n                <div class=\"home-heading mb-3\">\n                    <h3><i class=\"fa-solid fa-cart-shopping m-2\"></i> ";
-echo mb_strtoupper(__("Lịch sử đơn hàng"));
-echo "                    </h3>\n                </div>\n                <div class=\"account-card pt-3\">\n                    <form action=\"";
-echo base_url();
-echo "\" method=\"GET\">\n                        <input type=\"hidden\" name=\"action\" value=\"product-orders\">\n                        <div class=\"row\">\n                            <div class=\"col-lg col-md-4 col-6\">\n                                <input class=\"form-control mb-2\" type=\"hidden\" value=\"";
-echo $getUser["token"];
-echo "\"\n                                    id=\"token\">\n                                <input class=\"form-control mb-2\" type=\"text\" value=\"";
-echo $trans_id;
-echo "\" name=\"trans_id\"\n                                    placeholder=\"";
-echo __("Mã đơn hàng");
-echo "\">\n                            </div>\n                            <div class=\"col-lg col-md-4 col-6\">\n                                <input type=\"text\" class=\"js-flatpickr form-control mb-2\" id=\"example-flatpickr-range\"\n                                    name=\"time\" placeholder=\"";
-echo __("Chọn thời gian cần tìm");
-echo "\" value=\"";
-echo $time;
-echo "\"\n                                    data-mode=\"range\">\n                            </div>\n                            <div class=\"col-lg col-md-4 col-6\">\n                                <button class=\"shop-widget-btn mb-2\"><i\n                                        class=\"fas fa-search\"></i><span>";
-echo __("Tìm kiếm");
-echo "</span></button>\n                            </div>\n                            <div class=\"col-lg col-md-4 col-6\">\n                                <a href=\"";
-echo base_url("product-orders/");
-echo "\" class=\"shop-widget-btn mb-2\"><i\n                                        class=\"far fa-trash-alt\"></i><span>";
-echo __("Bỏ lọc");
-echo "</span></a>\n                            </div>\n                        </div>\n                        <div class=\"top-filter\">\n                            <div class=\"filter-show\"><label class=\"filter-label\">Show :</label>\n                                <select name=\"limit\" onchange=\"this.form.submit()\" class=\"form-select filter-select\">\n                                    <option ";
-echo $limit == 5 ? "selected" : "";
-echo " value=\"5\">5</option>\n                                    <option ";
-echo $limit == 10 ? "selected" : "";
-echo " value=\"10\">10</option>\n                                    <option ";
-echo $limit == 20 ? "selected" : "";
-echo " value=\"20\">20</option>\n                                    <option ";
-echo $limit == 50 ? "selected" : "";
-echo " value=\"50\">50</option>\n                                    <option ";
-echo $limit == 100 ? "selected" : "";
-echo " value=\"100\">100</option>\n                                    <option ";
-echo $limit == 500 ? "selected" : "";
-echo " value=\"500\">500</option>\n                                    <option ";
-echo $limit == 1000 ? "selected" : "";
-echo " value=\"1000\">1000\n                                    </option>\n                                </select>\n                            </div>\n                            <div class=\"filter-short\">\n                                <label class=\"filter-label\">";
-echo __("Short by Date:");
-echo "</label>\n                                <select name=\"shortByDate\" onchange=\"this.form.submit()\"\n                                    class=\"form-select filter-select\">\n                                    <option value=\"\">";
-echo __("Tất cả");
-echo "</option>\n                                    <option ";
-echo $shortByDate == 1 ? "selected" : "";
-echo " value=\"1\">\n                                        ";
-echo __("Hôm nay");
-echo "                                    </option>\n                                    <option ";
-echo $shortByDate == 2 ? "selected" : "";
-echo " value=\"2\">\n                                        ";
-echo __("Tuần này");
-echo "                                    </option>\n                                    <option ";
-echo $shortByDate == 3 ? "selected" : "";
-echo " value=\"3\">\n                                        ";
-echo __("Tháng này");
-echo "                                    </option>\n                                </select>\n                            </div>\n                        </div>\n                    </form>\n                    <div class=\"table-scroll table-wrapper\">\n                        <table class=\"table fs-sm text-nowrap table-hover  mb-0\">\n                            <thead>\n                                <th class=\"text-center\">\n                                    <input type=\"checkbox\" class=\"form-check-input\" name=\"check_all\"\n                                        id=\"check_all_checkbox\" value=\"option1\">\n                                </th>\n                                <th class=\"text-center\">";
-echo __("Thao tác");
-echo "</th>\n                                <th class=\"text-center\">";
-echo __("Mã đơn hàng");
-echo "</th>\n                                <th class=\"text-center\">";
-echo __("Sản phẩm");
-echo "</th>\n                                <th class=\"text-center\">";
-echo __("Số lượng");
-echo "</th>\n                                <th class=\"text-center\">";
-echo __("Thanh toán");
-echo "</th>\n                                <th class=\"text-center\">";
-echo __("Ghi chú cá nhân");
-echo "</th>\n                                <th class=\"text-center\">";
-echo __("Thời gian");
-echo "</th>\n                            </thead>\n                            <tbody>\n                                ";
-foreach ($listDatatable as $order) {
-    echo "                                <tr\n                                    style=\"vertical-align: middle;";
-    echo $order["trash"] == 1 ? "background-color:#ffd6d6;" : "";
-    echo "\">\n                                    <td class=\"text-center\">\n                                        ";
-    if($order["trash"] == 0) {
-        echo "                                        <input type=\"checkbox\" class=\"form-check-input checkbox\"\n                                            data-id=\"";
-        echo $order["id"];
-        echo "\" name=\"checkbox\" value=\"";
-        echo $order["id"];
-        echo "\" />\n                                        ";
-    }
-    echo "                                    </td>\n                                    <td class=\"text-center\">\n                                        ";
-    if($order["trash"] == 1) {
-        echo "                                        <strong>";
-        echo __("Đơn hàng đã bị xóa");
-        echo "</strong>\n                                        ";
-    } else {
-        echo "                                        <a class=\"btn btn-info btn-sm\"\n                                            href=\"";
-        echo base_url("product-order/" . $order["trans_id"]);
-        echo "\" type=\"button\"><i\n                                                class=\"fa-solid fa-eye\"></i>\n                                            ";
-        echo __("View");
-        echo "</a>\n                                        <button class=\"btn btn-primary btn-sm\"\n                                            onclick=\"downloadOrder(`";
-        echo $order["trans_id"];
-        echo "`)\"><i\n                                                class=\"fa-solid fa-cloud-arrow-down\"></i>\n                                            ";
-        echo __("Download");
-        echo "</button>\n                                        <button type=\"button\" onclick=\"deleteOrder(`";
-        echo $order["id"];
-        echo "`)\"\n                                            class=\"btn btn-danger btn-sm\">\n                                            <i class=\"fa-solid fa-trash\"></i> ";
-        echo __("Delete");
-        echo "                                        </button>\n                                        ";
-    }
-    echo "                                    </td>\n                                    <td class=\"text-center\">\n                                        ";
-    echo $order["trans_id"];
-    echo "                                    </td>\n                                    <td class=\"text-center\">\n                                        <strong><small>";
-    echo $order["product_name"];
-    echo "</small></strong>\n                                    </td>\n                                    <td class=\"text-right\">\n                                        <span class=\"badge bg-primary\">";
-    echo format_cash($order["amount"]);
-    echo "</span>\n                                    </td>\n                                    <td class=\"text-right\">\n                                        <span class=\"badge bg-danger\">";
-    echo format_currency($order["pay"]);
-    echo "</span>\n                                    </td>\n                                    <td class=\"text-center\">\n                                        <textarea class=\"saveNote\" rows=\"1\"\n                                            data-id=\"";
-    echo $order["id"];
-    echo "\">";
-    echo $order["note"];
-    echo "</textarea>\n                                    </td>\n                                    <td class=\"text-center\">\n                                        <strong data-toggle=\"tooltip\" data-placement=\"bottom\"\n                                            title=\"";
-    echo timeAgo(strtotime($order["create_gettime"]));
-    echo "\"><small>";
-    echo $order["create_gettime"];
-    echo "</small></strong>\n                                    </td>\n                                </tr>\n                                ";
-}
-echo "                            </tbody>\n                            <tfoot>\n                                <td colspan=\"7\">\n                                    <button type=\"button\" id=\"btn_delete\" class=\"btn btn-danger btn-sm\"\n                                        data-toggle=\"tooltip\" data-placement=\"bottom\"\n                                        title=\"";
-echo __("Xóa đơn hàng đã chọn khỏi lịch sử của bạn");
-echo "\">\n                                        <i class=\"fa-solid fa-trash\"></i> ";
-echo __("Xóa đơn hàng");
-echo "                                    </button>\n                                </td>\n                            </tfoot>\n                        </table>\n                    </div>\n                    <div class=\"bottom-paginate\">\n                        <p class=\"page-info\">Showing ";
-echo $limit;
-echo " of ";
-echo $totalDatatable;
-echo " Results</p>\n                        <div class=\"pagination\">\n                            ";
-echo $limit < $totalDatatable ? $urlDatatable : "";
-echo "                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</section>\n\n\n<script>\n\$(document).ready(function() {\n    \$('.saveNote').on('input', function() {\n        saveNote(\$(this));\n    });\n\n    function saveNote(textarea) {\n        var note = textarea.val();\n        var id = textarea.data('id');\n        \$.ajax({\n            url: \"";
-echo BASE_URL("ajaxs/client/update.php");
-echo "\",\n            method: \"POST\",\n            dataType: \"JSON\",\n            data: {\n                id: id,\n                note: note,\n                token: \$(\"#token\").val(),\n                action: 'saveNoteOrder'\n            },\n            success: function(result) {},\n            error: function() {}\n        });\n    }\n});\n</script>\n<script>\n\$(function() {\n    \$('#check_all_checkbox').on('click', function() {\n        \$('.checkbox').prop('checked', this.checked);\n    });\n    \$('.checkbox').on('click', function() {\n        \$('#check_all_checkbox').prop('checked', \$('.checkbox:checked')\n            .length === \$('.checkbox').length);\n    });\n});\n\nfunction delete_records() {\n    var checkbox = document.getElementsByName('checkbox');\n\n    function postUpdatesSequentially(index) {\n        if (index < checkbox.length) {\n            if (checkbox[index].checked === true) {\n                post_remove(checkbox[index].value);\n            }\n            setTimeout(function() {\n                postUpdatesSequentially(index + 1);\n            }, 100);\n        } else {\n            Swal.fire({\n                title: \"";
-echo __("Thành công!");
-echo "\",\n                text: \"";
-echo __("Xóa đơn hàng thành công");
-echo "\",\n                icon: \"success\"\n            });\n            setTimeout(function() {\n                location.reload();\n            }, 1000);\n        }\n    }\n    postUpdatesSequentially(0);\n}\n\n\$(\"#btn_delete\").click(function() {\n    var checkboxes = document.querySelectorAll('input[name=\"checkbox\"]:checked');\n    if (checkboxes.length === 0) {\n        showMessage('";
-echo __("Vui lòng chọn ít nhất một đơn hàng.");
-echo "', 'error');\n        return;\n    }\n    Swal.fire({\n        title: \"";
-echo __("Bạn có chắc không?");
-echo "\",\n        text: \"";
-echo __("Hệ thống sẽ xóa");
-echo " \" + checkboxes.length +\n            \" ";
-echo __("đơn hàng bạn chọn khi nhấn Đồng Ý");
-echo "\",\n        icon: \"warning\",\n        showCancelButton: true,\n        confirmButtonColor: \"#3085d6\",\n        cancelButtonColor: \"#d33\",\n        confirmButtonText: \"";
-echo __("Đồng ý");
-echo "\",\n        cancelButtonText: \"";
-echo __("Đóng");
-echo "\"\n    }).then((result) => {\n        if (result.isConfirmed) {\n            delete_records();\n        }\n    });\n});\n</script>\n\n<script>\nfunction post_remove(id) {\n    \$.ajax({\n        url: \"";
-echo BASE_URL("ajaxs/client/remove.php");
-echo "\",\n        method: \"POST\",\n        dataType: \"JSON\",\n        data: {\n            id: id,\n            token: \$(\"#token\").val(),\n            action: 'removeOrder'\n        },\n        success: function(result) {\n            if (result.status == 'success') {\n                showMessage(result.msg, result.status);\n            } else {\n                showMessage(result.msg, result.status);\n            }\n        },\n        error: function() {\n            alert(html(response));\n            location.reload();\n        }\n    });\n}\n\nfunction deleteOrder(id) {\n    Swal.fire({\n        title: \"";
-echo __("Bạn có chắc không?");
-echo "\",\n        text: \"";
-echo __("Hệ thống sẽ xóa đơn hàng khỏi lịch sử của bạn khi bạn nhấn đồng ý");
-echo "\",\n        icon: \"warning\",\n        showCancelButton: true,\n        confirmButtonColor: \"#3085d6\",\n        cancelButtonColor: \"#d33\",\n        confirmButtonText: \"";
-echo __("Đồng ý");
-echo "\",\n        cancelButtonText: \"";
-echo __("Đóng");
-echo "\",\n    }).then((result) => {\n        if (result.isConfirmed) {\n            post_remove(id);\n            setTimeout(function() {\n                location.reload();\n            }, 500);\n        }\n    });\n}\n</script>\n\n\n\n<script>\nfunction downloadOrder(trans_id) {\n    Swal.fire({\n        title: \"";
-echo __("Bạn có chắc không?");
-echo "\",\n        text: \"";
-echo __("Hệ thống sẽ tải về đơn hàng khi bạn nhấn đồng ý");
-echo "\",\n        icon: \"warning\",\n        showCancelButton: true,\n        confirmButtonColor: \"#3085d6\",\n        cancelButtonColor: \"#d33\",\n        confirmButtonText: \"";
-echo __("Đồng ý");
-echo "\",\n        cancelButtonText: \"";
-echo __("Đóng");
-echo "\",\n    }).then((result) => {\n        if (result.isConfirmed) {\n            \$.ajax({\n                url: \"";
-echo BASE_URL("ajaxs/client/view.php");
-echo "\",\n                method: \"POST\",\n                dataType: \"JSON\",\n                data: {\n                    action: 'download_order',\n                    trans_id: trans_id,\n                    token: \$(\"#token\").val(),\n                },\n                success: function(result) {\n                    if (result.status == 'success') {\n                        showMessage(result.msg, result.status);\n                        downloadTXT(result.filename, result.accounts);\n                    } else {\n                        Swal.fire({\n                            title: \"";
-echo __("Thất bại!");
-echo "\",\n                            text: result.msg,\n                            icon: \"error\"\n                        });\n                    }\n                },\n                error: function() {\n                    alert(html(response));\n                    location.reload();\n                }\n            });\n        }\n    });\n}\n\nfunction downloadTXT(filename, text) {\n    var element = document.createElement('a');\n    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));\n    element.setAttribute('download', filename);\n    element.style.display = 'none';\n    document.body.appendChild(element);\n    element.click();\n    document.body.removeChild(element);\n}\n</script>\n\n\n\n";
-require_once __DIR__ . "/footer.php";
-echo "\n<script>\nDashmix.helpersOnLoad(['js-flatpickr', 'jq-datepicker', 'jq-maxlength', 'jq-select2', 'jq-rangeslider',\n    'jq-masked-inputs', 'jq-pw-strength'\n]);\n</script>";
 
+require_once __DIR__ . "/../../models/is_user.php";
+require_once __DIR__ . "/../common/store-shell.php";
+require_once __DIR__ . "/../common/pagination.php";
+
+$storeMethods = store_payment_methods($CMSNT);
+
+/* --- filters -------------------------------------------------------------- */
+
+$storeLimit = isset($_GET["limit"]) ? (int) $_GET["limit"] : 10;
+if (!in_array($storeLimit, array(5, 10, 20, 50, 100, 500, 1000), true)) {
+    $storeLimit = 10;
+}
+$storePage = isset($_GET["page"]) ? (int) $_GET["page"] : 1;
+if ($storePage < 1) {
+    $storePage = 1;
+}
+
+$storeBuyer = (int) $getUser["id"];
+$storeWhere = " `buyer` = " . $storeBuyer . " ";
+$storeTransId = isset($_GET["trans_id"]) ? trim((string) $_GET["trans_id"]) : "";
+$storeTransId = (string) preg_replace("/[^A-Za-z0-9_-]/", "", $storeTransId);
+if ($storeTransId !== "") {
+    $storeWhere .= " AND `trans_id` = '" . check_string($storeTransId) . "' ";
+}
+
+$storeDate = function ($value) {
+    $value = trim((string) $value);
+    if (!preg_match("/^(\d{4})-(\d{2})-(\d{2})$/", $value, $match)) {
+        return "";
+    }
+    return checkdate((int) $match[2], (int) $match[3], (int) $match[1]) ? $value : "";
+};
+$storeFrom = isset($_GET["from"]) ? $storeDate($_GET["from"]) : "";
+$storeTo = isset($_GET["to"]) ? $storeDate($_GET["to"]) : "";
+if ($storeFrom !== "" || $storeTo !== "") {
+    if ($storeFrom !== "") {
+        $storeWhere .= " AND `create_gettime` >= '" . $storeFrom . " 00:00:00' ";
+    }
+    if ($storeTo !== "") {
+        $storeWhere .= " AND `create_gettime` <= '" . $storeTo . " 23:59:59' ";
+    }
+} elseif (!empty($_GET["time"])) {
+    /* Legacy link format: "2026-11-01 to 2026-11-16". */
+    $storeLegacy = str_replace("/", "-", trim((string) $_GET["time"]));
+    $storeParts = array_map("trim", explode(" to ", $storeLegacy));
+    if (count($storeParts) === 2) {
+        $storeStart = $storeDate($storeParts[0]);
+        $storeEnd = $storeDate($storeParts[1]);
+        if ($storeStart !== "" && $storeEnd !== "") {
+            $storeWhere .= " AND `create_gettime` >= '" . $storeStart . " 00:00:00'"
+                . " AND `create_gettime` <= '" . $storeEnd . " 23:59:59' ";
+        }
+    }
+}
+
+$storeShortBy = isset($_GET["shortByDate"]) ? (string) $_GET["shortByDate"] : "";
+if ($storeShortBy === "1") {
+    $storeWhere .= " AND `create_gettime` LIKE '%" . date("Y-m-d") . "%' ";
+} elseif ($storeShortBy === "2") {
+    $storeWhere .= " AND YEAR(`create_gettime`) = " . (int) date("Y") . " AND WEEK(`create_gettime`, 1) = " . (int) date("W") . " ";
+} elseif ($storeShortBy === "3") {
+    $storeWhere .= " AND MONTH(`create_gettime`) = " . (int) date("m") . " AND YEAR(`create_gettime`) = " . (int) date("Y") . " ";
+} else {
+    $storeShortBy = "";
+}
+
+$storeTotalRow = $CMSNT->get_row(" SELECT COUNT(`id`) AS total FROM `product_order` WHERE " . $storeWhere . " ");
+$storeState = orbit_pagination_state($storeTotalRow ? $storeTotalRow["total"] : 0, $storeLimit, $storePage);
+$storeOrders = (array) $CMSNT->get_list(
+    " SELECT * FROM `product_order` WHERE " . $storeWhere
+    . " ORDER BY `id` DESC LIMIT " . (int) $storeState["offset"] . ", " . (int) $storeState["per_page"] . " "
+);
+
+$storePagerQuery = array(
+    "limit" => $storeLimit,
+    "trans_id" => $storeTransId,
+    "from" => $storeFrom,
+    "to" => $storeTo,
+    "shortByDate" => $storeShortBy,
+);
+if ($storeFrom !== "" || $storeTo !== "") {
+    $storePagerQuery["from"] = $storeFrom;
+    $storePagerQuery["to"] = $storeTo;
+} elseif (!empty($_GET["time"])) {
+    $storePagerQuery["time"] = (string) $_GET["time"];
+}
+$storePageHref = function ($page) use ($storePagerQuery) {
+    return BASE_URL("product-orders") . "?" . http_build_query(array_merge($storePagerQuery, array("page" => (int) $page)));
+};
+
+$storeShell = array(
+    "title" => __("Lịch sử đơn hàng") . " | " . $CMSNT->site("title"),
+    "desc" => $CMSNT->site("description"),
+    "nav" => store_nav_default($CMSNT, $storeMethods),
+    "body_class" => "page-orders",
+    "noindex" => true,
+);
+store_shell_open($storeShell);
 ?>
+
+<section class="section section--tight" aria-labelledby="orders-title">
+  <div class="container">
+
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Tài khoản</p>
+        <h1 id="orders-title">Lịch sử đơn hàng</h1>
+        <p class="muted m0">Mọi đơn bạn đã mua, kèm ghi chú riêng và tệp tài khoản để tải lại.</p>
+      </div>
+      <a class="btn" href="<?php echo store_e(BASE_URL("client/purchase-history")); ?>">Thống kê chi tiêu</a>
+    </div>
+
+    <?php if ((string) $CMSNT->site("notice_orders") !== "") { ?>
+    <div class="alert alert--info orders-notice" role="note">
+      <?php echo $CMSNT->site("notice_orders"); ?>
+    </div>
+    <?php } ?>
+
+    <form class="toolbar orders-filter" method="get" action="<?php echo store_e(BASE_URL("product-orders")); ?>">
+      <div class="field">
+        <label class="field__label" for="order-code">Mã đơn hàng</label>
+        <input class="input" id="order-code" type="text" name="trans_id" autocomplete="off"
+          value="<?php echo store_e($storeTransId); ?>" placeholder="VD: 8F3A21C9">
+      </div>
+      <div class="field">
+        <label class="field__label" for="order-from">Từ ngày</label>
+        <input class="input" id="order-from" type="date" name="from" value="<?php echo store_e($storeFrom); ?>">
+      </div>
+      <div class="field">
+        <label class="field__label" for="order-to">Đến ngày</label>
+        <input class="input" id="order-to" type="date" name="to" value="<?php echo store_e($storeTo); ?>">
+      </div>
+      <div class="field">
+        <label class="field__label" for="order-short">Khoảng thời gian</label>
+        <select class="select" id="order-short" name="shortByDate">
+          <option value="">Tất cả</option>
+          <option value="1"<?php echo $storeShortBy === "1" ? " selected" : ""; ?>>Hôm nay</option>
+          <option value="2"<?php echo $storeShortBy === "2" ? " selected" : ""; ?>>Tuần này</option>
+          <option value="3"<?php echo $storeShortBy === "3" ? " selected" : ""; ?>>Tháng này</option>
+        </select>
+      </div>
+      <div class="field field--shrink">
+        <label class="field__label" for="order-limit">Mỗi trang</label>
+        <select class="select" id="order-limit" name="limit">
+          <?php foreach (array(5, 10, 20, 50, 100, 500, 1000) as $storeLimitOption) { ?>
+          <option value="<?php echo (int) $storeLimitOption; ?>"<?php echo $storeLimit === $storeLimitOption ? " selected" : ""; ?>>
+            <?php echo format_cash($storeLimitOption); ?>
+          </option>
+          <?php } ?>
+        </select>
+      </div>
+      <div class="toolbar__actions">
+        <button class="btn btn--primary" type="submit">Lọc đơn</button>
+        <?php if ($storeTransId !== "" || $storeFrom !== "" || $storeTo !== "" || $storeShortBy !== "" || !empty($_GET["time"])) { ?>
+        <a class="btn btn--ghost" href="<?php echo store_e(BASE_URL("product-orders")); ?>">Bỏ lọc</a>
+        <?php } ?>
+      </div>
+    </form>
+
+    <div class="orders-head">
+      <p class="small muted m0">
+        <?php echo orbit_pagination_summary($storeState, "Hiển thị %from%–%to% trong %total% đơn"); ?>
+      </p>
+      <?php if (!empty($storeOrders)) { ?>
+      <div class="orders-bulk">
+        <label class="check">
+          <input type="checkbox" data-orders-all>
+          <span>Chọn tất cả</span>
+        </label>
+        <button class="btn btn--sm btn--danger" type="button" data-orders-delete disabled>Xóa đơn đã chọn</button>
+      </div>
+      <?php } ?>
+    </div>
+
+    <?php if (empty($storeOrders)) { ?>
+    <div class="empty">
+      <p class="empty__title">Chưa có đơn hàng nào</p>
+      <p class="m0">Đơn bạn mua sẽ xuất hiện ở đây kèm mã đơn và tệp tài khoản. Bạn có thể bắt đầu từ trang sản phẩm.</p>
+      <p class="m0"><a class="btn btn--primary" href="<?php echo store_e(BASE_URL("client/home")); ?>#san-pham">Xem sản phẩm</a></p>
+    </div>
+    <?php } else { ?>
+    <div data-orders
+      data-update-endpoint="<?php echo store_e(BASE_URL("ajaxs/client/update.php")); ?>"
+      data-remove-endpoint="<?php echo store_e(BASE_URL("ajaxs/client/remove.php")); ?>"
+      data-view-endpoint="<?php echo store_e(BASE_URL("ajaxs/client/view.php")); ?>"
+      data-token="<?php echo store_e($getUser["token"]); ?>">
+
+      <p class="small" role="status" aria-live="polite" data-orders-status></p>
+
+      <ul class="order-list">
+        <?php foreach ($storeOrders as $storeOrder) {
+            $storeDeleted = (int) $storeOrder["trash"] === 1;
+            ?>
+        <li class="order-item<?php echo $storeDeleted ? " order-item--deleted" : ""; ?>" data-order-row>
+          <div class="order-item__check">
+            <?php if (!$storeDeleted) { ?>
+            <label class="check">
+              <input type="checkbox" value="<?php echo (int) $storeOrder["id"]; ?>" data-order-check
+                data-trans="<?php echo store_e($storeOrder["trans_id"]); ?>">
+              <span class="sr-only">Chọn đơn <?php echo store_e($storeOrder["trans_id"]); ?></span>
+            </label>
+            <?php } ?>
+          </div>
+
+          <div class="order-item__main">
+            <a class="order-item__code" href="<?php echo store_e(BASE_URL("product-order/" . $storeOrder["trans_id"])); ?>">
+              <?php echo store_e($storeOrder["trans_id"]); ?>
+            </a>
+            <span class="order-item__product"><?php echo store_e($storeOrder["product_name"]); ?></span>
+            <span class="order-item__meta">
+              SL <?php echo format_cash($storeOrder["amount"]); ?>
+              · <?php echo store_e($storeOrder["create_gettime"]); ?>
+              <?php if ($storeDeleted) { ?><span class="pill pill--danger">Đã xóa khỏi lịch sử</span><?php } ?>
+            </span>
+          </div>
+
+          <div class="order-item__money">
+            <span class="small faint">Thanh toán</span>
+            <strong><?php echo format_currency($storeOrder["pay"]); ?></strong>
+          </div>
+
+          <div class="order-item__actions">
+            <?php if (!$storeDeleted) { ?>
+            <a class="btn btn--sm" href="<?php echo store_e(BASE_URL("product-order/" . $storeOrder["trans_id"])); ?>">Xem</a>
+            <button class="btn btn--sm btn--ghost" type="button"
+              data-order-download="<?php echo store_e($storeOrder["trans_id"]); ?>">Tải .txt</button>
+            <button class="btn btn--sm btn--ghost btn--danger" type="button"
+              data-order-remove="<?php echo (int) $storeOrder["id"]; ?>">Xóa</button>
+            <?php } else { ?>
+            <span class="small faint">Không còn thao tác</span>
+            <?php } ?>
+          </div>
+
+          <div class="order-item__note">
+            <label class="small faint" for="note-<?php echo (int) $storeOrder["id"]; ?>">Ghi chú riêng</label>
+            <input class="input input--sm" id="note-<?php echo (int) $storeOrder["id"]; ?>" type="text"
+              value="<?php echo store_e($storeOrder["note"]); ?>" maxlength="200"
+              placeholder="VD: tài khoản dùng cho gia đình"
+              <?php echo $storeDeleted ? "disabled" : 'data-order-note="' . (int) $storeOrder["id"] . '"'; ?>>
+          </div>
+        </li>
+        <?php } ?>
+      </ul>
+    </div>
+
+    <?php orbit_pagination(array(
+        "total" => $storeState["total"],
+        "per_page" => $storeLimit,
+        "page" => $storeState["page"],
+        "href" => $storePageHref,
+        "aria" => "Phân trang đơn hàng",
+        "labels" => array("summary" => "Trang %page%/%pages% · %total% đơn"),
+    )); ?>
+    <?php } ?>
+
+    <p class="small faint orders-foot">
+      Đơn đã xóa vẫn hiện ở đây để bạn biết nó từng tồn tại; nội dung tài khoản không còn mở được.
+      Cần hỗ trợ? <a href="<?php echo store_e(BASE_URL("client/contact")); ?>">Liên hệ shop</a>.
+    </p>
+  </div>
+</section>
+
+<?php
+store_shell_close();
