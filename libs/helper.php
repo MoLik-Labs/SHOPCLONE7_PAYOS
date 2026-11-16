@@ -680,6 +680,26 @@ function check_string($data)
 {
     return trim(htmlspecialchars(addslashes($data)));
 }
+/**
+ * A quantity that may be interpolated into SQL without quotes (LIMIT, arithmetic, stock checks).
+ *
+ * `check_string()` is not enough for a number: "1 PROCEDURE ANALYSE(...)" is not numeric, passes a
+ * loose comparison against min/max and would reach `LIMIT ...` untouched. Only a run of digits is a
+ * quantity; everything else is refused before any query is built.
+ *
+ * @return int|false
+ */
+function order_quantity($value)
+{
+    if (!is_int($value) && !is_string($value)) {
+        return false;
+    }
+    $value = trim((string) $value);
+    if ($value === "" || !preg_match('/^[0-9]{1,9}$/D', $value)) {
+        return false;
+    }
+    return (int) $value;
+}
 function format_cash($number, $suffix = "")
 {
     return number_format($number, 0, ",", ".") . (string) $suffix;

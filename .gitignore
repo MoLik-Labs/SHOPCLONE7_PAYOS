@@ -11,3 +11,6 @@
 *.zip
 .DS_Store
 Thumbs.db
+
+# Local test harness (PHP wasm, puppeteer): rebuild instructions in docs/skills/project/php-monolith-debug
+/.harness/

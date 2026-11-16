@@ -50,7 +50,11 @@ if ($_GET['action'] == "get-balance") { // lấy sô dư
         exit(json_encode(["code" => 201, "message" => __("Vui lòng nhập số lượng cần mua")]));
     }
 
-    $amount = check_string($_GET["amount"]);
+    /* Digits only: this value becomes `LIMIT <n>` below, so a non-number must never reach SQL. */
+    $amount = order_quantity($_GET["amount"]);
+    if ($amount === false) {
+        exit(json_encode(["code" => 201, "message" => __("Số lượng mua không hợp lệ")]));
+    }
     if ($product["supplier_id"] == 0) {
         if ($CMSNT->get_row(" SELECT COUNT(id) FROM `product_stock` WHERE `product_code` = '" . $product["code"] . "' ")["COUNT(id)"] < $amount) {
             exit(json_encode(["code" => 201, "message" => __("Số lượng còn lại trong hệ thống không đủ")]));

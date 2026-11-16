@@ -42,15 +42,16 @@ if($_REQUEST["action"] == "buyProduct") {
     if(empty($_REQUEST["amount"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập số lượng cần mua")]));
     }
-    $amount = check_string($_REQUEST["amount"]);
-    if($amount < $product["min"]) {
+    /* Digits only: this value becomes `LIMIT <n>` below, so a non-number must never reach SQL. */
+    $amount = order_quantity($_REQUEST["amount"]);
+    if($amount === false) {
+        exit(json_encode(["status" => "error", "msg" => __("Số lượng mua không hợp lệ")]));
+    }
+    if($amount < (int) $product["min"]) {
         exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối thiểu là") . " " . format_cash($product["min"])]));
     }
-    if($product["max"] < $amount) {
+    if($amount > (int) $product["max"]) {
         exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối đa là") . " " . format_cash($product["max"])]));
-    }
-    if(is_numeric($amount) && floor($amount) != $amount) {
-        exit(json_encode(["status" => "error", "msg" => __("Số lượng mua không hợp lệ")]));
     }
     if($product["supplier_id"] == 0) {
         if($CMSNT->get_row(" SELECT COUNT(id) FROM `product_stock` WHERE `product_code` = '" . $product["code"] . "' ")["COUNT(id)"] < $amount) {
@@ -524,7 +525,10 @@ if($_REQUEST["action"] == "buyProduct") {
         if(empty($_REQUEST["amount"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập số lượng cần mua")]));
         }
-        $amount = check_string($_REQUEST["amount"]);
+        $amount = order_quantity($_REQUEST["amount"]);
+        if($amount === false) {
+            exit(json_encode(["status" => "error", "msg" => __("Số lượng mua không hợp lệ")]));
+        }
         if(!($product = $CMSNT->get_row("SELECT * FROM `products` WHERE `id` = '" . $id . "' AND `status` = 1 "))) {
             exit(json_encode(["status" => "error", "msg" => __("Sản phẩm không khả dụng")]));
         }
