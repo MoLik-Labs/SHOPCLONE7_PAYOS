@@ -152,21 +152,68 @@ class DB
     {
         $this->site_cache()->flush();
     }
+    /**
+     * Run $callback inside a transaction; commit only when it returns truthy.
+     * The ledger row and the balance update in users::AddCredits() must move together — before this,
+     * a failed UPDATE left a `dongtien` row that claimed money had moved. On a MyISAM table the
+     * engine ignores the transaction (same behaviour as before, no worse).
+     */
+    public function transaction($callback)
+    {
+        $this->connect();
+        $started = @mysqli_begin_transaction($this->ketnoi);
+        try {
+            $result = $callback();
+        } catch (Throwable $error) {
+            if ($started) {
+                @mysqli_rollback($this->ketnoi);
+            }
+            error_log("[orbit-db] transaction rolled back: " . $error->getMessage());
+            return false;
+        }
+        if ($started) {
+            if ($result) {
+                @mysqli_commit($this->ketnoi);
+            } else {
+                @mysqli_rollback($this->ketnoi);
+            }
+        }
+        return $result;
+    }
     public function query($sql)
     {
         $this->connect();
         $row = $this->run_sql($sql);
         return $row;
     }
+    /**
+     * Normalise an amount before it is put into arithmetic SQL. Not a security boundary on its own
+     * (callers already escape), but "1abc" or "" used to reach MySQL, which casts them to 1 and 0 —
+     * a credit log that disagrees with the balance. A malformed amount is refused and logged.
+     */
+    private function amount($sotien)
+    {
+        if (!is_numeric($sotien)) {
+            error_log("[orbit-db] refused a non-numeric amount");
+            return false;
+        }
+        return (float) $sotien;
+    }
     public function cong($table, $data, $sotien, $where)
     {
         $this->connect();
+        if (($sotien = $this->amount($sotien)) === false) {
+            return false;
+        }
         $row = $this->run_sql("UPDATE `" . $table . "` SET `" . $data . "` = `" . $data . "` + '" . $sotien . "' WHERE " . $where . " ");
         return $row;
     }
     public function tru($table, $data, $sotien, $where)
     {
         $this->connect();
+        if (($sotien = $this->amount($sotien)) === false) {
+            return false;
+        }
         $row = $this->run_sql("UPDATE `" . $table . "` SET `" . $data . "` = `" . $data . "` - '" . $sotien . "' WHERE " . $where . " ");
         return $row;
     }

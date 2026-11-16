@@ -90,7 +90,23 @@ fatal-errors when the product has no stock row (it returns `0`), and its code is
 The counter `DB::$queries` (already added this round) now counts every statement including failures,
 and `DB::$errors` makes a "blank but no error" render impossible to miss.
 
-### 2.5 Entry point (`index.php`)
+### 2.5 Money movement is now atomic
+
+`users::AddCredits()`, `RefundCredits()` and `RemoveCredits()` wrote a `dongtien` ledger row and then
+updated `users.money` in two separate statements. If the second failed, the ledger claimed money had
+moved when it had not. All three now run inside `DB::transaction()`: the ledger row and the balance
+commit together, or neither does. The balance snapshot (`sotientruoc`/`sotiensau`) is read on the
+transaction's own connection, and the user id is cast to `int` in every balance statement.
+
+`DB::cong()`/`DB::tru()` now refuse a non-numeric amount (`"1abc"`, `""`) instead of letting MySQL
+cast it to `1`/`0` and writing a ledger row that disagrees with the balance; the refusal is logged.
+The admin credit/debit form in `views/admin/user-edit.php` parses the amount with
+`FILTER_VALIDATE_FLOAT` and rejects anything non-finite or ≤ 0 before it reaches the database.
+
+On MyISAM tables the engine ignores `BEGIN`/`ROLLBACK` — behaviour is then exactly what it was
+before, never worse. On InnoDB (the normal install) the two writes are atomic.
+
+### 2.6 Entry point (`index.php`)
 
 - The maintenance-mode admin token is validated against `^[A-Za-z0-9]{16,64}$` before the one query —
   an invalid cookie can no longer reach SQL.
@@ -102,7 +118,7 @@ and `DB::$errors` makes a "blank but no error" render impossible to miss.
 This is also a small perf win: the `aff` click previously ran `check_string()` and a `SELECT *` on
 every request carrying the cookie.
 
-### 2.6 Server configuration
+### 2.7 Server configuration
 
 `.user.ini` (PHP-FPM/CGI) — OPcache 192 MB / 20 000 files / `revalidate_freq=2`, realpath cache
 4 MB / 600 s, `display_errors=Off`, `log_errors=On`, `expose_php=Off`, zlib output compression at
@@ -176,7 +192,7 @@ $ node tools/dev/phpcl.mjs tests/lang_cache_test.php
 24 passed, 0 failed.
 
 $ node tools/dev/phpcl.mjs tests/db_hardening_test.php
-20 passed, 0 failed.
+30 passed, 0 failed.
 
 $ node tools/dev/phpcl.mjs tests/settings_cache_test.php
 23 passed, 0 failed.

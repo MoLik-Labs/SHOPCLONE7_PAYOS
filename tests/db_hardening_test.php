@@ -59,6 +59,32 @@ check("every statement still goes through the counter", substr_count($source, "+
 check("the wrapper calls mysqli_query exactly once", substr_count($source, "mysqli_query(\$this->ketnoi, \$sql)") === 1);
 check("settings lookups are escaped", strpos($source, 'mysqli_real_escape_string($this->ketnoi, $key)') !== false);
 
+/* ---------------------------------------------------------------- money movement */
+
+$users = (string) file_get_contents(__DIR__ . "/../libs/database/users.php");
+check("the ledger and the balance move in one transaction",
+    substr_count($users, 'return $this->transaction(') === 3);
+check("AddCredits documents the ledger/balance pairing",
+    strpos($users, "Ledger row + balance move together") !== false);
+check("the balance snapshot is read on the transaction's own connection",
+    substr_count($users, '$this->get_row("SELECT `money` FROM `users` WHERE `id` = ') === 3);
+$credits = substr($users, strpos($users, "public function AddCredits"), strpos($users, "public function Banned") - strpos($users, "public function AddCredits"));
+check("the user id is an integer in the three balance statements", strpos($credits, "`id` = '") === false);
+
+check("a transaction rolls back on an exception",
+    strpos($source, '@mysqli_rollback($this->ketnoi);') !== false);
+check("a transaction commits only on a truthy result",
+    strpos($source, '@mysqli_commit($this->ketnoi);') !== false && strpos($source, 'if ($result) {') !== false);
+check("non-numeric amounts are refused before SQL",
+    strpos($source, 'if (!is_numeric($sotien)) {') !== false);
+
+$adminForm = (string) file_get_contents(__DIR__ . "/../views/admin/user-edit.php");
+check("the admin credit form parses a strict float",
+    substr_count($adminForm, "FILTER_VALIDATE_FLOAT") === 2);
+check("…and rejects non-finite values", substr_count($adminForm, '!is_finite($amount)') === 2);
+check("the admin form no longer sends check_string() amounts to cong/tru",
+    strpos($adminForm, '$amount = check_string($_POST["amount"]);') === false);
+
 /* The helper must reuse the request's connection instead of opening a second one per call. */
 $helper = (string) file_get_contents(__DIR__ . "/../libs/helper.php");
 check("only the bootstrap and the lazy fallback open a connection",

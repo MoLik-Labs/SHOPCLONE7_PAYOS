@@ -82,11 +82,12 @@ if(isset($_GET["id"])) {
         if($CMSNT->site("status_demo") != 0) {
             exit("<script type=\"text/javascript\">if(!alert(\"Không được dùng chức năng này vì đây là trang web demo.\")){window.history.back().location.reload();}</script>");
         }
-        if($_POST["amount"] <= 0) {
+        /* Strict float: "1abc" used to pass the loose <= 0 test and reach MySQL as 1. */
+        $amount = filter_var(isset($_POST["amount"]) ? $_POST["amount"] : "", FILTER_VALIDATE_FLOAT);
+        if($amount === false || !is_finite($amount) || $amount <= 0) {
             exit("<script type=\"text/javascript\">if(!alert(\"Amount không hợp lệ !\")){window.history.back().location.reload();}</script>");
         }
         $Mobile_Detect = new Mobile_Detect();
-        $amount = check_string($_POST["amount"]);
         $reason = "[VÍ CHÍNH] " . check_string($_POST["reason"]);
         if($_POST["wallet"] == 2) {
             $CMSNT->cong("users", "debit", $amount, " `id` = '" . $id . "' ");
@@ -108,11 +109,12 @@ if(isset($_GET["id"])) {
         if($CMSNT->site("status_demo") != 0) {
             exit("<script type=\"text/javascript\">if(!alert(\"Không được dùng chức năng này vì đây là trang web demo.\")){window.history.back().location.reload();}</script>");
         }
-        if($_POST["amount"] <= 0) {
+        /* Same strict parse as the credit form: an amount is a finite positive number or nothing. */
+        $amount = filter_var(isset($_POST["amount"]) ? $_POST["amount"] : "", FILTER_VALIDATE_FLOAT);
+        if($amount === false || !is_finite($amount) || $amount <= 0) {
             exit("<script type=\"text/javascript\">if(!alert(\"Amount không hợp lệ !\")){window.history.back().location.reload();}</script>");
         }
         $Mobile_Detect = new Mobile_Detect();
-        $amount = check_string($_POST["amount"]);
         if($_POST["wallet"] == 2) {
             $CMSNT->tru("users", "debit", $amount, " `id` = '" . $id . "' ");
             $reason = "[VÍ GHI NỢ] " . check_string($_POST["reason"]);

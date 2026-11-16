@@ -52,43 +52,53 @@ class users extends DB
         if($transid == NULL) {
             $transid = uniqid() . "_" . mt_rand(0, 9999999);
         }
-        $isInsert = parent::insert("dongtien", ["sotientruoc" => getUser($user_id, "money"), "sotienthaydoi" => $amount, "sotiensau" => getUser($user_id, "money") + $amount, "thoigian" => gettime(), "noidung" => $reason, "user_id" => $user_id, "transid" => $transid]);
-        if($isInsert) {
-            $isUpdate = parent::cong("users", "money", $amount, " `id` = '" . $user_id . "' ");
-            if($isUpdate) {
-                parent::cong("users", "total_money", $amount, " `id` = '" . $user_id . "' ");
-                return true;
+        /* Ledger row + balance move together: a failed balance update must not leave a ledger entry. */
+        return $this->transaction(function () use ($user_id, $amount, $reason, $transid) {
+            $user_id = (int) $user_id;
+            $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " ");
+            $before = $balance ? $balance["money"] : 0;
+            $isInsert = parent::insert("dongtien", ["sotientruoc" => $before, "sotienthaydoi" => $amount, "sotiensau" => $before + $amount, "thoigian" => gettime(), "noidung" => $reason, "user_id" => $user_id, "transid" => $transid]);
+            if(!$isInsert) {
+                return false;
             }
-        }
-        return false;
+            $isUpdate = parent::cong("users", "money", $amount, " `id` = " . $user_id . " ");
+            if(!$isUpdate) {
+                return false;
+            }
+            return (bool) parent::cong("users", "total_money", $amount, " `id` = " . $user_id . " ");
+        });
     }
     public function RefundCredits($user_id, $amount, $reason, $transid = NULL)
     {
         if($transid == NULL) {
             $transid = uniqid() . "_" . mt_rand(0, 9999999);
         }
-        $isInsert = parent::insert("dongtien", ["sotientruoc" => getUser($user_id, "money"), "sotienthaydoi" => $amount, "sotiensau" => getUser($user_id, "money") + $amount, "thoigian" => gettime(), "noidung" => $reason, "user_id" => $user_id, "transid" => $transid]);
-        if($isInsert) {
-            $isUpdate = parent::cong("users", "money", $amount, " `id` = '" . $user_id . "' ");
-            if($isUpdate) {
-                return true;
+        return $this->transaction(function () use ($user_id, $amount, $reason, $transid) {
+            $user_id = (int) $user_id;
+            $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " ");
+            $before = $balance ? $balance["money"] : 0;
+            $isInsert = parent::insert("dongtien", ["sotientruoc" => $before, "sotienthaydoi" => $amount, "sotiensau" => $before + $amount, "thoigian" => gettime(), "noidung" => $reason, "user_id" => $user_id, "transid" => $transid]);
+            if(!$isInsert) {
+                return false;
             }
-        }
-        return false;
+            return (bool) parent::cong("users", "money", $amount, " `id` = " . $user_id . " ");
+        });
     }
     public function RemoveCredits($user_id, $amount, $reason, $transid = NULL)
     {
         if($transid == NULL) {
             $transid = uniqid() . "_" . mt_rand(0, 9999999);
         }
-        $isInsert = parent::insert("dongtien", ["sotientruoc" => getUser($user_id, "money"), "sotienthaydoi" => $amount, "sotiensau" => getUser($user_id, "money") - $amount, "thoigian" => gettime(), "noidung" => $reason, "user_id" => $user_id, "transid" => $transid]);
-        if($isInsert) {
-            $isRemove = parent::tru("users", "money", $amount, " `id` = '" . $user_id . "' ");
-            if($isRemove) {
-                return true;
+        return $this->transaction(function () use ($user_id, $amount, $reason, $transid) {
+            $user_id = (int) $user_id;
+            $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " ");
+            $before = $balance ? $balance["money"] : 0;
+            $isInsert = parent::insert("dongtien", ["sotientruoc" => $before, "sotienthaydoi" => $amount, "sotiensau" => $before - $amount, "thoigian" => gettime(), "noidung" => $reason, "user_id" => $user_id, "transid" => $transid]);
+            if(!$isInsert) {
+                return false;
             }
-        }
-        return false;
+            return (bool) parent::tru("users", "money", $amount, " `id` = " . $user_id . " ");
+        });
     }
     public function Banned($user_id, $reason)
     {
