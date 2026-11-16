@@ -51,98 +51,154 @@ try {
     $payosHistoryError = true;
     $payosReady = false;
 }
-$body = [
+require_once __DIR__ . '/../common/store-shell.php';
+
+$storeShell = array(
     'title' => 'Nạp tiền qua payOS | ' . $CMSNT->site('title'),
-    'desc' => $CMSNT->site('description'), 'keyword' => $CMSNT->site('keywords'),
-    'header' => '<link rel="stylesheet" href="' . $payosEscape(base_url('public/client/css/wallet.css')) . '">',
-    'footer' => '',
-];
-require_once __DIR__ . '/header.php';
-require_once __DIR__ . '/nav.php';
+    'desc' => $CMSNT->site('description'),
+    'nav' => store_nav_default($CMSNT),
+    'body_class' => 'page-recharge',
+    'noindex' => true,
+);
+store_shell_open($storeShell);
 ?>
-<section class="py-5 inner-section profile-part">
-    <div class="container">
-        <div class="home-heading mb-3"><h3>NẠP TIỀN QUA payOS</h3></div>
-        <div class="row">
-            <div class="col-lg-7">
-                <div class="account-card p-4">
-                    <h4 class="mb-3">Chuyển khoản ngân hàng</h4>
-                    <p class="mb-3">Nhập số tiền cần nạp, mở trang thanh toán payOS và quét mã QR bằng ứng dụng ngân hàng của bạn.</p>
-                    <?php if (!$payosReady): ?>
-                        <div class="alert alert-warning" role="alert">Nạp tiền qua payOS hiện chưa sẵn sàng. Vui lòng liên hệ quản trị viên hoặc quay lại sau.</div>
-                    <?php endif; ?>
-                    <form id="payos-form" method="post" action="<?= $payosEscape($payosAppUrl . '/ajaxs/client/payos.php') ?>">
-                        <input type="hidden" name="action" value="create">
-                        <input type="hidden" name="csrf_token" value="<?= $payosEscape(payos_csrf_token()) ?>">
-                        <label class="form-label" for="payos-amount">Số tiền nạp (VND)</label>
-                        <input class="form-control mb-2" id="payos-amount" name="amount" type="number" inputmode="numeric"
-                            min="<?= (int) $payosConfig['min_amount'] ?>" max="<?= (int) $payosConfig['max_amount'] ?>"
-                            step="1" required placeholder="Ví dụ: 100000" aria-describedby="payos-amount-help" <?= $payosReady ? '' : 'disabled' ?>>
-                        <p id="payos-amount-help" class="text-muted mb-3">Từ <?= $payosEscape($payosMoney($payosConfig['min_amount'])) ?> đến <?= $payosEscape($payosMoney($payosConfig['max_amount'])) ?> mỗi giao dịch.</p>
-                        <button class="btn btn-inline" id="payos-submit" type="submit" <?= $payosReady ? '' : 'disabled' ?>>Tạo thanh toán payOS</button>
-                    </form>
-                    <div id="payos-form-message" class="alert mt-3" role="status" aria-live="polite" hidden></div>
-                    <p class="text-muted mt-3 mb-0">Tiền được cộng vào số dư sau khi hệ thống xác nhận giao dịch. Vui lòng chuyển đúng số tiền và nội dung trên trang payOS.</p>
-                </div>
-            </div>
-            <div class="col-lg-5">
-                <div class="account-card p-4">
-                    <h4 class="mb-3">Thanh toán trong 3 bước</h4>
-                    <ol class="ps-3 mb-3" style="list-style: decimal;">
-                        <li class="mb-2">Nhập số tiền và chọn “Tạo thanh toán payOS”.</li>
-                        <li class="mb-2">Quét mã QR và hoàn tất chuyển khoản.</li>
-                        <li>Quay lại đây để xem trạng thái và số tiền đã cộng.</li>
-                    </ol>
-                    <p class="text-muted mb-0">Bạn có thể mở lại giao dịch đang chờ trong lịch sử bên dưới. Khi đã chuyển khoản, hãy kiểm tra trạng thái trước khi tạo giao dịch mới.</p>
-                </div>
-                <div id="payos-payment-panel" class="account-card p-4" <?= $payosOrderCode === '' ? 'hidden' : '' ?>>
-                    <h4 class="mb-3">Trạng thái giao dịch</h4>
-                    <p>Mã giao dịch: <strong id="payos-current-code"><?= $payosEscape($payosOrderCode) ?></strong></p>
-                    <div id="payos-payment-message" class="alert alert-info mt-3" role="status" aria-live="polite">Đang kiểm tra trạng thái thanh toán…</div>
-                    <button type="button" id="payos-check-status" class="btn btn-sm btn-outline-primary">Kiểm tra lại</button>
-                    <a id="payos-resume-payment" class="btn btn-sm btn-outline-primary" rel="noopener noreferrer" hidden>Mở thanh toán</a>
-                </div>
-            </div>
-        </div>
-        <div class="home-heading mb-3"><h3>LỊCH SỬ NẠP TIỀN payOS</h3></div>
-        <div class="account-card p-3">
-            <p class="text-muted mb-3">20 giao dịch gần nhất của bạn.</p>
-            <?php if ($payosHistoryError): ?>
-                <div class="alert alert-warning" role="alert">Chưa thể tải lịch sử nạp tiền. Vui lòng thử lại sau.</div>
-            <?php endif; ?>
-            <div class="table-responsive">
-                <table class="table table-bordered align-middle mb-0">
-                    <thead><tr><th>Mã giao dịch</th><th>Số tiền</th><th>Đã cộng</th><th>Trạng thái</th><th>Thời gian tạo</th><th>Thao tác</th></tr></thead>
-                    <tbody>
-                    <?php foreach ($payosHistory as $payosOrder): ?>
-                        <?php
-                        $payosStatus = strtoupper($payosOrder['status']);
-                        $payosLink = $payosCheckoutUrl($payosOrder['checkout_url']);
-                        $payosCredited = $payosStatus === 'PAID' && !empty($payosOrder['credited_at']);
-                        ?>
-                        <tr>
-                            <td><?= $payosEscape($payosOrder['order_code']) ?></td>
-                            <td class="text-nowrap"><?= $payosEscape($payosMoney($payosOrder['amount'])) ?></td>
-                            <td class="text-nowrap"><?= $payosEscape($payosMoney($payosCredited ? $payosOrder['credited_amount'] : 0)) ?></td>
-                            <td><span class="badge <?= $payosCredited ? 'bg-success' : 'bg-secondary' ?>"><?= $payosEscape($payosCredited ? 'Đã cộng tiền' : ($payosStatusLabels[$payosStatus] ?? 'Đang xử lý')) ?></span></td>
-                            <td class="text-nowrap"><?= $payosEscape($payosOrder['created_at']) ?></td>
-                            <td class="text-nowrap">
-                                <?php if ($payosLink !== '' && in_array($payosStatus, ['PENDING', 'UNDERPAID'], true)): ?>
-                                    <a class="btn btn-sm btn-outline-primary mb-1" href="<?= $payosEscape($payosLink) ?>" rel="noopener noreferrer">Thanh toán</a>
-                                <?php endif; ?>
-                                <a class="btn btn-sm btn-outline-secondary mb-1" href="<?= $payosEscape($payosAppUrl . '/?action=recharge-bank&orderCode=' . rawurlencode($payosOrder['order_code'])) ?>">Kiểm tra</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                    <?php if (!$payosHistory && !$payosHistoryError): ?>
-                        <tr><td colspan="6" class="text-center text-muted py-4">Bạn chưa có giao dịch nạp tiền qua payOS.</td></tr>
-                    <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<section class="section section--tight" aria-labelledby="recharge-title">
+  <div class="container">
+
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Ví của bạn</p>
+        <h1 id="recharge-title">Nạp tiền</h1>
+        <p class="muted m0">Chuyển khoản ngân hàng qua payOS; tiền vào số dư sau khi hệ thống xác nhận giao dịch.</p>
+      </div>
+      <p class="recharge-balance">
+        <span>Số dư hiện tại</span>
+        <strong><?= $payosEscape(format_currency($getUser['money'])) ?></strong>
+      </p>
     </div>
+
+    <?php if (!$payosReady): ?>
+    <div class="alert alert--warn" role="alert">
+      Nạp tiền qua payOS hiện chưa sẵn sàng. Vui lòng liên hệ quản trị viên hoặc quay lại sau.
+    </div>
+    <?php endif; ?>
+
+    <div class="recharge-grid">
+      <div class="panel">
+        <div class="panel__head">
+          <h2 class="panel__title">Chuyển khoản ngân hàng</h2>
+          <span class="pill">payOS</span>
+        </div>
+        <div class="panel__body">
+          <p class="muted">Nhập số tiền cần nạp, mở trang thanh toán payOS và quét mã QR bằng ứng dụng ngân hàng của bạn.</p>
+          <form id="payos-form" class="recharge-form" method="post" action="<?= $payosEscape($payosAppUrl . '/ajaxs/client/payos.php') ?>">
+            <input type="hidden" name="action" value="create">
+            <input type="hidden" name="csrf_token" value="<?= $payosEscape(payos_csrf_token()) ?>">
+            <div class="field">
+              <label class="field__label" for="payos-amount">Số tiền nạp (VND)</label>
+              <input class="input" id="payos-amount" name="amount" type="number" inputmode="numeric"
+                min="<?= (int) $payosConfig['min_amount'] ?>" max="<?= (int) $payosConfig['max_amount'] ?>"
+                step="1" required placeholder="Ví dụ: 100000" aria-describedby="payos-amount-help" <?= $payosReady ? '' : 'disabled' ?>>
+              <p class="field__help" id="payos-amount-help">Từ <?= $payosEscape($payosMoney($payosConfig['min_amount'])) ?> đến <?= $payosEscape($payosMoney($payosConfig['max_amount'])) ?> mỗi giao dịch.</p>
+            </div>
+            <button class="btn btn--primary" id="payos-submit" type="submit" <?= $payosReady ? '' : 'disabled' ?>>Tạo thanh toán payOS</button>
+          </form>
+          <div id="payos-form-message" class="alert recharge-message" role="status" aria-live="polite" hidden></div>
+          <p class="small faint m0">Tiền được cộng vào số dư sau khi hệ thống xác nhận giao dịch. Vui lòng chuyển đúng số tiền và nội dung trên trang payOS.</p>
+        </div>
+      </div>
+
+      <aside class="panel panel--muted recharge-steps">
+        <div class="panel__head">
+          <h2 class="panel__title">Ba bước</h2>
+        </div>
+        <div class="panel__body">
+          <ol class="steps">
+            <li><strong>Nhập số tiền</strong><span>Chọn số tiền trong giới hạn và bấm “Tạo thanh toán payOS”.</span></li>
+            <li><strong>Quét mã và chuyển khoản</strong><span>Mở trang payOS, quét QR bằng ứng dụng ngân hàng và hoàn tất.</span></li>
+            <li><strong>Quay lại kiểm tra</strong><span>Trạng thái tự cập nhật; số tiền đã cộng hiện trong lịch sử bên dưới.</span></li>
+          </ol>
+          <p class="small faint m0">Khi đã chuyển khoản, hãy kiểm tra trạng thái trước khi tạo giao dịch mới.</p>
+        </div>
+      </aside>
+    </div>
+
+    <div id="payos-payment-panel" class="panel recharge-status" <?= $payosOrderCode === '' ? 'hidden' : '' ?>>
+      <div class="panel__head">
+        <h2 class="panel__title">Trạng thái giao dịch</h2>
+        <span class="pill pill--accent mono" id="payos-current-code"><?= $payosEscape($payosOrderCode) ?></span>
+      </div>
+      <div class="panel__body">
+        <div id="payos-payment-message" class="alert recharge-message" role="status" aria-live="polite">Đang kiểm tra trạng thái thanh toán…</div>
+        <div class="recharge-status__actions">
+          <button type="button" id="payos-check-status" class="btn btn--sm">Kiểm tra lại</button>
+          <a id="payos-resume-payment" class="btn btn--sm btn--primary" rel="noopener noreferrer" hidden>Mở thanh toán</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel recharge-history">
+      <div class="panel__head">
+        <h2 class="panel__title">Lịch sử nạp tiền</h2>
+        <span class="small faint">20 giao dịch gần nhất</span>
+      </div>
+      <div class="panel__body">
+        <?php if ($payosHistoryError): ?>
+        <div class="alert alert--warn" role="alert">Chưa thể tải lịch sử nạp tiền. Vui lòng thử lại sau.</div>
+        <?php endif; ?>
+        <div class="table-wrap">
+          <table class="table table--compact">
+            <thead>
+              <tr>
+                <th scope="col">Mã giao dịch</th>
+                <th scope="col" class="num">Số tiền</th>
+                <th scope="col" class="num">Đã cộng</th>
+                <th scope="col">Trạng thái</th>
+                <th scope="col">Thời gian tạo</th>
+                <th scope="col"><span class="sr-only">Thao tác</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($payosHistory as $payosOrder): ?>
+              <?php
+              $payosStatus = strtoupper($payosOrder['status']);
+              $payosLink = $payosCheckoutUrl($payosOrder['checkout_url']);
+              $payosCredited = $payosStatus === 'PAID' && !empty($payosOrder['credited_at']);
+              ?>
+              <tr>
+                <td class="mono"><?= $payosEscape($payosOrder['order_code']) ?></td>
+                <td class="num"><?= $payosEscape($payosMoney($payosOrder['amount'])) ?></td>
+                <td class="num"><?= $payosEscape($payosMoney($payosCredited ? $payosOrder['credited_amount'] : 0)) ?></td>
+                <td><span class="pill<?= $payosCredited ? ' pill--ok' : '' ?>"><?= $payosEscape($payosCredited ? 'Đã cộng tiền' : ($payosStatusLabels[$payosStatus] ?? 'Đang xử lý')) ?></span></td>
+                <td class="small faint"><?= $payosEscape($payosOrder['created_at']) ?></td>
+                <td>
+                  <div class="table__actions">
+                    <?php if ($payosLink !== '' && in_array($payosStatus, ['PENDING', 'UNDERPAID'], true)): ?>
+                    <a class="btn btn--sm" href="<?= $payosEscape($payosLink) ?>" rel="noopener noreferrer">Thanh toán</a>
+                    <?php endif; ?>
+                    <a class="btn btn--sm btn--ghost" href="<?= $payosEscape($payosAppUrl . '/?action=recharge-bank&orderCode=' . rawurlencode($payosOrder['order_code'])) ?>">Kiểm tra</a>
+                  </div>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+              <?php if (!$payosHistory && !$payosHistoryError): ?>
+              <tr>
+                <td colspan="6">
+                  <div class="empty">
+                    <p class="empty__title">Chưa có giao dịch nào</p>
+                    <p class="m0">Giao dịch nạp tiền qua payOS sẽ hiện ở đây sau khi bạn tạo.</p>
+                  </div>
+                </td>
+              </tr>
+              <?php endif; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
+
 <script>
 (function () {
     'use strict';
@@ -167,7 +223,7 @@ require_once __DIR__ . '/nav.php';
 
     function showMessage(element, message, kind) {
         element.textContent = message;
-        element.className = 'alert mt-3 alert-' + kind;
+        element.className = 'alert recharge-message' + (kind === 'success' ? ' alert--ok' : kind === 'warning' ? ' alert--warn' : kind === 'danger' ? ' alert--danger' : '');
         element.hidden = false;
     }
     function money(amount) {
@@ -302,4 +358,6 @@ require_once __DIR__ . '/nav.php';
     window.addEventListener('pagehide', function () { clearTimeout(pollingTimer); });
 })();
 </script>
-<?php require_once __DIR__ . '/footer.php'; ?>
+
+<?php
+store_shell_close();

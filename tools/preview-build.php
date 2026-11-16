@@ -164,6 +164,17 @@ require_once $root . "/libs/sales_stats.php";
 require_once $root . "/views/common/pagination.php";
 require_once $root . "/views/common/orbit-shell.php";
 require_once $root . "/views/common/chart.php";
+require_once $root . "/libs/payos.php";
+
+/* Sample payOS configuration: no real credentials, just enough for the page to render as configured.
+   The preview has no MySQL, so the history query fails — the page's fail-closed state is what shows. */
+putenv("PAYOS_ENABLED=true");
+putenv("PAYOS_CLIENT_ID=preview-client");
+putenv("PAYOS_API_KEY=preview-key");
+putenv("PAYOS_CHECKSUM_KEY=preview-checksum");
+putenv("APP_URL=https://shop.example");
+putenv("PAYOS_MIN_AMOUNT=10000");
+putenv("PAYOS_MAX_AMOUNT=5000000");
 
 /* --------------------------------------------------------------- rendering */
 
@@ -306,6 +317,13 @@ $pages["order.html"] = array(
         array("module" => "client", "action" => "product-order", "trans_id" => $sampleTrans), $fixtures),
 );
 
+/* 6c. money in */
+$pages["recharge.html"] = array(
+    "title" => "Nạp tiền qua payOS — bản xem trước",
+    "html" => preview_render($root, "views/client/recharge-payos.php", array("login" => "tok"),
+        array("module" => "client", "action" => "recharge-bank"), $fixtures),
+);
+
 /* 7. the styleguide (design system reference) */
 $pages["styleguide.html"] = array(
     "title" => "Orbit design system — bản xem trước",
@@ -431,6 +449,9 @@ $index = '<!doctype html><html lang="vi" data-theme="light"><head><meta charset=
     . '<a class="card card--interactive preview-tile" href="order.html">'
     . '<h3>Chi tiết đơn hàng</h3>'
     . '<p class="small muted">Tài khoản đã giao, UID, chép từng dòng hoặc tải cả đơn; ghi chú giao hàng của shop.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="recharge.html">'
+    . '<h3>Nạp tiền qua payOS</h3>'
+    . '<p class="small muted">Số dư, số tiền trong giới hạn, ba bước thanh toán, trạng thái giao dịch và lịch sử nạp.</p></a>'
     . '<a class="card card--interactive preview-tile" href="styleguide.html">'
     . '<h3>Design system</h3>'
     . '<p class="small muted">Màu, chữ, nút, biểu mẫu, thẻ KPI, bảng, phân trang, timeline, '

@@ -371,6 +371,10 @@ video {
   background: var(--surface-2);
 }
 
+/* An element with [hidden] must not paint, even when another rule gives it a display value
+   (buttons, panels, inline-flex badges). */
+[hidden] { display: none !important; }
+
 .m0 { margin: 0; }
 .mt-2 { margin-top: var(--space-2); }
 .mt-4 { margin-top: var(--space-4); }
