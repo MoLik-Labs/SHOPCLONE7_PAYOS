@@ -81,7 +81,7 @@ $foot = ob_get_clean();
 
 /* --- document ------------------------------------------------------------- */
 check("the document opens with doctype before anything else", strpos($head, "<!doctype html>") === 0);
-check("the html element carries the dark default", strpos($head, 'data-theme="dark"') !== false);
+check("the html element carries the light storefront default", strpos($head, 'data-theme="light"') !== false);
 check("the lang attribute is present", strpos($head, 'lang="vi"') !== false);
 check("a viewport meta is present (mobile first)", strpos($head, 'name="viewport"') !== false);
 check("noindex is emitted when asked", strpos($head, 'name="robots" content="noindex, nofollow"') !== false);
@@ -91,22 +91,24 @@ check("the site title cannot inject markup into <title>", strpos($head, "<script
 check("…but it is still printed, escaped", strpos($head, "&lt;script&gt;alert(1)&lt;/script&gt;") !== false);
 check("a nav label cannot inject markup", strpos($head, "<em>Nạp</em>") === false && strpos($head, "&lt;em&gt;Nạp&lt;/em&gt;") !== false);
 check("the meta description is escaped", strpos($head, "&amp; &lt;b&gt;bold&lt;/b&gt;") !== false);
-check("a nav entry without an href is skipped", substr_count($head, "<li><a href=") === 2);
+check("a nav entry without an href is skipped", strpos($head, "ignored") === false
+    && substr_count($head, 'href="https://shop.example/client/home"') === 3 /* brand + desktop + mobile sheet */);
 check("the current page is marked for assistive tech", strpos($head, 'aria-current="page"') !== false);
 check("the favicon and theme colour come from the CMS", strpos($head, "public/uploads/fav.png") !== false && strpos($head, "#123456") !== false);
 check("a relative OG image is resolved through BASE_URL", strpos($head, "https://shop.example/public/uploads/og.png") !== false);
 check("page-owned head markup is passed through raw (documented contract)", strpos($head, '<link rel="stylesheet" href="https://shop.example/x.css">') !== false);
 check("the skip link points at the main landmark", strpos($head, 'class="skip-link" href="#main"') !== false);
 check("the main landmark carries the id", strpos($head, '<main id="main"') !== false);
-check("the shell links the four design-system stylesheets", substr_count($head, "public/client/orbit/") === 4);
-check("every stylesheet carries a cache-busting version", substr_count($head, "?v=") === 4);
+check("the shell links the five design-system stylesheets", substr_count($head, "public/client/orbit/") === 5
+    && strpos($head, "store.css") !== false);
+check("every stylesheet carries a cache-busting version", substr_count($head, "?v=") === 5);
 check("no third-party request appears in the shell head", strpos($head, "cdn") === false && strpos($head, "cdn.jsdelivr") === false);
 
 /* --- footer --------------------------------------------------------------- */
 check("the footer prints the provided links only", strpos($foot, "https://t.me/example") !== false && strpos($foot, "facebook") === false);
 check("the footer repeats the shell's brand instead of a page label",
-    preg_match('#topbar__brand[^>]*>([^<]+)<#u', $head, $m) === 1
-    && strpos($foot, ">" . trim($m[1]) . "<") !== false);
+    substr_count($head . $foot, 'class="topbar__brand"') === 2
+    && strpos($foot, 'Orbit &quot;Office&quot; &lt;script&gt;alert(1)&lt;/script&gt;') !== false);
 check("page-owned scripts are passed through raw", strpos($foot, 'src="https://shop.example/x.js"') !== false);
 check("the document is closed once", substr_count($foot, "</html>") === 1);
 check("the footer closes what open() opened", strpos($foot, "</main>") !== false && strpos($foot, "</body>") !== false);
@@ -128,7 +130,8 @@ global $CMSNT;
 $saved = $CMSNT;
 $CMSNT = null;
 $bare = orbit_shell_config(array());
-check("the shell works when no CMS object exists", $bare["title"] === null && $bare["nav"] === array());
+check("the shell works when no CMS object exists",
+    is_string($bare["title"]) && $bare["title"] !== "" && is_array($bare["nav"]));
 $CMSNT = $saved;
 
 echo "\norbit_shell_test: " . $pass . " passed, " . $fail . " failed\n";

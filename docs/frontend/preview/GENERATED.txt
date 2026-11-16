@@ -2,7 +2,7 @@ Orbit — static UI preview (generated)
 =====================================
 
 Built by: php tools/preview-build.php
-Built at: 2026-11-15 03:05 UTC
+Built at: 2026-11-16 12:24 UTC
 
 Contents: index.html, sales.html (admin), purchase-history.html (buyer), styleguide.html, assets/.
 Every page is rendered from the same code the shop runs, with SAMPLE data — there is no real customer,

@@ -27,8 +27,8 @@ $orbit = array(
     "head" => '<link rel="stylesheet" href="' . BASE_URL("public/client/orbit/music-player.css") . '?v='
         . orbit_shell_asset_version("public/client/orbit/music-player.css") . '">',
     "actions_html" => '<div class="segmented" role="group" aria-label="Theme">'
-        . '<button type="button" data-theme-toggle="dark" class="is-active">Dark</button>'
-        . '<button type="button" data-theme-toggle="light">Light</button></div>',
+        . '<button type="button" data-theme-toggle="light" class="is-active">Light</button>'
+        . '<button type="button" data-theme-toggle="dark">Dark</button></div>',
     "scripts" => '<script>(function(){document.querySelectorAll("[data-theme-toggle]").forEach(function(b){'
         . 'b.addEventListener("click",function(){document.documentElement.setAttribute("data-theme",b.getAttribute("data-theme-toggle"));'
         . 'document.querySelectorAll("[data-theme-toggle]").forEach(function(o){o.classList.toggle("is-active",o===b);});});});'

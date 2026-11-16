@@ -24,6 +24,23 @@ class DB
             "keywords" => "shop, licence",
             "currency" => "VND",
             "home_page" => "home",
+            "hotline" => "0909 123 456",
+            "email" => "support@orbit.example",
+            "address" => "Quận 1, TP. Hồ Chí Minh",
+            "max_show_product_home" => "6",
+            "type_show_product" => "BOX",
+            "product_hide_outstock" => "0",
+            "product_sold_display" => "1",
+            "order_by_product_home" => "1",
+            "bank_status" => "1",
+            "momo_status" => "0",
+            "card_status" => "0",
+            "crypto_status" => "0",
+            "paypal_status" => "0",
+            "perfectmoney_status" => "0",
+            "toyyibpay_status" => "0",
+            "squadco_status" => "0",
+            "flutterwave_status" => "0",
         );
         return isset($map[$key]) ? $map[$key] : "";
     }
@@ -83,6 +100,14 @@ class DB
         if (strpos($sql, "FROM `users`") !== false && strpos($sql, "COUNT(`id`) AS total") !== false) {
             return array("total" => $f["user_total"]);
         }
+        if (strpos($sql, "FROM `categories`") !== false && strpos($sql, "`slug`") !== false) {
+            foreach ($f["store_categories"] as $category) {
+                if (strpos($sql, "'" . $category["slug"] . "'") !== false) {
+                    return $category;
+                }
+            }
+            return false;
+        }
         return false;
     }
 
@@ -108,11 +133,30 @@ class DB
         if (strpos($sql, "FROM `product_order`") !== false) {
             return strpos($sql, "`product_id`") !== false ? $f["orders"] : $f["mine_orders"];
         }
+        if (strpos($sql, "FROM `payment_manual`") !== false) {
+            return array();
+        }
+        if (strpos($sql, "FROM `categories`") !== false) {
+            return $f["store_categories"];
+        }
+        if (strpos($sql, "GROUP BY `category_id`") !== false) {
+            return $f["store_counts"];
+        }
+        if (strpos($sql, "FROM `product_stock`") !== false) {
+            return $f["store_stock_rows"];
+        }
+        if (strpos($sql, "FROM `products`") !== false) {
+            return $f["store_products"];
+        }
         return array();
     }
 
     public function num_rows($sql)
     {
+        self::$log[] = $sql;
+        if (strpos($sql, "FROM `products`") !== false) {
+            return self::$fixtures["store_total"];
+        }
         return 0;
     }
 }
@@ -250,6 +294,60 @@ if (!function_exists("preview_fixtures")) {
                 array("method" => "card", "deposits" => 6, "amount" => 720000, "received" => 692000),
             ),
             "user_total" => 486,
+            "store_categories" => array(
+                array("id" => 1, "name" => "Tài khoản giải trí", "slug" => "tai-khoan-giai-tri",
+                    "icon" => "", "parent_id" => 1, "description" => "Tài khoản dùng ngay, giao tự động."),
+                array("id" => 2, "name" => "Phần mềm & licence", "slug" => "phan-mem-licence",
+                    "icon" => "", "parent_id" => 1, "description" => "Bản quyền phần mềm chính hãng."),
+                array("id" => 3, "name" => "Nạp & tiện ích", "slug" => "nap-tien-tien-ich",
+                    "icon" => "", "parent_id" => 1, "description" => ""),
+            ),
+            "store_counts" => array(
+                array("category_id" => 1, "c" => 4),
+                array("category_id" => 2, "c" => 3),
+                array("category_id" => 3, "c" => 1),
+            ),
+            "store_products" => array(
+                array("id" => 101, "name" => "Netflix Premium 1 tháng", "slug" => "netflix-premium-1-thang",
+                    "price" => 120000, "discount" => 0, "short_desc" => "Tài khoản riêng, xem trên 1 thiết bị.",
+                    "images" => "", "sold" => 128, "supplier_id" => 0, "api_stock" => 0, "code" => "NF1",
+                    "category_id" => 1, "status" => 1, "stt" => 40),
+                array("id" => 102, "name" => "Spotify Premium 3 tháng", "slug" => "spotify-premium-3-thang",
+                    "price" => 180000, "discount" => 10, "short_desc" => "Nâng cấp chính chủ, giữ nguyên playlist.",
+                    "images" => "", "sold" => 86, "supplier_id" => 0, "api_stock" => 0, "code" => "SP3",
+                    "category_id" => 1, "status" => 1, "stt" => 39),
+                array("id" => 103, "name" => "YouTube Premium 2 tháng", "slug" => "youtube-premium-2-thang",
+                    "price" => 150000, "discount" => 0, "short_desc" => "Không quảng cáo, phát nền.",
+                    "images" => "", "sold" => 64, "supplier_id" => 0, "api_stock" => 0, "code" => "YT2",
+                    "category_id" => 1, "status" => 1, "stt" => 38),
+                array("id" => 104, "name" => "Canva Pro 1 năm", "slug" => "canva-pro-1-nam",
+                    "price" => 250000, "discount" => 0, "short_desc" => "Mở khoá toàn bộ mẫu thiết kế.",
+                    "images" => "", "sold" => 41, "supplier_id" => 0, "api_stock" => 0, "code" => "CV1",
+                    "category_id" => 1, "status" => 1, "stt" => 37),
+                array("id" => 105, "name" => "Office 365 Family 1 năm", "slug" => "office-365-family-1-nam",
+                    "price" => 450000, "discount" => 15, "short_desc" => "Word, Excel, PowerPoint và 1 TB OneDrive.",
+                    "images" => "", "sold" => 29, "supplier_id" => 0, "api_stock" => 0, "code" => "OF1",
+                    "category_id" => 2, "status" => 1, "stt" => 36),
+                array("id" => 106, "name" => "Adobe Creative Cloud 1 năm", "slug" => "adobe-cc-1-nam",
+                    "price" => 890000, "discount" => 0, "short_desc" => "Bộ ứng dụng thiết kế đầy đủ.",
+                    "images" => "", "sold" => 12, "supplier_id" => 0, "api_stock" => 0, "code" => "AD1",
+                    "category_id" => 2, "status" => 1, "stt" => 35),
+                array("id" => 107, "name" => "Windows 11 Pro", "slug" => "windows-11-pro",
+                    "price" => 390000, "discount" => 0, "short_desc" => "Khoá kích hoạt vĩnh viễn.",
+                    "images" => "", "sold" => 18, "supplier_id" => 0, "api_stock" => 0, "code" => "WN1",
+                    "category_id" => 2, "status" => 1, "stt" => 34),
+                array("id" => 108, "name" => "Thẻ nạp 100.000đ", "slug" => "the-nap-100k",
+                    "price" => 100000, "discount" => 0, "short_desc" => "Mã thẻ giao ngay sau khi thanh toán.",
+                    "images" => "", "sold" => 230, "supplier_id" => 0, "api_stock" => 0, "code" => "TC1",
+                    "category_id" => 3, "status" => 1, "stt" => 33),
+            ),
+            "store_stock_rows" => array(
+                array("product_code" => "NF1", "c" => 24), array("product_code" => "SP3", "c" => 9),
+                array("product_code" => "YT2", "c" => 15), array("product_code" => "CV1", "c" => 6),
+                array("product_code" => "OF1", "c" => 4), array("product_code" => "AD1", "c" => 2),
+                array("product_code" => "WN1", "c" => 11), array("product_code" => "TC1", "c" => 100),
+            ),
+            "store_total" => 8,
             "new_users" => 23,
             "mine_total" => count($mineOrders),
             "mine_summary" => array(

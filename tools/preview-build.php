@@ -76,7 +76,9 @@ if (!function_exists("BASE_URL")) {
     {
         $clean = ltrim(str_replace("public/", "", (string) $path), "/");
         if (preg_match("~\\.(css|js|json|png|jpe?g|svg|webp|gif|ico|woff2?)$~i", $clean)) {
-            return "assets/" . $clean;
+            /* Root-relative shop assets (assets/img/icon-*.svg) already live under the preview's
+               assets/ folder, so prefixing them again produced assets/assets/… and a broken icon. */
+            return strpos($clean, "assets/") === 0 ? $clean : "assets/" . $clean;
         }
         return "#preview-" . trim(preg_replace("~[^a-z0-9]+~i", "-", $clean), "-");
     }
@@ -201,7 +203,14 @@ $pages["purchase-history.html"] = array(
         array("module" => "client", "action" => "purchase-history", "days" => "90"), $fixtures),
 );
 
-/* 3. the styleguide (design system reference) */
+/* 3. the storefront home, rebuilt on the v3 light design system */
+$pages["home.html"] = array(
+    "title" => "Trang chủ cửa hàng — bản xem trước",
+    "html" => preview_render($root, "views/client/home.php", array(),
+        array("module" => "client", "action" => "home", "sort" => "price-asc"), $fixtures),
+);
+
+/* 4. the styleguide (design system reference) */
 $pages["styleguide.html"] = array(
     "title" => "Orbit design system — bản xem trước",
     "html" => preview_render($root, "views/common/orbit-styleguide.php", array("admin_login" => "admintok"),
@@ -235,11 +244,21 @@ if (!is_dir($outDir . "/assets/music")) {
 }
 
 $copied = array();
-foreach (array("tokens.css", "base.css", "components.css", "shell.css", "chart.css", "music-player.css",
-               "chart.js", "table.js", "music-player.js") as $asset) {
+foreach (array("tokens.css", "base.css", "components.css", "shell.css", "store.css", "chart.css", "music-player.css",
+               "chart.js", "table.js", "music-player.js", "store.js") as $asset) {
     $source = $root . "/public/client/orbit/" . $asset;
     if (is_file($source) && copy($source, $assetsDir . "/" . $asset)) {
         $copied[] = $asset;
+    }
+}
+/* The storefront preloads one local woff2; the preview must carry the family or it falls back silently. */
+$fontDir = $outDir . "/assets/client/fonts/be-vietnam-pro";
+if (is_dir($root . "/public/client/fonts/be-vietnam-pro")) {
+    if (!is_dir($fontDir)) {
+        mkdir($fontDir, 0777, true);
+    }
+    foreach (glob($root . "/public/client/fonts/be-vietnam-pro/*") as $font) {
+        copy($font, $fontDir . "/" . basename($font));
     }
 }
 $musicPlaylist = $root . "/public/music/playlist.json";
@@ -259,6 +278,9 @@ file_put_contents($outDir . "/assets/preview.css", <<<CSS
 .preview-banner strong { margin-right: 6px; }
 .preview-nav { display: flex; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .preview-nav a { font-size: 13px; }
+.preview-tile { padding: var(--space-5); text-decoration: none; display: block; }
+.preview-tile h3 { margin-bottom: var(--space-2); }
+.preview-tile p { margin: 0; }
 CSS);
 
 foreach ($pages as $file => $page) {
@@ -271,35 +293,64 @@ foreach ($pages as $file => $page) {
     echo "wrote " . $file . " (" . number_format(strlen($html) / 1024, 1) . " KB)\n";
 }
 /* the landing page */
-$index = '<!doctype html><html lang="vi" data-theme="dark"><head><meta charset="utf-8">'
+$index = '<!doctype html><html lang="vi" data-theme="light"><head><meta charset="utf-8">'
     . '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Orbit — bản xem trước</title>'
     . '<link rel="stylesheet" href="assets/client/orbit/tokens.css"><link rel="stylesheet" href="assets/client/orbit/base.css">'
     . '<link rel="stylesheet" href="assets/client/orbit/components.css"><link rel="stylesheet" href="assets/client/orbit/shell.css">'
+    . '<link rel="stylesheet" href="assets/client/orbit/store.css">'
     . '<link rel="stylesheet" href="assets/preview.css"></head><body>'
     . $banner
     . '<div class="container section stack stack--lg">'
     . '<h1>Orbit — bản xem trước giao diện</h1>'
-    . '<p class="lead">Ba trang dưới đây được sinh ra từ chính mã sẽ chạy trong shop, với dữ liệu mẫu. '
-    . 'Mở từng trang để xem bố cục, biểu đồ và bảng.</p>'
-    . '<div class="grid grid--3">'
-    . '<a class="card card--interactive" href="sales.html" style="padding:var(--space-5);text-decoration:none">'
-    . '<h3 style="margin-bottom:var(--space-2)">Thống kê bán hàng (admin)</h3>'
-    . '<p class="small muted" style="margin:0">KPI, biểu đồ doanh thu, sản phẩm bán chạy, khách mua nhiều, '
+    . '<p class="lead">Bốn trang dưới đây được sinh ra từ chính mã sẽ chạy trong shop, với dữ liệu mẫu. '
+    . 'Mở từng trang để xem bố cục, biểu đồ và bảng. Trang chủ là bản dựng cần duyệt ở giai đoạn 1.</p>'
+    . '<div class="grid grid--2">'
+    . '<a class="card card--interactive preview-tile" href="home.html">'
+    . '<h3>Trang chủ cửa hàng</h3>'
+    . '<p class="small muted">Thanh điều hướng, khối giới thiệu, danh mục, lưới sản phẩm, lọc/sắp xếp/phân trang '
+    . 'và chân trang — nền sáng, dữ liệu thật từ danh mục.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="sales.html">'
+    . '<h3>Thống kê bán hàng (admin)</h3>'
+    . '<p class="small muted">KPI, biểu đồ doanh thu, sản phẩm bán chạy, khách mua nhiều, '
     . 'nạp tiền theo phương thức, bảng đơn có sắp xếp và xuất CSV.</p></a>'
-    . '<a class="card card--interactive" href="purchase-history.html" style="padding:var(--space-5);text-decoration:none">'
-    . '<h3 style="margin-bottom:var(--space-2)">Lịch sử mua hàng (khách)</h3>'
-    . '<p class="small muted" style="margin:0">Số tiền đã chi, biểu đồ chi tiêu, tìm kiếm đơn của chính mình '
-    . 'và phân trang.</p></a>'
-    . '<a class="card card--interactive" href="styleguide.html" style="padding:var(--space-5);text-decoration:none">'
-    . '<h3 style="margin-bottom:var(--space-2)">Design system</h3>'
-    . '<p class="small muted" style="margin:0">Màu, chữ, nút, biểu mẫu, thẻ KPI, bảng, phân trang, '
-    . 'timeline, công tắc và trình phát nhạc.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="purchase-history.html">'
+    . '<h3>Lịch sử mua hàng (khách)</h3>'
+    . '<p class="small muted">Số tiền đã chi, biểu đồ chi tiêu, tìm kiếm đơn của chính mình và phân trang.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="styleguide.html">'
+    . '<h3>Design system</h3>'
+    . '<p class="small muted">Màu, chữ, nút, biểu mẫu, thẻ KPI, bảng, phân trang, timeline, '
+    . 'công tắc và trình phát nhạc.</p></a>'
     . '</div>'
     . '<p class="small faint">Sinh bằng <span class="mono">php tools/preview-build.php</span>. '
     . 'Không chứa dữ liệu thật, không gọi mạng, không có trình phát nhạc nào tự chạy.</p>'
     . '</div></body></html>';
 file_put_contents($outDir . "/index.html", $fix($index));
 echo "wrote index.html\n";
+
+/* Root-relative images (assets/img/icon-*.svg) are copied out of the checkout on demand, so the preview
+   stays self-contained without duplicating the whole 14 MB assets folder. */
+foreach (glob($outDir . "/*.html") as $page) {
+    $html = (string) file_get_contents($page);
+    if (preg_match_all('~(?:href|src)="(assets/[^"]+)"~i', $html, $matches)) {
+        foreach (array_unique($matches[1]) as $reference) {
+            $relative = preg_split('/[?#]/', $reference);
+            $relative = $relative[0];
+            if (strpos($relative, "assets/client/orbit/") === 0 || strpos($relative, "assets/client/fonts/") === 0) {
+                continue; /* already mirrored above */
+            }
+            $source = $root . "/" . $relative;
+            if (!is_file($source)) {
+                continue; /* the asset check below reports it */
+            }
+            $target = $outDir . "/" . $relative;
+            if (!is_dir(dirname($target)) && !mkdir(dirname($target), 0777, true) && !is_dir(dirname($target))) {
+                fwrite(STDERR, "Cannot create " . dirname($target) . "\n");
+                exit(3);
+            }
+            copy($source, $target);
+        }
+    }
+}
 
 /* The tool checks its own output: every local stylesheet/script/image the pages reference must exist on
    disk, or the preview opens broken for whoever receives it. */
