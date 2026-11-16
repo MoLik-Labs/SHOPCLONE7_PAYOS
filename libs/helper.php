@@ -48,7 +48,7 @@ function remove_html_tags($string)
 }
 function getDiscount($amount, $product_id)
 {
-    $CMSNT = new DB();
+    $CMSNT = orbit_db();
     foreach ($CMSNT->get_list("SELECT * FROM `product_discount` WHERE `min` <= '" . $amount . "' AND `product_id` = '" . $product_id . "' ORDER BY `min` DESC ") as $discount) {
         return $discount["discount"];
     }
@@ -77,8 +77,8 @@ function admin_msg_warning($text, $url, $time)
 }
 function debit_processing($user_id)
 {
-    $CMSNT = new DB();
-    $User = new users();
+    $CMSNT = orbit_db();
+    $User = orbit_users();
     $getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ");
     if(0 < $getUser["debit"]) {
         if($getUser["debit"] <= $getUser["money"]) {
@@ -128,15 +128,33 @@ function checkPermission($admin_id, $role)
     }
     return false;
 }
+function orbit_db()
+{
+    global $CMSNT;
+    /* Reuse the request's connection. `new DB()` opened (and later closed) a second connection —
+       a TCP + auth + TLS handshake for a single COUNT. */
+    if (!($CMSNT instanceof DB)) {
+        $CMSNT = new DB();
+    }
+    return $CMSNT;
+}
+function orbit_users()
+{
+    static $instance = null;
+    if ($instance === null) {
+        $instance = new users();
+    }
+    return $instance;
+}
 function getStock($code)
 {
-    $CMSNT = new DB();
-    return $CMSNT->get_row(" SELECT COUNT(id) FROM `product_stock` WHERE  `product_code` = '" . $code . "' ")["COUNT(id)"];
+    $row = orbit_db()->get_row(" SELECT COUNT(id) FROM `product_stock` WHERE  `product_code` = '" . addslashes((string) $code) . "' ");
+    return $row ? $row["COUNT(id)"] : 0;
 }
 function currencyDefault()
 {
-    $CMSNT = new DB();
-    return $CMSNT->get_row(" SELECT `code` FROM `currencies` WHERE `display` = 1 AND `default_currency` = 1")["code"];
+    $row = orbit_db()->get_row(" SELECT `code` FROM `currencies` WHERE `display` = 1 AND `default_currency` = 1");
+    return $row ? $row["code"] : "VND";
 }
 function dirImageProduct($image)
 {
@@ -256,7 +274,7 @@ function display_domains($data)
 }
 function addRef($user_id, $price, $note = "")
 {
-    $CMSNT = new DB();
+    $CMSNT = orbit_db();
     if($CMSNT->site("status_ref") != 1) {
         return false;
     }
@@ -280,7 +298,7 @@ function sendMessAdmin($my_text)
 }
 function sendMessTelegram($my_text, $token = "", $chat_id = "")
 {
-    $CMSNT = new DB();
+    $CMSNT = orbit_db();
     if($chat_id == "") {
         $chat_id = $CMSNT->site("telegram_chat_id");
     }
@@ -312,8 +330,8 @@ function getFlag($flag)
 }
 function claimSpin($user_id, $trans_id, $total_money)
 {
-    $CMSNT = new DB();
-    $USER = new users();
+    $CMSNT = orbit_db();
+    $USER = orbit_users();
     if($CMSNT->site("status_spin") == 1 && $CMSNT->site("condition_spin") <= $total_money) {
         $USER->AddSpin($user_id, 1, "Nhập 1 SPIN từ đơn hàng #" . $trans_id);
     }
@@ -552,7 +570,7 @@ function base_url_admin($url = "")
 }
 function TypePassword($password)
 {
-    $CMSNT = new DB();
+    $CMSNT = orbit_db();
     if($CMSNT->site("type_password") == "md5") {
         return md5($password);
     }
@@ -566,7 +584,7 @@ function TypePassword($password)
 }
 function getUser($id, $row)
 {
-    $CMSNT = new DB();
+    $CMSNT = orbit_db();
     return $CMSNT->get_row("SELECT * FROM `users` WHERE `id` = '" . $id . "' ")[$row];
 }
 function validateUsername($username)
@@ -597,7 +615,7 @@ function gettime()
 }
 function format_currency2($amount)
 {
-    $CMSNT = new DB();
+    $CMSNT = orbit_db();
     $currency = $CMSNT->site("currency");
     if($currency == "USD") {
         return "\$" . number_format($amount / $CMSNT->site("usd_rate"), 2, ".", "");
@@ -614,7 +632,7 @@ function format_currency($amount)
     /* The two currency look-ups are cached for the request: a product grid used to ask the database
        for the same default-currency row once per price it printed. */
     static $rows = array();
-    $CMSNT = new DB();
+    $CMSNT = orbit_db();
     if(isset($_COOKIE["currency"])) {
         $currency = check_string($_COOKIE["currency"]);
         $cacheKey = "id:" . $currency;
@@ -716,7 +734,7 @@ function create_slug($str)
 }
 function checkAddon($id_addon)
 {
-    $CMSNT = new DB();
+    $CMSNT = orbit_db();
     $domain = str_replace("www.", "", $_SERVER["HTTP_HOST"]);
     if($CMSNT->get_row("SELECT * FROM `addons` WHERE `id` = '" . $id_addon . "' ")["purchase_key"] == md5($domain . "|" . $id_addon)) {
         return true;

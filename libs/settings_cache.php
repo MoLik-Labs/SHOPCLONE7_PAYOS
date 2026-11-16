@@ -24,6 +24,39 @@ if (!class_exists("SettingsCache")) {
     {
         private $values = array();
         private $loads = 0;
+        /** The one-shot map of small settings, or null before the first read. */
+        private $map = null;
+        private $mapLoads = 0;
+
+        /**
+         * Load every small setting in ONE query and keep the map for the rest of the request.
+         *
+         * The shop reads 20–60 distinct settings per page (title, every toggle, every label). One
+         * query per key is the single largest avoidable cost in a page render. Values above the
+         * caller's size limit are deliberately absent: a page that needs the 200 KB FAQ blob should
+         * pay for it only on the page that prints it, through remember().
+         */
+        public function remember_all($loader)
+        {
+            if ($this->map !== null) {
+                return $this->map;
+            }
+            ++$this->mapLoads;
+            $map = is_callable($loader) ? call_user_func($loader) : array();
+            $this->map = is_array($map) ? $map : array();
+            return $this->map;
+        }
+
+        public function has_all()
+        {
+            return $this->map !== null;
+        }
+
+        /** How many times the bulk query ran — used by the performance test. */
+        public function map_loads()
+        {
+            return $this->mapLoads;
+        }
 
         /**
          * Return the cached value for $key, or run $loader once and keep its result.
@@ -49,6 +82,7 @@ if (!class_exists("SettingsCache")) {
         public function flush()
         {
             $this->values = array();
+            $this->map = null;
         }
 
         /** How many times a loader actually ran — used by the performance test. */
@@ -59,7 +93,7 @@ if (!class_exists("SettingsCache")) {
 
         public function size()
         {
-            return count($this->values);
+            return count($this->values) + ($this->map === null ? 0 : count($this->map));
         }
     }
 }

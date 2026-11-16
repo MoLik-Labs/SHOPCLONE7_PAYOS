@@ -11,11 +11,83 @@ session_start();
 class DB
 {
     private $ketnoi;
+
+    /** How many SQL statements this process has sent — for tools/perf-probe.php and staging. */
+    public static $queries = 0;
+    /** How many statements failed. A page render must never report 0 errors while showing blanks. */
+    public static $errors = 0;
+    /** Last driver message, already stripped of credentials by MySQL. */
+    public static $last_error = "";
+
+    public static function reset_stats()
+    {
+        self::$queries = 0;
+        self::$errors = 0;
+        self::$last_error = "";
+    }
+
+    /**
+     * Log a failed statement without ever echoing SQL to the browser. The SQL text itself is only
+     * written when DB_DEBUG=1, because INSERT/UPDATE statements can carry tokens and passwords.
+     */
+    private function note_error($sql)
+    {
+        ++self::$errors;
+        self::$last_error = (string) mysqli_error($this->ketnoi);
+        $where = "unknown";
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5) as $frame) {
+            if (isset($frame["file"], $frame["line"]) && $frame["file"] !== __FILE__) {
+                $where = basename($frame["file"]) . ":" . $frame["line"];
+                break;
+            }
+        }
+        $detail = "[orbit-db] " . self::$last_error . " at " . $where;
+        if (getenv("DB_DEBUG") === "1") {
+            $detail .= " | SQL: " . substr(preg_replace('/\s+/', ' ', (string) $sql), 0, 300);
+        }
+        error_log($detail);
+    }
+
+    /** Every statement goes through here so the count, the log and the error counter are honest. */
+    private function run_sql($sql)
+    {
+        ++self::$queries;
+        $result = mysqli_query($this->ketnoi, $sql);
+        if ($result === false) {
+            $this->note_error($sql);
+        }
+        return $result;
+    }
     public function connect()
     {
         if(!$this->ketnoi) {
-            $this->ketnoi = mysqli_connect($_ENV["DB_HOST"], $_ENV["DB_USERNAME"], $_ENV["DB_PASSWORD"], $_ENV["DB_DATABASE"], (int) ($_ENV["DB_PORT"] ?? 3306)) or exit("Error => DATABASE");
-            mysqli_query($this->ketnoi, "set names 'utf8' ");
+            /* PHP 8.1+ throws mysqli exceptions by default; the rest of this class is written for the
+               "false on error" contract, so pin the mode instead of depending on the php.ini value. */
+            mysqli_report(MYSQLI_REPORT_OFF);
+            $host = $_ENV["DB_HOST"] ?? getenv("DB_HOST") ?: "localhost";
+            $user = $_ENV["DB_USERNAME"] ?? getenv("DB_USERNAME") ?: "";
+            $pass = $_ENV["DB_PASSWORD"] ?? getenv("DB_PASSWORD") ?: "";
+            $name = $_ENV["DB_DATABASE"] ?? getenv("DB_DATABASE") ?: "";
+            $port = (int) ($_ENV["DB_PORT"] ?? getenv("DB_PORT") ?: 3306);
+            /* A dead database must fail in seconds, not hang the render for the default 60 s. */
+            $link = mysqli_init();
+            if ($link) {
+                mysqli_options($link, MYSQLI_OPT_CONNECT_TIMEOUT, 5);
+                $this->ketnoi = @mysqli_real_connect($link, $host, $user, $pass, $name, $port);
+            } else {
+                $this->ketnoi = false;
+            }
+            if (!$this->ketnoi) {
+                error_log("[orbit-db] connect failed: " . mysqli_connect_error());
+                if (PHP_SAPI !== "cli" && !headers_sent()) {
+                    http_response_code(503);
+                }
+                exit("Error => DATABASE");
+            }
+            /* utf8 (3-byte) silently mangles emoji and any 4-byte character; utf8mb4 does not. */
+            if (!mysqli_set_charset($this->ketnoi, "utf8mb4")) {
+                error_log("[orbit-db] cannot set utf8mb4: " . mysqli_error($this->ketnoi));
+            }
         }
     }
     public function dis_connect()
@@ -27,12 +99,34 @@ class DB
     public function site($data)
     {
         $key = (string) $data;
-        /* One query per distinct setting per request instead of one query per read. Writes to the
-           settings table flush this cache (see update()/insert()/remove()). */
+        /* ONE query per request for every small setting. A page reads 20–60 keys; asking MySQL for
+           each one separately was the largest avoidable cost in a render. Large blobs (the FAQ blob,
+           e-mail templates) are left out of the bulk map by the LENGTH filter and fetched on demand
+           by remember(), so a page that never prints them never pays for them.
+           Writes to `settings` flush both layers (see update()/insert()/remove()). */
+        $map = $this->site_cache()->remember_all(function () {
+            $this->connect();
+            $map = array();
+            $result = $this->run_sql("SELECT `name`, `value` FROM `settings` WHERE LENGTH(`value`) <= 1024 ");
+            if ($result) {
+                while ($row = $result->fetch_assoc()) {
+                    $map[(string) $row["name"]] = $row["value"];
+                }
+                $result->free();
+            }
+            return $map;
+        });
+        if (array_key_exists($key, $map)) {
+            return $map[$key];
+        }
+        /* Either a large value or a setting that does not exist: ask once, then cache the answer. */
         return $this->site_cache()->remember($key, function () use ($key) {
             $this->connect();
-            $result = $this->ketnoi->query("SELECT * FROM `settings` WHERE `name` = '" . $key . "' ");
+            $result = $this->run_sql("SELECT * FROM `settings` WHERE `name` = '" . mysqli_real_escape_string($this->ketnoi, $key) . "' ");
             $row = $result ? $result->fetch_array() : null;
+            if ($result) {
+                $result->free();
+            }
             return ($row && isset($row["value"])) ? $row["value"] : "";
         });
     }
@@ -47,6 +141,12 @@ class DB
         return self::$site_cache_shared;
     }
 
+    /** How many times the bulk settings query ran in this process (should be 0 or 1). */
+    public function settings_loads()
+    {
+        return $this->site_cache()->map_loads();
+    }
+
     /** Public hook for long-running workers and tests; a normal request never needs it. */
     public function flush_site_cache()
     {
@@ -55,19 +155,19 @@ class DB
     public function query($sql)
     {
         $this->connect();
-        $row = $this->ketnoi->query($sql);
+        $row = $this->run_sql($sql);
         return $row;
     }
     public function cong($table, $data, $sotien, $where)
     {
         $this->connect();
-        $row = $this->ketnoi->query("UPDATE `" . $table . "` SET `" . $data . "` = `" . $data . "` + '" . $sotien . "' WHERE " . $where . " ");
+        $row = $this->run_sql("UPDATE `" . $table . "` SET `" . $data . "` = `" . $data . "` + '" . $sotien . "' WHERE " . $where . " ");
         return $row;
     }
     public function tru($table, $data, $sotien, $where)
     {
         $this->connect();
-        $row = $this->ketnoi->query("UPDATE `" . $table . "` SET `" . $data . "` = `" . $data . "` - '" . $sotien . "' WHERE " . $where . " ");
+        $row = $this->run_sql("UPDATE `" . $table . "` SET `" . $data . "` = `" . $data . "` - '" . $sotien . "' WHERE " . $where . " ");
         return $row;
     }
     public function insert($table, $data)
@@ -80,7 +180,7 @@ class DB
             $value_list .= ",'" . mysqli_real_escape_string($this->ketnoi, $value) . "'";
         }
         $sql = "INSERT INTO " . $table . "(" . trim($field_list, ",") . ") VALUES (" . trim($value_list, ",") . ")";
-        $result = mysqli_query($this->ketnoi, $sql);
+        $result = $this->run_sql($sql);
         if ($table === "settings") {
             $this->site_cache()->flush();
         }
@@ -94,7 +194,7 @@ class DB
             $sql .= $key . " = '" . mysqli_real_escape_string($this->ketnoi, $value) . "',";
         }
         $sql = "UPDATE " . $table . " SET " . trim($sql, ",") . " WHERE " . $where;
-        $result = mysqli_query($this->ketnoi, $sql);
+        $result = $this->run_sql($sql);
         if ($table === "settings") {
             $this->site_cache()->flush();
         }
@@ -108,13 +208,13 @@ class DB
             $sql .= $key . " = '" . mysqli_real_escape_string($this->ketnoi, $value) . "',";
         }
         $sql = "UPDATE " . $table . " SET " . trim($sql, ",") . " WHERE " . $where . " LIMIT " . $value1;
-        return mysqli_query($this->ketnoi, $sql);
+        return $this->run_sql($sql);
     }
     public function remove($table, $where)
     {
         $this->connect();
         $sql = "DELETE FROM " . $table . " WHERE " . $where;
-        $result = mysqli_query($this->ketnoi, $sql);
+        $result = $this->run_sql($sql);
         if ($table === "settings") {
             $this->site_cache()->flush();
         }
@@ -123,9 +223,9 @@ class DB
     public function get_list($sql)
     {
         $this->connect();
-        $result = mysqli_query($this->ketnoi, $sql);
+        $result = $this->run_sql($sql);
         if(!$result) {
-            exit("Câu truy vấn bị sai");
+            return [];
         }
         $return = [];
         while ($row = mysqli_fetch_assoc($result)) {
@@ -137,9 +237,9 @@ class DB
     public function get_row($sql)
     {
         $this->connect();
-        $result = mysqli_query($this->ketnoi, $sql);
+        $result = $this->run_sql($sql);
         if(!$result) {
-            exit("Câu truy vấn bị sai");
+            return false;
         }
         $row = mysqli_fetch_assoc($result);
         mysqli_free_result($result);
@@ -151,9 +251,9 @@ class DB
     public function num_rows($sql)
     {
         $this->connect();
-        $result = mysqli_query($this->ketnoi, $sql);
+        $result = $this->run_sql($sql);
         if(!$result) {
-            exit("Câu truy vấn bị sai");
+            return false;
         }
         $row = mysqli_num_rows($result);
         mysqli_free_result($result);

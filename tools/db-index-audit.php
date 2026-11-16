@@ -1,0 +1,106 @@
+<?php
+/*
+ * Read-only index audit for the queries this shop actually sends.
+ *
+ *   php tools/db-index-audit.php
+ *
+ * Prints, per table, the indexes that exist and the ones the hot queries need but MySQL cannot use.
+ * It NEVER writes: every missing index is printed as the exact ALTER TABLE statement for the owner
+ * to review and run. A missing index is usually a full table scan on a page that renders on every
+ * visit (products by status, stock by product_code, orders by buyer, settings by name).
+ *
+ * Connection: the same DB_* environment the app uses (.env or real environment variables).
+ */
+
+if (PHP_SAPI !== "cli") {
+    http_response_code(404);
+    exit;
+}
+
+$root = dirname(__DIR__);
+if (is_file($root . "/vendor/autoload.php")) {
+    require_once $root . "/vendor/autoload.php";
+    if (class_exists("Dotenv\\Dotenv")) {
+        try {
+            Dotenv\Dotenv::createImmutable($root)->safeLoad();
+        } catch (Throwable $error) {
+            /* env vars may already be set by the shell; not fatal for a read-only audit */
+        }
+    }
+}
+
+$host = $_ENV["DB_HOST"] ?? getenv("DB_HOST") ?: "localhost";
+$port = (int) ($_ENV["DB_PORT"] ?? getenv("DB_PORT") ?: 3306);
+$user = $_ENV["DB_USERNAME"] ?? getenv("DB_USERNAME") ?: "";
+$pass = $_ENV["DB_PASSWORD"] ?? getenv("DB_PASSWORD") ?: "";
+$name = $_ENV["DB_DATABASE"] ?? getenv("DB_DATABASE") ?: "";
+if ($name === "") {
+    fwrite(STDERR, "DB_DATABASE is not set (fill .env or export DB_*).\n");
+    exit(2);
+}
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+try {
+    $db = new mysqli($host, $user, $pass, $name, $port);
+} catch (Throwable $error) {
+    fwrite(STDERR, "Cannot connect: " . $error->getMessage() . "\n");
+    exit(2);
+}
+
+/* Leftmost-prefix match is what MySQL can use: an index on (buyer, id) serves `WHERE buyer = ?`. */
+$required = array(
+    "settings" => array(array("name")),
+    "users" => array(array("token"), array("api_key"), array("username")),
+    "products" => array(array("status"), array("category_id", "status"), array("slug")),
+    "product_stock" => array(array("product_code")),
+    "product_order" => array(array("buyer", "id"), array("trans_id"), array("trash")),
+    "product_sold" => array(array("trans_id"), array("trans_id", "buyer"), array("buyer")),
+    "posts" => array(array("slug"), array("status", "category_id")),
+    "post_category" => array(array("status")),
+    "payos_orders" => array(array("order_code"), array("status")),
+    "block_ip" => array(array("ip", "banned")),
+    "failed_attempts" => array(array("ip_address", "type")),
+    "coupons" => array(array("code")),
+    "currencies" => array(array("display", "default_currency")),
+    "dongtien" => array(array("user_id"), array("transid")),
+);
+
+$missing = 0;
+$checked = 0;
+foreach ($required as $table => $wanted) {
+    $result = $db->query("SELECT INDEX_NAME, COLUMN_NAME FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '" . $db->real_escape_string($table) . "'
+        ORDER BY INDEX_NAME, SEQ_IN_INDEX");
+    if (!$result) {
+        echo "SKIP  " . $table . " (table not present)\n";
+        continue;
+    }
+    $indexes = array();
+    while ($row = $result->fetch_assoc()) {
+        $indexes[$row["INDEX_NAME"]][] = $row["COLUMN_NAME"];
+    }
+    $result->free();
+    echo $table . ": " . (count($indexes) ? implode(", ", array_map(function ($name, $cols) {
+        return $name . "(" . implode(",", $cols) . ")";
+    }, array_keys($indexes), $indexes)) : "(no index)") . "\n";
+    foreach ($wanted as $columns) {
+        ++$checked;
+        $served = false;
+        foreach ($indexes as $cols) {
+            if (array_slice($cols, 0, count($columns)) === $columns) {
+                $served = true;
+                break;
+            }
+        }
+        if (!$served) {
+            ++$missing;
+            echo "  MISSING (" . implode(", ", $columns) . ")\n";
+            echo "    ALTER TABLE `" . $table . "` ADD INDEX `idx_" . $table . "_" . implode("_", $columns)
+                . "` (" . implode(", ", array_map(function ($c) { return "`" . $c . "`"; }, $columns)) . ");\n";
+        }
+    }
+}
+$db->close();
+echo "\n" . $checked . " index requirements checked, " . $missing . " missing.\n";
+echo $missing === 0 ? "All hot-query indexes are present.\n" : "Review the ALTER statements above; nothing was changed.\n";
+exit($missing === 0 ? 0 : 1);

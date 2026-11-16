@@ -405,6 +405,9 @@ if (!function_exists("store_shell_open")) {
 <?php if ($favicon !== "") { ?><link rel="icon" href="<?php echo store_e($favicon); ?>">
 <?php } ?>
 <link rel="preload" href="<?php echo store_e(BASE_URL("public/client/fonts/be-vietnam-pro/latin-400.woff2")); ?>" as="font" type="font/woff2" crossorigin>
+<?php /* Vietnamese copy needs the Vietnamese subset immediately; without this the first paint waits
+         for the CSS to parse before the font request even starts. */ ?>
+<link rel="preload" href="<?php echo store_e(BASE_URL("public/client/fonts/be-vietnam-pro/vietnamese-400.woff2")); ?>" as="font" type="font/woff2" crossorigin>
 <?php foreach ($styles as $file) { ?>
 <link rel="stylesheet" href="<?php echo store_e(store_asset($file)); ?>">
 <?php } ?>

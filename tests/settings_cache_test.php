@@ -68,11 +68,44 @@ check("numeric keys are usable", $cache->remember("123", function () {
     return "not this";
 }) === "numeric key");
 
+/* ------------------------------------------------------- bulk settings map */
+
+$bulk = new SettingsCache();
+$bulkLoads = 0;
+$rows = array("title" => "Orbit Shop", "currency" => "VND", "hotline" => "0909 123 456");
+$loader = function () use (&$bulkLoads, $rows) {
+    ++$bulkLoads;
+    return $rows;
+};
+$map = $bulk->remember_all($loader);
+check("the bulk loader returns every small setting", $map === $rows);
+check("…and runs exactly once for many reads", $bulk->remember_all($loader) === $rows && $bulkLoads === 1
+    && $bulk->map_loads() === 1);
+check("the map is visible to size()", $bulk->size() === 3);
+
+/* A key that the bulk query deliberately skipped (a large blob) is still fetchable and cached. */
+$largeLoads = 0;
+$faq = $bulk->remember("page_faq", function () use (&$largeLoads) {
+    ++$largeLoads;
+    return "<h2>FAQ</h2>";
+});
+check("a large value outside the map loads on demand", $faq === "<h2>FAQ</h2>" && $largeLoads === 1);
+check("…and is cached like any other key", $bulk->remember("page_faq", function () use (&$largeLoads) {
+    return "unexpected";
+}) === "<h2>FAQ</h2>" && $largeLoads === 1);
+
+$bulk->flush();
+check("flush drops the bulk map too", $bulk->has_all() === false);
+$bulk->remember_all($loader);
+check("a read after a write reloads the map", $bulkLoads === 2 && $bulk->map_loads() === 2);
+
 /* ------------------------------------------------------------- wiring */
 
 $db = (string) file_get_contents(__DIR__ . "/../libs/db.php");
 check("DB loads the cache helper", strpos($db, 'require_once __DIR__ . "/settings_cache.php"') !== false);
-check("DB::site reads through the cache", strpos($db, "site_cache()->remember") !== false);
+check("DB::site bulk-loads small settings once", strpos($db, "site_cache()->remember_all") !== false
+    && strpos($db, "LENGTH(`value`) <= 1024") !== false);
+check("DB::site still has a per-key fallback for large values", strpos($db, "site_cache()->remember(") !== false);
 check("settings writes flush the cache (update)", preg_match('/function update\(.*?settings.*?flush/s', $db) === 1);
 check("settings writes flush the cache (insert)", preg_match('/function insert\(.*?settings.*?flush/s', $db) === 1);
 check("settings writes flush the cache (remove)", preg_match('/function remove\(.*?settings.*?flush/s', $db) === 1);

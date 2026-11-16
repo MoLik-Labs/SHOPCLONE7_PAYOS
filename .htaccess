@@ -1,5 +1,38 @@
 Options -Indexes
 
+# ---------------------------------------------------------------------------
+# Performance: compress text, cache only the versioned Orbit assets.
+# Everything under /public/client/orbit/ is linked with ?v=<filemtime>, so it
+# can be cached for a year; legacy assets are deliberately left alone because
+# they are linked without a version and may be replaced in place.
+# ---------------------------------------------------------------------------
+AddDefaultCharset UTF-8
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE image/svg+xml application/xml
+</IfModule>
+
+<IfModule mod_brotli.c>
+    AddOutputFilterByType BROTLI_COMPRESS text/html text/css text/plain
+    AddOutputFilterByType BROTLI_COMPRESS application/javascript application/json image/svg+xml
+</IfModule>
+
+<IfModule mod_setenvif.c>
+    SetEnvIf Request_URI "^/public/client/orbit/" ORBIT_ASSET=1
+    SetEnvIf Request_URI "^/public/client/fonts/" ORBIT_FONT=1
+</IfModule>
+<IfModule mod_headers.c>
+    # CSS/JS are linked with ?v=<filemtime>, so a change always gets a new URL.
+    Header set Cache-Control "public, max-age=31536000, immutable" env=ORBIT_ASSET
+    # Font files are not versioned: a month keeps them fast without pinning a replaced file forever.
+    Header set Cache-Control "public, max-age=2592000" env=ORBIT_FONT
+    Header set X-Content-Type-Options "nosniff"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
 RewriteEngine On
 
 # Keep internal files out of HTTP responses; allow ACME challenges.
