@@ -79,7 +79,11 @@ class DB
             }
             if (!$this->ketnoi) {
                 error_log("[orbit-db] connect failed: " . mysqli_connect_error());
-                if (PHP_SAPI !== "cli" && !headers_sent()) {
+                if (PHP_SAPI === "cli") {
+                    fwrite(STDERR, "Error => DATABASE\n");
+                    exit(1);
+                }
+                if (!headers_sent()) {
                     http_response_code(503);
                 }
                 exit("Error => DATABASE");

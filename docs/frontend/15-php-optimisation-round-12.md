@@ -154,8 +154,9 @@ as the site. `tools/dev/perf.sh` runs it N times per page and prints the median:
 bash tools/dev/perf.sh 5 home product:netflix-1-thang blogs faq
 ```
 
-**Status in this sandbox: NOT RUN** — no MySQL is configured here, so the probe exits with
-`Error => DATABASE` (the expected path). Production numbers must be taken on staging.
+**Status in this sandbox: NOT RUN** — no MySQL is configured here. The probe fails fast with
+`[orbit-db] connect failed: …` on stderr, `Error => DATABASE` and exit code 1 (verified). Production
+numbers must be taken on staging.
 
 ### 3.2 `tools/db-index-audit.php` — missing-index detector
 
