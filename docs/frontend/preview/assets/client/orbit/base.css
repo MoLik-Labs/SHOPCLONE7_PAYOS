@@ -388,11 +388,16 @@ video {
   font-size: var(--text-base);
   line-height: 1.7;
 }
+/* Inside running text an h2 is a section label, not a page title: it must not compete with the h1. */
 .prose h2 {
   margin-top: var(--space-7);
+  font-size: var(--text-xl);
+  line-height: var(--leading-snug);
 }
 .prose h3 {
   margin-top: var(--space-5);
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
 }
 .prose ul,
 .prose ol {

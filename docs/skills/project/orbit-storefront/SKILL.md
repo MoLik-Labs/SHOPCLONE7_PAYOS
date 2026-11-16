@@ -47,6 +47,8 @@ sheet without JavaScript, self-hosted fonts, no third-party request. Do not dupl
 | Card block | `.panel` + `.panel__head`/`.panel__title` + `.panel__body`; `.panel--muted` for a quiet aside |
 | Table | wrap in `.table-wrap`; `.table` never escapes the panel |
 | Empty state | `.empty` with `.empty__title` and one action |
+| Breadcrumbs | `<nav aria-label="Đường dẫn"><ol class="breadcrumbs"><li>…</li></ol></nav>` — the component styles `li`, not the `nav` |
+| Blog list | `.blog-list` → `.blog-item` (+`__media`, `__body`, `__meta`, `__title`, `__desc`, `__more`), `.blog-side` for "Đọc nhiều" |
 | Money | `format_currency()` for money, `format_cash()` for counts |
 | Pager | `orbit_pagination()` from `views/common/pagination.php` (never `store_pager()`: its hrefs point at the home page) |
 
@@ -89,9 +91,11 @@ Use the components that exist: `.btn` (`--primary`, `--ghost`, `--danger`, `--sm
 ```bash
 # 1. Render every page with sample data and run the class/asset checks
 node .harness/phpcl.mjs tools/preview-build.php
-# 2. Look at 1440, 768 and 390 px (if the browser harness exists)
-node .harness/browser.mjs /tmp/shots docs/frontend/preview/<page>.html --widths=1440,768,390
+# 2. Look at 1440, 768 and 390 px (the harness serves the preview over HTTP itself)
+LD_LIBRARY_PATH=/tmp/al2023/lib node .harness/browser.mjs /tmp/shots \
+    docs/frontend/preview/<page>.html --widths=1440,768,390
 # 3. Read the report: page overflow must be 0 bytes, console errors 0, failed requests 0
+#    (file:// shots always show a blocked font request — that is the harness, not the page)
 # 4. Run the page test and the whole sweep
 node .harness/phpcl.mjs tests/<page>_test.php
 bash .harness/run.sh "$PWD" .harness/specs/all.json
@@ -108,3 +112,9 @@ PHP warning, a working empty state and a visible focus ring.
 - Later media queries win silently: put the phone override after the desktop rule.
 - `table` cells scroll inside `.table-wrap`; never let the page itself overflow.
 - The preview is a build artifact. Regenerate it after any view/CSS change before reviewing.
+- Owner HTML (FAQ, policy, manual) is not rewritten; style it with scoped `.page-content .prose …`
+  rules. A plain `<h2>` inside running text inherits the page-title size unless `.prose h2` overrides it.
+- Screenshot `file://` pages and the font is CORS-blocked; `.harness/browser.mjs` serves the preview
+  over HTTP for exactly this reason.
+- The footer legal line must name the shop, not the page title: `store_shell_close()` resolves it from
+  `site("title")` (bug found while reviewing `blogs.html`).

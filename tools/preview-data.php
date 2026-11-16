@@ -45,6 +45,20 @@ class DB
             "toyyibpay_status" => "0",
             "squadco_status" => "0",
             "flutterwave_status" => "0",
+            "page_faq" => "<h2>Đơn hàng được giao thế nào?</h2>"
+                . "<p>Sau khi thanh toán, thông tin đăng nhập hiện ngay trong mục <strong>Lịch sử</strong>. "
+                . "Bạn cũng có thể tải lại bằng file văn bản.</p>"
+                . "<h2>Tôi có thể đổi mật khẩu không?</h2>"
+                . "<p>Có. Đổi ngay lần đầu đăng nhập và ghi lại ở nơi an toàn.</p>"
+                . "<h2>Nếu tài khoản lỗi thì sao?</h2>"
+                . "<p>Gửi mã đơn cho hỗ trợ trong thời hạn bảo hành, shop cấp tài khoản thay thế cùng loại.</p>",
+            "page_policy" => "<h2>Điều khoản mua hàng</h2>"
+                . "<p>Giá và tình trạng còn hàng hiển thị tại thời điểm mua là giá bạn thanh toán.</p>"
+                . "<h2>Bảo hành</h2>"
+                . "<p>Thời hạn bảo hành ghi trên trang sản phẩm. Bảo hành áp dụng khi tài khoản không đăng nhập được "
+                . "và bạn còn mã đơn.</p>"
+                . "<h2>Hoàn tiền</h2>"
+                . "<p>Trường hợp không thể cấp tài khoản thay thế, shop hoàn phần chưa sử dụng về số dư theo yêu cầu.</p>",
         );
         return isset($map[$key]) ? $map[$key] : "";
     }
@@ -81,6 +95,14 @@ class DB
 
     public function get_row($sql)
     {
+        if (strpos($sql, "FROM `posts`") !== false && preg_match("/`slug` = '([^']+)'/", $sql, $match)) {
+            foreach (self::$fixtures["posts"] as $post) {
+                if ($post["slug"] === $match[1] && (int) $post["status"] === 1) {
+                    return $post;
+                }
+            }
+            return false;
+        }
         self::$log[] = $sql;
         $f = self::$fixtures;
         if (strpos($sql, "FROM `users` WHERE `token`") !== false) {
@@ -173,6 +195,50 @@ class DB
 
     public function get_list($sql)
     {
+        if (strpos($sql, "FROM `posts`") !== false && strpos($sql, "GROUP BY") !== false) {
+            $counts = array();
+            foreach (self::$fixtures["posts"] as $post) {
+                if ((int) $post["status"] !== 1) {
+                    continue;
+                }
+                $key = (int) $post["category_id"];
+                $counts[$key] = isset($counts[$key]) ? $counts[$key] + 1 : 1;
+            }
+            $rows = array();
+            foreach ($counts as $key => $total) {
+                $rows[] = array("category_id" => $key, "total" => $total);
+            }
+            return $rows;
+        }
+        if (strpos($sql, "FROM `posts`") !== false) {
+            $rows = array();
+            foreach (self::$fixtures["posts"] as $post) {
+                if ((int) $post["status"] !== 1) {
+                    continue;
+                }
+                if (preg_match("/`id` != ([0-9]+)/", $sql, $match) && (int) $post["id"] === (int) $match[1]) {
+                    continue;
+                }
+                if (preg_match("/`category_id` = ([0-9]+)/", $sql, $match) && (int) $post["category_id"] !== (int) $match[1]) {
+                    continue;
+                }
+                $rows[] = $post;
+            }
+            if (strpos($sql, "ORDER BY `id` DESC") !== false) {
+                usort($rows, function ($a, $b) { return $b["id"] <=> $a["id"]; });
+            } elseif (strpos($sql, "ORDER BY `view` DESC") !== false) {
+                usort($rows, function ($a, $b) { return $b["view"] <=> $a["view"]; });
+            }
+            if (preg_match("/LIMIT ([0-9]+)(?:,([0-9]+))?/", $sql, $match)) {
+                $offset = isset($match[2]) ? (int) $match[1] : 0;
+                $count = isset($match[2]) ? (int) $match[2] : (int) $match[1];
+                $rows = array_slice($rows, $offset, $count);
+            }
+            return $rows;
+        }
+        if (strpos($sql, "FROM `post_category`") !== false) {
+            return self::$fixtures["post_category"];
+        }
         self::$log[] = $sql;
         $f = self::$fixtures;
         if (strpos($sql, "FROM `product_sold`") !== false) {
@@ -219,6 +285,9 @@ class DB
         self::$log[] = $sql;
         if (strpos($sql, "FROM `products`") !== false) {
             return self::$fixtures["store_total"];
+        }
+        if (strpos($sql, "FROM `posts`") !== false) {
+            return count(self::$fixtures["posts"]);
         }
         return 0;
     }
@@ -440,6 +509,28 @@ if (!function_exists("preview_fixtures")) {
                     . "<p>Ghi đúng nội dung để hệ thống đối chiếu. Sau khi chuyển, gửi ảnh giao dịch cho "
                     . "<a href=\"mailto:{email}\">{email}</a> nếu số dư chưa cập nhật trong 15 phút.</p>"
                 )),
+            "posts" => array(
+                array("id" => 3, "slug" => "cach-chon-goi-netflix-phu-hop", "title" => "Cách chọn gói Netflix phù hợp với nhu cầu",
+                    "category_id" => 2, "status" => 1, "view" => 214, "image" => "",
+                    "create_gettime" => "2026-10-02 09:15:00", "user_id" => 1,
+                    "content" => base64_encode("<p>Gói 1 thiết bị đủ cho một người xem, gói 2 thiết bị hợp với gia đình nhỏ. "
+                        . "Nếu bạn chỉ xem trên điện thoại, gói 1 thiết bị tiết kiệm hơn.</p>"
+                        . "<p>Mọi gói đều là tài khoản riêng, không dùng chung mật khẩu với người lạ.</p>")),
+                array("id" => 2, "slug" => "bao-hanh-tai-khoan-hoat-dong-the-nao", "title" => "Bảo hành tài khoản hoạt động như thế nào?",
+                    "category_id" => 1, "status" => 1, "view" => 351, "image" => "",
+                    "create_gettime" => "2026-09-24 14:40:00", "user_id" => 1,
+                    "content" => base64_encode("<p>Trong thời hạn bảo hành, nếu tài khoản không đăng nhập được, gửi mã đơn cho hỗ trợ. "
+                        . "Shop kiểm tra và cấp tài khoản thay thế cùng loại.</p>")),
+                array("id" => 1, "slug" => "huong-dan-doi-mat-khau-lan-dau", "title" => "Hướng dẫn đổi mật khẩu lần đầu",
+                    "category_id" => 1, "status" => 1, "view" => 128, "image" => "",
+                    "create_gettime" => "2026-09-10 08:05:00", "user_id" => 1,
+                    "content" => base64_encode("<p>Sau khi nhận tài khoản trong mục Lịch sử mua hàng, đăng nhập và đổi mật khẩu ngay. "
+                        . "Ghi lại mật khẩu mới ở nơi an toàn; shop không lưu mật khẩu bạn đã đổi.</p>")),
+            ),
+            "post_category" => array(
+                array("id" => 1, "name" => "Hướng dẫn", "status" => 1, "icon" => ""),
+                array("id" => 2, "name" => "Kinh nghiệm", "status" => 1, "icon" => ""),
+            ),
             "order_accounts" => array(
                 array("id" => 1, "trans_id" => $mineOrders[0]["trans_id"], "uid" => "NF-001",
                     "account" => "preview01@orbit.example|mat-khau-mau-1"),

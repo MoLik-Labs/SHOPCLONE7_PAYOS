@@ -513,6 +513,12 @@ if (!function_exists("store_shell_close")) {
         $cmsnt = isset($GLOBALS["CMSNT"]) ? $GLOBALS["CMSNT"] : null;
         $year = date("Y");
         $copyright = store_site("copyright_footer", $cmsnt);
+        /* The legal line names the shop, never the page: a caller that passes "Nạp tiền | Shop"
+           as the document title must not make the footer claim the shop is called "Nạp tiền". */
+        $footerTitle = trim((string) store_site("title", $cmsnt));
+        if ($footerTitle === "") {
+            $footerTitle = (string) $o["title"];
+        }
         ?>
 </main>
 <footer class="footer">
@@ -551,7 +557,7 @@ if (!function_exists("store_shell_close")) {
       </div>
     </div>
     <div class="footer__legal">
-      <p>© <?php echo store_e($year); ?> <?php echo store_e($o["title"]); ?><?php
+      <p>© <?php echo store_e($year); ?> <?php echo store_e($footerTitle); ?><?php
         echo $copyright !== "" ? " · " . store_e($copyright) : "";
       ?></p>
       <p class="footer__credit">Thiết kế &amp; vận hành: <strong>Orbit Office</strong></p>

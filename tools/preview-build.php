@@ -338,6 +338,25 @@ $pages["recharge-gtf-bank.html"] = array(
         array("module" => "client", "action" => "recharge-gtf-bank"), $fixtures),
 );
 
+/* 6e. the owner's static pages and the blog */
+$pages["faq.html"] = array(
+    "title" => "Câu hỏi thường gặp — bản xem trước",
+    "html" => preview_render($root, "views/client/faq.php", array(), array("module" => "client", "action" => "faq"), $fixtures),
+);
+$pages["policy.html"] = array(
+    "title" => "Chính sách — bản xem trước",
+    "html" => preview_render($root, "views/client/policy.php", array(), array("module" => "client", "action" => "policy"), $fixtures),
+);
+$pages["blogs.html"] = array(
+    "title" => "Bài viết — bản xem trước",
+    "html" => preview_render($root, "views/client/blogs.php", array(), array("module" => "client", "action" => "blogs", "limit" => 10), $fixtures),
+);
+$pages["blog.html"] = array(
+    "title" => "Một bài viết — bản xem trước",
+    "html" => preview_render($root, "views/client/blog.php", array(),
+        array("module" => "client", "action" => "blog", "slug" => "bao-hanh-tai-khoan-hoat-dong-the-nao"), $fixtures),
+);
+
 /* 7. the styleguide (design system reference) */
 $pages["styleguide.html"] = array(
     "title" => "Orbit design system — bản xem trước",
@@ -472,6 +491,18 @@ $index = '<!doctype html><html lang="vi" data-theme="light"><head><meta charset=
     . '<a class="card card--interactive preview-tile" href="recharge-gtf-bank.html">'
     . '<h3>Kênh GachtheFast (đóng)</h3>'
     . '<p class="small muted">Trang giải thích vì sao kênh ngân hàng chưa dùng được và lối sang phương thức khác.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="blogs.html">'
+    . '<h3>Bài viết</h3>'
+    . '<p class="small muted">Danh sách bài viết, lọc theo chuyên mục, sắp xếp, phân trang và mục đọc nhiều.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="blog.html">'
+    . '<h3>Một bài viết</h3>'
+    . '<p class="small muted">Nội dung do quản trị soạn trên nền sáng, kèm danh sách bài khác.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="faq.html">'
+    . '<h3>Câu hỏi thường gặp</h3>'
+    . '<p class="small muted">Trang trả lời do quản trị nhập, có trạng thái trống khi chưa có nội dung.</p></a>'
+    . '<a class="card card--interactive preview-tile" href="policy.html">'
+    . '<h3>Chính sách</h3>'
+    . '<p class="small muted">Điều khoản mua hàng, bảo hành và hoàn tiền do quản trị nhập.</p></a>'
     . '<a class="card card--interactive preview-tile" href="styleguide.html">'
     . '<h3>Design system</h3>'
     . '<p class="small muted">Màu, chữ, nút, biểu mẫu, thẻ KPI, bảng, phân trang, timeline, '

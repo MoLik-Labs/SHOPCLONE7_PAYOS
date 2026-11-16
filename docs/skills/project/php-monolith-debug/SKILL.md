@@ -25,7 +25,20 @@ If `.harness/` vanished (it is intentionally git-excluded), rebuild it:
 ```bash
 mkdir -p .harness && cd .harness && npm init -y
 npm i @php-wasm/universal@2.0.22 @php-wasm/node@2.0.22
+
+# screenshots (optional): Chromium 153 + its AL2023 libraries
+npm i @sparticuz/chromium puppeteer-core
+node -e 'const fs=require("fs"),z=require("zlib"),p=require("path");const d="node_modules/@sparticuz/chromium/bin";
+fs.writeFileSync("/tmp/al2023.tar",z.brotliDecompressSync(fs.readFileSync(p.join(d,"al2023.tar.br"))));
+fs.writeFileSync("/tmp/chromium",z.brotliDecompressSync(fs.readFileSync(p.join(d,"chromium.br"))));'
+tar -xf /tmp/al2023.tar -C /tmp/al2023 && chmod 755 /tmp/chromium
+LD_LIBRARY_PATH=/tmp/al2023/lib /tmp/chromium --version   # Chromium 153.0.8010.0
 ```
+
+`.harness/browser.mjs` serves `docs/frontend/preview/` over a throwaway localhost port before taking
+shots. **Do not screenshot `file://` pages**: the browser blocks the font fetch as a cross-origin
+request, the page silently renders in a fallback typeface, and the report shows two bogus console
+errors. Over HTTP the same pages report `errors=0 failed=0`.
 
 ```js
 // .harness/phpcl.mjs
