@@ -215,6 +215,7 @@ wiring (no MySQL here). `perf-probe` and the index audit are the tools that meas
 | --- | --- |
 | Full-page cache for guests | The shell prints the visitor's login state and balance; a shared cache would leak one visitor's header to another. Correct keying needs a session-aware cache layer, not a directive |
 | Prepared statements everywhere | The app opens one connection per request, so MySQL cannot reuse a prepared plan across requests (no `mysqli` persistent cache). Escaping + casting gives the same safety with a much smaller diff |
+| Caching `getRowRealtime()` | Its whole purpose is a fresh read: `ajaxs/client/product.php` checks `money` immediately before a purchase, and `api/api.php` does the same. A request-level cache would let a stale balance through. The N+1 it causes in listings is bounded (one indexed primary-key read per row); the fix belongs in a `JOIN` in those views, not in the helper |
 | Merging the 5 Orbit CSS files into one | Over HTTP/2 the 5 files cost roughly one request, and each is cached `immutable` with its own `?v=`. A bundle adds a build step the owner can forget to run |
 | Rust/Go rewrite | See `docs/rewrite-evaluation-php-vs-go-rust.md` — DB round trips dominate, and the rewrite would have to reimplement 60+ payment integrations and the CMSNT licence layer |
 | OPcache preload | Most files exit unless `IN_SITE` is defined; preloading them is unsafe, and OPcache + `revalidate_freq=2` already removes compilation from the request |
@@ -242,3 +243,9 @@ Every change is local to a file and independent:
 - entry point → revert `index.php` (no schema or data change anywhere).
 
 No SQL was executed against production in this round. No deployment was performed.
+
+## 8. Commits
+
+- `d12b9ac6` — perf(round 12): bulk settings and translation caches, one DB connection, DB hardening
+- `43035cbd` — fix(money): atomic credits, numeric amount guard, strict admin amount parsing
+- `02766e49` — chore(db): non-zero exit for CLI connection failures so perf-probe stays scriptable
