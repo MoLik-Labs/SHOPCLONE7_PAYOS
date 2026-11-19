@@ -1752,3 +1752,64 @@
   .blog-list { grid-template-columns: 1fr; }
   .blog-item__media { aspect-ratio: 16 / 9; }
 }
+
+/* =========================================================================
+ * Tools — local TOTP, emoji picker
+ * ========================================================================= */
+
+.totp {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+.totp__code {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(2.4rem, 8vw, 3.4rem);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.totp__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.totp__bar {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.totp__bar span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--accent);
+  transition: width 1s linear;
+}
+.totp__next { margin: var(--space-3) 0 0; font-size: var(--text-sm); color: var(--text-muted); }
+.totp__next code { font-family: var(--font-mono); letter-spacing: 0.08em; }
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: var(--space-2);
+}
+.emoji-grid button {
+  aspect-ratio: 1;
+  font-size: 1.5rem;
+  line-height: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.emoji-grid button:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+.emoji-grid button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

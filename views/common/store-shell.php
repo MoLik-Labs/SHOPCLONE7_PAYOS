@@ -112,6 +112,12 @@ if (!function_exists("store_nav_default")) {
                 "current" => in_array($action, array("product-orders", "purchase-history"), true)),
             array("label" => "Hỗ trợ", "href" => BASE_URL("client/contact"), "current" => $action === "contact"),
         );
+        /* Only when the owner has opened the tools area — otherwise the link would 404-redirect. */
+        if ($cmsnt && (string) $cmsnt->site("status_menu_tools") === "1") {
+            $nav[] = array("label" => "Công cụ", "href" => BASE_URL("client/tools"),
+                "current" => strpos($action, "tool") === 0 || $action === "tools");
+        }
+        return $nav;
     }
 }
 

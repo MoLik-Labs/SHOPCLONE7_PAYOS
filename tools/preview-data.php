@@ -43,6 +43,7 @@ class DB
             "affiliate_banks" => "Vietcombank\nTPBank\nMB Bank",
             "affiliate_chat_id_telegram" => "",
             "affiliate_note" => "<p>Hoa hồng được cộng sau khi đơn của khách hoàn tất.</p>",
+            "status_menu_tools" => "1",
             "card_status" => "0",
             "crypto_status" => "0",
             "paypal_status" => "0",

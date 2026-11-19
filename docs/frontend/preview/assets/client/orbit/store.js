@@ -1056,6 +1056,21 @@
   /* --- copy buttons ------------------------------------------------------- */
 
   function setupCopy() {
+    /* 2FA tool: the code changes every 30 s, so the button reads the live value at click time. */
+    document.querySelectorAll("[data-totp-copy]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var literal = button.getAttribute("data-copy-value") || "";
+        if (!literal || !navigator.clipboard) {
+          return;
+        }
+        navigator.clipboard.writeText(literal).then(function () {
+          var was = button.textContent;
+          button.textContent = "Đã chép";
+          window.setTimeout(function () { button.textContent = was; }, 1500);
+        });
+      });
+    });
+
     document.querySelectorAll("[data-copy]").forEach(function (button) {
       button.addEventListener("click", function () {
         var literal = button.getAttribute("data-copy-value");

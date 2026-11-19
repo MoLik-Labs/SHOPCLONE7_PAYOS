@@ -408,6 +408,33 @@ $pages["affiliate-withdraw.html"] = array(
         array("module" => "client", "action" => "affiliate-withdraw"), $fixtures),
 );
 
+/* 6i. the tools area */
+$pages["tools.html"] = array(
+    "title" => "Công cụ — bản xem trước",
+    "html" => preview_render($root, "views/client/tools.php", array(),
+        array("module" => "client", "action" => "tools"), $fixtures),
+);
+$pages["tool-2fa.html"] = array(
+    "title" => "Tạo mã 2FA — bản xem trước",
+    "html" => preview_render($root, "views/client/tool-2fa.php", array(),
+        array("module" => "client", "action" => "tool-2fa"), $fixtures),
+);
+$pages["tool-emoji.html"] = array(
+    "title" => "Biểu tượng cảm xúc — bản xem trước",
+    "html" => preview_render($root, "views/client/tool-icon-facebook.php", array(),
+        array("module" => "client", "action" => "tool-icon-facebook"), $fixtures),
+);
+$pages["tool-checklive.html"] = array(
+    "title" => "Check live UID Facebook — bản xem trước",
+    "html" => preview_render($root, "views/client/tool-checklive-fb.php", array(),
+        array("module" => "client", "action" => "tool-checklive-fb"), $fixtures),
+);
+$pages["tool-random-face.html"] = array(
+    "title" => "Ảnh khuôn mặt ngẫu nhiên — bản xem trước",
+    "html" => preview_render($root, "views/client/tool-random-face.php", array(),
+        array("module" => "client", "action" => "tool-random-face"), $fixtures),
+);
+
 /* 7. the styleguide (design system reference) */
 $pages["styleguide.html"] = array(
     "title" => "Orbit design system — bản xem trước",

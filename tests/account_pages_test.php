@@ -182,6 +182,7 @@ class AccountStubDB
             "page_contact" => "<p>Gửi mã đơn kèm mô tả lỗi.</p>", "smtp_status" => "1",
             "affiliate_status" => "1", "affiliate_ck" => "20", "affiliate_min" => "100000",
             "affiliate_banks" => "Vietcombank\nTPBank", "affiliate_note" => "<p>Ghi chú cộng tác viên</p>",
+            "status_menu_tools" => "1",
             "bank_status" => "1", "momo_status" => "0",
         );
     }
@@ -645,6 +646,41 @@ $page = render_view("views/client/affiliate-withdraw.php",
     array("login" => "tok-lan"), array("token" => "tok-lan"));
 check("an unknown page size is clamped to a real one", strpos(implode("\n", $GLOBALS["CMSNT"]->sql), "LIMIT 0, 20") !== false);
 check("a negative page does not reach SQL", strpos(implode("\n", $GLOBALS["CMSNT"]->sql), "LIMIT -") === false);
+
+echo "\ntools\n";
+$page = render_view("views/client/tools.php", array("action" => "tools"), array(), array());
+assert_clean("tools index", $page["html"]);
+check("tools index lists the four tools", substr_count($page["html"], "card--interactive") === 4);
+check("tools index never frames a third party", strpos($page["html"], "<iframe") === false);
+
+$page = render_view("views/client/tool-2fa.php", array("action" => "tool-2fa"), array(), array());
+assert_clean("tool 2fa", $page["html"]);
+check("tool 2fa computes the code locally", strpos($page["html"], "crypto.subtle") !== false);
+check("tool 2fa embeds no third-party frame", strpos($page["html"], "2fa.zone") === false);
+check("tool 2fa says the key stays in the browser", strpos($page["html"], "không rời khỏi trang") !== false);
+check("tool 2fa carries the RFC 6238 parameters", strpos($page["html"], "SHA-1") !== false
+    && strpos($page["html"], "30") !== false);
+
+$page = render_view("views/client/tool-icon-facebook.php", array("action" => "tool-icon-facebook"), array(), array());
+assert_clean("tool emoji", $page["html"]);
+check("tool emoji renders a local grid", strpos($page["html"], "emoji-grid") !== false);
+check("tool emoji embeds no third-party frame", strpos($page["html"], "smileysapp") === false);
+check("tool emoji buttons say what they do", strpos($page["html"], "data-emoji=") !== false);
+
+$page = render_view("views/client/tool-checklive-fb.php", array("action" => "tool-checklive-fb"), array(), array());
+assert_clean("tool checklive", $page["html"]);
+check("checklive states the result is an estimate", strpos($page["html"], "không phải xác nhận") !== false);
+check("checklive keeps UID in the browser", strpos($page["html"], "không lưu UID") !== false);
+
+$page = render_view("views/client/tool-random-face.php", array("action" => "tool-random-face"), array(), array());
+check("random face opens the service in a new tab", strpos($page["html"], 'target="_blank"') !== false
+    && strpos($page["html"], 'rel="noopener noreferrer nofollow"') !== false);
+check("random face does not frame the service", strpos($page["html"], "<iframe") === false);
+
+$GLOBALS["CMSNT"]->sites["status_menu_tools"] = "0";
+$page = render_view("views/client/tools.php", array("action" => "tools"), array(), array());
+check("the tools area is closed when the owner turns it off", $page["redirect"] === BASE_URL(""));
+$GLOBALS["CMSNT"]->sites["status_menu_tools"] = "1";
 
 echo "\nguest access\n";
 /* is_user.php runs once per process, so this is a source-level check: a request without a session is

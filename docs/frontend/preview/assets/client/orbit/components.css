@@ -363,7 +363,9 @@
   gap: var(--space-2);
   align-items: center;
 }
-.copy-row .input { font-family: var(--font-mono); }
+.copy-row .input, .copy-row .textarea { font-family: var(--font-mono); }
+.copy-row .textarea { flex: 1 1 auto; }
+.copy-row .btn { flex: none; }
 
 /* =========================================================================
  * Data components — added in the "sales tracking" round.
