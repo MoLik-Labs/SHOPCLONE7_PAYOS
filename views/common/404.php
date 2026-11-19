@@ -43,7 +43,7 @@ store_shell_open($storeShell);
 
     <div class="panel mt-4">
       <div class="panel__body">
-        <h2 class="h3">Bạn đang tìm một đơn hàng?</h2>
+        <h2 class="panel__title">Bạn đang tìm một đơn hàng?</h2>
         <p class="muted m0">
           Đăng nhập rồi mở <a href="<?php echo store_e(BASE_URL("client/orders")); ?>">Đơn hàng của tôi</a>
           — mã đơn nằm trong mục đó, kèm tài khoản đã giao. Nếu vẫn không thấy, gửi mã đơn cho shop qua

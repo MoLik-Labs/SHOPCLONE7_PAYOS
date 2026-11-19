@@ -457,6 +457,13 @@ $pages["payment.html"] = array(
         array("module" => "client", "action" => "payment", "trans_id" => "INV7Q2M9X"), $fixtures),
 );
 
+/* 6k. the 404 page, reachable through index.php for a missing route */
+$pages["404.html"] = array(
+    "title" => "Không tìm thấy trang — bản xem trước",
+    "html" => preview_render($root, "views/common/404.php", array(),
+        array("module" => "common", "action" => "404"), $fixtures),
+);
+
 /* 7. the styleguide (design system reference) */
 $pages["styleguide.html"] = array(
     "title" => "Orbit design system — bản xem trước",
@@ -539,75 +546,71 @@ foreach ($pages as $file => $page) {
     file_put_contents($outDir . "/" . $file, $html);
     echo "wrote " . $file . " (" . number_format(strlen($html) / 1024, 1) . " KB)\n";
 }
-/* the landing page */
-$index = '<!doctype html><html lang="vi" data-theme="light"><head><meta charset="utf-8">'
+/* ------------------------------------------------------------- landing page
+ * Generated from the pages that were actually written, so adding a page above
+ * cannot leave the index out of date. A page with no description still gets a
+ * tile: the file name is better than a dead link nobody notices.
+ */
+$tileText = array(
+    "home.html" => array("Trang chủ cửa hàng", "Thanh điều hướng, khối giới thiệu, danh mục, lưới sản phẩm, lọc/sắp xếp/phân trang và chân trang."),
+    "sales.html" => array("Thống kê bán hàng (admin)", "KPI, biểu đồ doanh thu, sản phẩm bán chạy, khách mua nhiều, nạp tiền theo phương thức, bảng đơn và xuất CSV."),
+    "purchase-history.html" => array("Lịch sử mua hàng (khách)", "Số tiền đã chi, biểu đồ chi tiêu, tìm kiếm đơn của chính mình và phân trang."),
+    "product.html" => array("Trang sản phẩm", "Ảnh hoặc ký tự đại diện, giá và tồn kho thật, bảng mua, mô tả do quản trị nhập."),
+    "product-signed.html" => array("Trang sản phẩm (đã đăng nhập)", "Số dư trong thanh trên, ô số lượng, mã giảm giá và nút thanh toán bằng số dư."),
+    "login.html" => array("Đăng nhập & đăng ký", "Biểu mẫu có nhãn, trạng thái trong dòng, nút đăng nhập mạng xã hội khi bật."),
+    "register.html" => array("Đăng ký", "Tạo tài khoản mới trên cùng khung với trang đăng nhập."),
+    "account.html" => array("Tài khoản", "Số dư, tổng đã nạp, đã sử dụng, lối tắt tới đơn hàng và biểu mẫu liên hệ."),
+    "favorites.html" => array("Sản phẩm yêu thích", "Danh sách đã lưu, tồn kho theo mã hàng, bỏ lưu ngay tại dòng."),
+    "transactions.html" => array("Biến động số dư", "Số dư trước và sau mỗi giao dịch, lọc theo lý do và khoảng ngày."),
+    "logs.html" => array("Nhật ký hoạt động", "Đăng nhập, đổi mật khẩu, nạp tiền — kèm IP và thiết bị."),
+    "change-password.html" => array("Đổi mật khẩu", "Ba trường, cảnh báo đăng xuất mọi thiết bị sau khi đổi."),
+    "security.html" => array("Bảo mật", "Mã QR 2FA nội bộ, khoá dự phòng, công tắc thông báo phụ thuộc SMTP."),
+    "contact.html" => array("Liên hệ", "Hotline, email, địa chỉ do quản trị nhập và nội dung hỗ trợ."),
+    "forgot-password.html" => array("Quên mật khẩu", "Gửi liên kết đặt lại, kèm trạng thái khi SMTP chưa bật."),
+    "reset-password.html" => array("Đặt lại mật khẩu", "Đặt mật khẩu mới bằng liên kết có hạn."),
+    "verify-2fa.html" => array("Xác minh 2FA", "Bước đăng nhập thứ hai bằng mã từ ứng dụng xác thực."),
+    "verify-otp.html" => array("Xác minh OTP", "Bước đăng nhập thứ hai bằng mã gửi qua email."),
+    "affiliates.html" => array("Cộng tác viên", "Hoa hồng, liên kết giới thiệu và danh sách khách đã đăng ký."),
+    "affiliate-history.html" => array("Lịch sử hoa hồng", "Từng khoản cộng hoa hồng kèm số dư trước và sau."),
+    "affiliate-withdraw.html" => array("Rút hoa hồng", "Biểu mẫu rút, ngân hàng do quản trị nhập, lịch sử yêu cầu."),
+    "tools.html" => array("Công cụ", "Bốn tiện ích miễn phí, mở khi quản trị bật menu Công cụ."),
+    "tool-2fa.html" => array("Tạo mã 2FA (cục bộ)", "TOTP chạy trong trình duyệt bằng WebCrypto, không gửi khoá đi đâu."),
+    "tool-emoji.html" => array("Biểu tượng cảm xúc", "Bảng biểu tượng cục bộ, bấm để chép."),
+    "tool-checklive.html" => array("Check live UID Facebook", "Kiểm tra ảnh đại diện công khai, kèm phần giải thích giới hạn."),
+    "tool-random-face.html" => array("Ảnh khuôn mặt ngẫu nhiên", "Giới thiệu dịch vụ ngoài và mở trong tab mới, không nhúng khung."),
+    "orders.html" => array("Lịch sử đơn hàng", "Lọc theo mã, khoảng ngày; ghi chú riêng, tải .txt và xóa đơn."),
+    "order.html" => array("Chi tiết đơn hàng", "Tài khoản đã giao, UID, chép từng dòng hoặc tải cả đơn."),
+    "payment.html" => array("Hoá đơn USDT (kênh cũ)", "Trang email hoá đơn cũ trỏ tới: số tiền, địa chỉ, đếm ngược, cảnh báo kênh đã đóng."),
+    "recharge.html" => array("Nạp tiền qua payOS", "Số dư, số tiền trong giới hạn, ba bước thanh toán, trạng thái giao dịch."),
+    "recharge-manual.html" => array("Nạp tiền thủ công", "Hướng dẫn do quản trị nhập, điền sẵn tên đăng nhập và mã khách."),
+    "recharge-gtf-bank.html" => array("Kênh GachtheFast (đóng)", "Trang giải thích vì sao kênh chưa dùng được và lối sang phương thức khác."),
+    "blogs.html" => array("Bài viết", "Danh sách bài viết, lọc theo chuyên mục, sắp xếp, phân trang."),
+    "blog.html" => array("Một bài viết", "Nội dung do quản trị soạn trên nền sáng, kèm danh sách bài khác."),
+    "faq.html" => array("Câu hỏi thường gặp", "Trang trả lời do quản trị nhập, có trạng thái trống khi chưa có nội dung."),
+    "policy.html" => array("Chính sách", "Điều khoản mua hàng, bảo hành và hoàn tiền do quản trị nhập."),
+    "styleguide.html" => array("Design system", "Màu, chữ, nút, biểu mẫu, thẻ KPI, bảng, phân trang, timeline, công tắc."),
+    "404.html" => array("Không tìm thấy trang (404)", "Cùng khung, cùng chân trang; có đường quay lại cửa hàng."),
+);
+
+$indexHead = '<!doctype html><html lang="vi" data-theme="light"><head><meta charset="utf-8">'
     . '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Orbit — bản xem trước</title>'
     . '<link rel="stylesheet" href="assets/client/orbit/tokens.css"><link rel="stylesheet" href="assets/client/orbit/base.css">'
     . '<link rel="stylesheet" href="assets/client/orbit/components.css"><link rel="stylesheet" href="assets/client/orbit/shell.css">'
     . '<link rel="stylesheet" href="assets/client/orbit/store.css">'
-    . '<link rel="stylesheet" href="assets/preview.css"></head><body>'
-    . $banner
+    . '<link rel="stylesheet" href="assets/preview.css"></head><body>';
+$index = $indexHead . $banner
     . '<div class="container section stack stack--lg">'
     . '<h1>Orbit — bản xem trước giao diện</h1>'
-    . '<p class="lead">Bốn trang dưới đây được sinh ra từ chính mã sẽ chạy trong shop, với dữ liệu mẫu. '
-    . 'Mở từng trang để xem bố cục, biểu đồ và bảng. Trang chủ là bản dựng cần duyệt ở giai đoạn 1.</p>'
-    . '<div class="grid grid--2">'
-    . '<a class="card card--interactive preview-tile" href="home.html">'
-    . '<h3>Trang chủ cửa hàng</h3>'
-    . '<p class="small muted">Thanh điều hướng, khối giới thiệu, danh mục, lưới sản phẩm, lọc/sắp xếp/phân trang '
-    . 'và chân trang — nền sáng, dữ liệu thật từ danh mục.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="sales.html">'
-    . '<h3>Thống kê bán hàng (admin)</h3>'
-    . '<p class="small muted">KPI, biểu đồ doanh thu, sản phẩm bán chạy, khách mua nhiều, '
-    . 'nạp tiền theo phương thức, bảng đơn có sắp xếp và xuất CSV.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="purchase-history.html">'
-    . '<h3>Lịch sử mua hàng (khách)</h3>'
-    . '<p class="small muted">Số tiền đã chi, biểu đồ chi tiêu, tìm kiếm đơn của chính mình và phân trang.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="product.html">'
-    . '<h3>Trang sản phẩm</h3>'
-    . '<p class="small muted">Ảnh hoặc ký tự đại diện, giá và tồn kho thật, bảng mua, mô tả do quản trị '
-    . 'nhập và phần API/tiếp thị khi shop bật.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="product-signed.html">'
-    . '<h3>Trang sản phẩm (đã đăng nhập)</h3>'
-    . '<p class="small muted">Số dư trong thanh trên, ô số lượng, mã giảm giá và nút thanh toán bằng số dư.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="login.html">'
-    . '<h3>Đăng nhập & đăng ký</h3>'
-    . '<p class="small muted">Biểu mẫu có nhãn, trạng thái trong dòng, nút đăng nhập mạng xã hội khi bật.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="account.html">'
-    . '<h3>Tài khoản</h3>'
-    . '<p class="small muted">Số dư, tổng đã nạp, đã sử dụng, lối tắt tới đơn hàng và biểu mẫu liên hệ.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="orders.html">'
-    . '<h3>Lịch sử đơn hàng</h3>'
-    . '<p class="small muted">Lọc theo mã, khoảng ngày; ghi chú riêng, tải .txt và xóa đơn; đơn đã xóa vẫn hiện.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="order.html">'
-    . '<h3>Chi tiết đơn hàng</h3>'
-    . '<p class="small muted">Tài khoản đã giao, UID, chép từng dòng hoặc tải cả đơn; ghi chú giao hàng của shop.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="recharge.html">'
-    . '<h3>Nạp tiền qua payOS</h3>'
-    . '<p class="small muted">Số dư, số tiền trong giới hạn, ba bước thanh toán, trạng thái giao dịch và lịch sử nạp.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="recharge-manual.html">'
-    . '<h3>Nạp tiền thủ công</h3>'
-    . '<p class="small muted">Hướng dẫn do quản trị nhập, điền sẵn tên đăng nhập và mã khách vào nội dung chuyển khoản.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="recharge-gtf-bank.html">'
-    . '<h3>Kênh GachtheFast (đóng)</h3>'
-    . '<p class="small muted">Trang giải thích vì sao kênh ngân hàng chưa dùng được và lối sang phương thức khác.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="blogs.html">'
-    . '<h3>Bài viết</h3>'
-    . '<p class="small muted">Danh sách bài viết, lọc theo chuyên mục, sắp xếp, phân trang và mục đọc nhiều.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="blog.html">'
-    . '<h3>Một bài viết</h3>'
-    . '<p class="small muted">Nội dung do quản trị soạn trên nền sáng, kèm danh sách bài khác.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="faq.html">'
-    . '<h3>Câu hỏi thường gặp</h3>'
-    . '<p class="small muted">Trang trả lời do quản trị nhập, có trạng thái trống khi chưa có nội dung.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="policy.html">'
-    . '<h3>Chính sách</h3>'
-    . '<p class="small muted">Điều khoản mua hàng, bảo hành và hoàn tiền do quản trị nhập.</p></a>'
-    . '<a class="card card--interactive preview-tile" href="styleguide.html">'
-    . '<h3>Design system</h3>'
-    . '<p class="small muted">Màu, chữ, nút, biểu mẫu, thẻ KPI, bảng, phân trang, timeline, '
-    . 'công tắc và trình phát nhạc.</p></a>'
-    . '</div>'
+    . '<p class="lead">Mọi trang dưới đây được sinh ra từ chính mã sẽ chạy trong shop, với dữ liệu mẫu. '
+    . 'Mở từng trang để xem bố cục, biểu đồ và bảng. Danh sách này được tạo từ đúng những tệp đã ghi.</p>'
+    . '<div class="grid grid--2">';
+foreach (array_keys($pages) as $pageFile) {
+    $tile = isset($tileText[$pageFile]) ? $tileText[$pageFile] : array($pageFile, "");
+    $index .= '<a class="card card--interactive preview-tile" href="' . $pageFile . '">'
+        . '<h3>' . $tile[0] . '</h3>'
+        . '<p class="small muted">' . $tile[1] . '</p></a>';
+}
+$index .= '</div>'
     . '<p class="small faint">Sinh bằng <span class="mono">php tools/preview-build.php</span>. '
     . 'Không chứa dữ liệu thật, không gọi mạng, không có trình phát nhạc nào tự chạy.</p>'
     . '</div></body></html>';

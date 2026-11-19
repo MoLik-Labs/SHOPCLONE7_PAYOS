@@ -52,6 +52,20 @@ grep -rn 'LIMIT " \.\|LIMIT \$' --include=*.php . | grep -v '(int)\|order_quanti
 The known bad pattern that was fixed: `LIMIT " . $amount` with `$amount = "1 PROCEDURE ANALYSE(...)"`
 passing loose min/max comparisons. `tests/order_quantity_test.php` pins the fix.
 
+### 2b. Run the scanner before you believe the grep
+
+`tools/security-scan.php` tokenises every PHP file under `views/ ajaxs/ api/ libs/ models/ cron/ mod/`,
+follows variables assigned from `$_GET/$_POST/$_COOKIE/$_REQUEST`, and reports the ones that reach SQL,
+`echo`/`print`, `include`, a shell primitive or a password hash — plus files with no `IN_SITE` guard.
+
+```bash
+node tools/dev/phpcl.mjs tools/security-scan.php --fail-on=high
+```
+
+It is a heuristic: it narrows the reading list, and a clean run is not a proof. Two things it has already
+caught that a grep does not: `json_encode($_POST[...])` used as if it were an SQL escape (the quotes inside
+the JSON are still quotes), and a page that printed a session token into a hidden input.
+
 ## 3. CSRF and sessions
 
 - New POST endpoints that act on a cookie session need a CSRF token compared with `hash_equals`
