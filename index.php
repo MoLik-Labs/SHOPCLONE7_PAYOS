@@ -18,7 +18,7 @@ if($CMSNT->site("status") != 1 && !isset($_SESSION["admin_login"])) {
     /* Limit queries run before the maintenance screen, so keep it to one indexed lookup. */
     $maintenanceToken = isset($_COOKIE["token"]) && preg_match('/^[A-Za-z0-9]{16,64}$/', $_COOKIE["token"]) ? $_COOKIE["token"] : "";
     /* The regex above admits only [A-Za-z0-9], so the value cannot break out of the quotes. */
-    if($maintenanceToken !== "" && ($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `token` = '" . $maintenanceToken . "' AND `admin` != 0 "))) {
+    if($maintenanceToken !== "" && ($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `token` = '" . addslashes($maintenanceToken) . "' AND `admin` != 0 "))) {
         $_SESSION["admin_login"] = $getUser["token"];
     } else {
         require_once __DIR__ . "/views/common/maintenance.php";

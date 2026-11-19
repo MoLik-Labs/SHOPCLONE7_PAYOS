@@ -146,6 +146,19 @@ function orbit_users()
     }
     return $instance;
 }
+function orbit_post_id_list($value)
+{
+    /* Admin forms post `product_id[]`/`role[]`. json_encode() alone is NOT an SQL escape — a quote in
+       one of the values would still break out. Keep only plausible ids, as strings, to preserve the
+       strict comparisons the edit forms use against row ids. */
+    $ids = array();
+    foreach ((array) $value as $id) {
+        if (is_scalar($id) && preg_match('/^[1-9][0-9]{0,18}$/', (string) $id)) {
+            $ids[] = (string) $id;
+        }
+    }
+    return $ids;
+}
 function getStock($code)
 {
     $row = orbit_db()->get_row(" SELECT COUNT(id) FROM `product_stock` WHERE  `product_code` = '" . addslashes((string) $code) . "' ");

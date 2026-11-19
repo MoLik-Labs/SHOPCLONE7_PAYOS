@@ -22,6 +22,12 @@ if [ "$MODE" != "tests" ]; then
   { git ls-files -z '*.php'; git ls-files -z --others --exclude-standard '*.php'; } \
     | python3 -c 'import sys,json; names=sorted(set(p for p in sys.stdin.buffer.read().decode().split("\0") if p)); print(json.dumps(names))' > /tmp/shopclone7-lint.json
   node tools/dev/phpcl.mjs tools/dev/lintlist.php /tmp/shopclone7-lint.json || fails=$((fails+1))
+
+  # Static security sweep: unescaped request data reaching SQL/HTML, missing guards, retired endpoints.
+  echo "=== security_scan"
+  if ! node tools/dev/phpcl.mjs tools/security-scan.php --fail-on=high; then
+    fails=$((fails+1)); echo "FAILED: security_scan"
+  fi
 fi
 
 if [ "$MODE" != "lint" ]; then

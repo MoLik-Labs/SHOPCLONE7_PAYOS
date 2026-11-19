@@ -37,10 +37,8 @@ if(isset($_POST["AddCoupon"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập chiết khấu giảm giá\")){window.history.back().location.reload();}</script>");
     }
     $discount = check_string($_POST["discount"]);
-    $product_id = json_encode($_POST["product_id"]);
-    if(empty($_POST["product_id"])) {
-        $product_id = NULL;
-    }
+    $productIds = orbit_post_id_list(isset($_POST["product_id"]) ? $_POST["product_id"] : array());
+    $product_id = $productIds ? json_encode($productIds) : NULL;
     if(empty($_POST["min"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập giá trị đơn hàng tối thiểu\")){window.history.back().location.reload();}</script>");
     }

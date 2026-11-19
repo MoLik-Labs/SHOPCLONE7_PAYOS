@@ -32,7 +32,13 @@ if(isset($_POST["Save"])) {
     if(empty($_POST["role"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng chọn quyền cho role\")){window.history.back().location.reload();}</script>");
     }
-    $role = json_encode($_POST["role"]);
+    $roleKeys = array();
+    foreach ($admin_roles as $roleCategory) {
+        foreach ($roleCategory as $roleKey => $roleLabel) {
+            $roleKeys[] = (string) $roleKey;
+        }
+    }
+    $role = json_encode(array_values(array_intersect($roleKeys, array_map("strval", (array) $_POST["role"]))));
     $isInsert = $CMSNT->update("admin_role", ["name" => $name, "role" => $role, "update_gettime" => gettime()], " `id` = '" . $row["id"] . "' ");
     if($isInsert) {
         $Mobile_Detect = new Mobile_Detect();

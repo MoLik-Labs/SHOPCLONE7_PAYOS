@@ -1,20 +1,11 @@
 <?php
-
-ini_set("display_errors", 0);
-if(!empty($_GET["account"])) {
-    $account = explode("|", check_string($_GET["account"]));
-    list($username, $password) = $account;
-    $imapPath = "{outlook.office365.com:993/imap/ssl/novalidate-cert}";
-    $inbox = imap_open($imapPath, $username, $password);
-    if(!$inbox) {
-        exit("DIE");
-    }
-    exit("LIVE");
-}
-exit("Thiếu account");
-function check_string($data)
-{
-    return trim(htmlspecialchars(addslashes($data)));
-}
-
-?>
+/*
+ * Legacy Hotmail live-check endpoint.
+ *
+ * It opened an IMAP session with a username/password pair supplied in the query string, from an
+ * unauthenticated URL: anyone could make the shop probe Microsoft accounts, and every credential
+ * landed in the web server's access log. Nothing in the shop calls it (the cron job
+ * cron/checklive/hotmail.php does its own check server-side), so it is retired rather than patched.
+ */
+http_response_code(410);
+exit('This endpoint has been retired. Use cron/checklive/hotmail.php.');

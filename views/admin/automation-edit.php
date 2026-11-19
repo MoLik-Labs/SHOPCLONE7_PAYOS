@@ -33,11 +33,8 @@ if(isset($_POST["SaveTask"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng chọn loại công việc\")){window.history.back().location.reload();}</script>");
     }
     $type = check_string($_POST["type"]);
-    if(empty($_POST["product_id"])) {
-        $product_id = NULL;
-    } else {
-        $product_id = json_encode($_POST["product_id"]);
-    }
+    $productIds = orbit_post_id_list(isset($_POST["product_id"]) ? $_POST["product_id"] : array());
+    $product_id = $productIds ? json_encode($productIds) : NULL;
     if(empty($_POST["schedule"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập thời gian\")){window.history.back().location.reload();}</script>");
     }

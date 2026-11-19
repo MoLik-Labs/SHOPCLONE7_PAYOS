@@ -607,7 +607,7 @@ if (!function_exists("oauth_user_payload")) {
             "create_date" => (string) $now,
             "update_date" => (string) $now,
             "time_session" => time(),
-            "api_key" => md5(oauth_random_token(16)),
+            "api_key" => bin2hex(random_bytes(16)),
             "SecretKey_2fa" => (string) $secret,
         );
     }
