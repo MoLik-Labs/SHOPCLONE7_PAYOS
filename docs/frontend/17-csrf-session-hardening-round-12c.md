@@ -102,7 +102,7 @@ Real Chromium, page loaded from the preview, `orbit_csrf=probe-token-42` set, th
 
 `PASS csrf.js attaches the header to same-origin writes only`, 0 page errors.
 
-Preview after the change: 35 pages rebuild, `class check: 358 class(es) used, all defined`,
+Preview after the change: 36 pages rebuild, `class check: 360 class(es) used, all defined`,
 `payment @1440/@390 → overflow 0 bytes h1=1 inline=0 errors=0 failed=0`.
 
 ## 5. Decisions worth knowing
@@ -122,7 +122,7 @@ Preview after the change: 35 pages rebuild, `class check: 358 class(es) used, al
 **LCP `fetchpriority` was a non-issue.** The standing queue asked for `fetchpriority="high"` on the home
 hero. The home page has no hero image — the `<img>` tags are category icons (36 px), product covers and
 payment marks, all `loading="lazy"`. Measured with a `PerformanceObserver` in Chromium on the preview
-(35 pages, home at 1440 and 390):
+(36 pages, home at 1440 and 390):
 
 | Viewport | LCP time | LCP element | Size |
 | --- | --- | --- | --- |
