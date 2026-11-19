@@ -201,6 +201,18 @@ function preview_render($root, $relativeView, array $session, array $get, array 
     DB::$fixtures = $fixtures;
     DB::$log = array();
     $_SESSION = $session;
+    /* A fixed token keeps the generated HTML byte-identical between builds; a random one made every
+       rebuild show up as a diff even when nothing on the page had changed. */
+    if (empty($_SESSION["csrf_token"])) {
+        $_SESSION["csrf_token"] = "csrf-preview-token";
+    }
+    /* payOS and GachtheFast mint their own per-form tokens on first use. */
+    if (empty($_SESSION["payos_csrf"])) {
+        $_SESSION["payos_csrf"] = str_repeat("0", 64);
+    }
+    if (empty($_SESSION["gtf_csrf"])) {
+        $_SESSION["gtf_csrf"] = str_repeat("1", 64);
+    }
     $_COOKIE = array();
     $_GET = $get;
     unset($GLOBALS["getUser"]);

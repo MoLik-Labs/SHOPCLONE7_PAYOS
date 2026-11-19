@@ -215,6 +215,17 @@ class DB
         return $row;
     }
     /**
+     * Rows changed by the last INSERT/UPDATE/DELETE on this connection.
+     *
+     * Needed to make a status change a claim: `UPDATE … SET status='completed' WHERE id=? AND
+     * status='pending'` credits only the request that actually moved the row, so a payment
+     * provider that retries its callback cannot credit twice.
+     */
+    public function affectedRows()
+    {
+        return $this->ketnoi ? (int) mysqli_affected_rows($this->ketnoi) : 0;
+    }
+    /**
      * Normalise an amount before it is put into arithmetic SQL. Not a security boundary on its own
      * (callers already escape), but "1abc" or "" used to reach MySQL, which casts them to 1 and 0 —
      * a credit log that disagrees with the balance. A malformed amount is refused and logged.

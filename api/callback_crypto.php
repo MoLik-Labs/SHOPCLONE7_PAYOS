@@ -33,29 +33,41 @@ if(!($row = $CMSNT->get_row(" SELECT * FROM `payment_crypto` WHERE `request_id` 
 }
 $amount = $row["received"];
 $received = checkPromotion($amount);
+if(!is_numeric($amount) || (float) $amount <= 0 || !is_numeric($received) || (float) $received <= 0) {
+    exit("số tiền không hợp lệ");
+}
 $getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $row["user_id"] . "' ");
 if($row["status"] == "completed") {
     exit("Hoá đơn này đã được xử lý rồi");
 }
 if($status == "expired") {
-    $CMSNT->update("payment_crypto", ["status" => "expired", "update_gettime" => gettime()], " `id` = '" . $row["id"] . "' ");
+    $CMSNT->query("UPDATE `payment_crypto` SET `status` = 'expired', `update_gettime` = '" . addslashes(gettime())
+        . "' WHERE `id` = " . (int) $row["id"] . " AND `status` <> 'completed'");
     exit("cập nhật trạng thái expired");
 }
 if($status == "completed") {
-    $isUpdate = $CMSNT->update("payment_crypto", ["status" => "completed", "update_gettime" => gettime()], " `id` = '" . $row["id"] . "' ");
-    if($isUpdate) {
+    /* The status change is the claim: a retried callback that arrives while the first one is still
+       crediting finds the row already out of `pending` and must not add a second credit. */
+    $CMSNT->query("UPDATE `payment_crypto` SET `status` = 'completed', `update_gettime` = '" . addslashes(gettime())
+        . "' WHERE `id` = " . (int) $row["id"] . " AND `status` <> 'completed'");
+    if($CMSNT->affectedRows() === 1) {
         $User = new users();
-        $isCong = $User->AddCredits($row["user_id"], $received, "Crypto Recharge #" . $row["trans_id"], "TOPUP_CRYPTO_" . $row["trans_id"]);
-        if($isCong) {
+        $credit = $User->AddCreditsChecked($row["user_id"], $received, "Crypto Recharge #" . $row["trans_id"], "TOPUP_CRYPTO_" . $row["trans_id"]);
+        if($credit === "failed") {
+            /* Credit failed: let the provider's retry try again instead of leaving a paid invoice open. */
+            $CMSNT->update("payment_crypto", ["status" => "pending"], " `id` = " . (int) $row["id"] . " AND `status` = 'completed' ");
+            exit("credit_failed");
+        }
+        if($credit === "credited") {
             $my_text = $CMSNT->site("noti_recharge");
             $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
-            $my_text = str_replace("{username}", $getUser["username"], $my_text);
+            $my_text = str_replace("{username}", $getUser ? $getUser["username"] : $row["user_id"], $my_text);
             $my_text = str_replace("{method}", "Crypto", $my_text);
             $my_text = str_replace("{amount}", format_currency($amount), $my_text);
             $my_text = str_replace("{price}", format_currency($received), $my_text);
             $my_text = str_replace("{time}", gettime(), $my_text);
             sendMessAdmin($my_text);
-            $CMSNT->insert("deposit_log", ["user_id" => $getUser["id"], "method" => "USDT", "amount" => $amount, "received" => $received, "create_time" => time(), "is_virtual" => 0]);
+            $CMSNT->insert("deposit_log", ["user_id" => $getUser ? $getUser["id"] : $row["user_id"], "method" => "USDT", "amount" => $amount, "received" => $received, "create_time" => time(), "is_virtual" => 0]);
             exit("Cập nhật trạng thái completed thành công!");
         }
         exit("Hóa đơn này đã được cộng tiền rồi");

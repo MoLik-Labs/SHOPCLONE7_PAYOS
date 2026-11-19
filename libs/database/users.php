@@ -6,6 +6,8 @@ if(!defined("IN_SITE")) {
 class users extends DB
 {
     protected $_table_name = "users";
+    /* Outcome of the last AddCreditsChecked() call: "credited", "duplicate" or "failed". */
+    private $credit_outcome = "failed";
     protected $_key = "id";
     public function __construct()
     {
@@ -47,26 +49,76 @@ class users extends DB
         $sql = "SELECT * FROM " . $this->_table_name . " WHERE " . $where;
         return $this->num_rows($sql);
     }
-    public function AddCredits($user_id, $amount, $reason, $transid = NULL)
+    /**
+     * Write the ledger row for a keyed movement, but only if that key is not already in the ledger.
+     *
+     * A payment provider retries its callback; the retry used to arrive after the first credit and
+     * add a second one. `transid` is deterministic for every credited event (`PAYOS_…`, `TOPUP_…`,
+     * `ORDER_…`), so "same key already present" means "this event was already booked". The check and
+     * the insert are one statement so the window is as small as a statement, not a request; the real
+     * guarantee is the unique index `tools/db-index-audit.php` recommends. With no key (both callers
+     * pass one), the row is written as before.
+     */
+    private function ledger_claim($user_id, $delta, $reason, $transid, $before)
+    {
+        $user_id = (int) $user_id;
+        $delta = (float) $delta;
+        $before = (float) $before;
+        if($transid === NULL || $transid === "") {
+            return parent::insert("dongtien", ["sotientruoc" => $before, "sotienthaydoi" => $delta, "sotiensau" => $before + $delta, "thoigian" => gettime(), "noidung" => $reason, "user_id" => $user_id, "transid" => $transid]) ? 1 : -1;
+        }
+        $transid = addslashes((string) $transid);
+        $sql = "INSERT INTO `dongtien` (`sotientruoc`,`sotienthaydoi`,`sotiensau`,`thoigian`,`noidung`,`user_id`,`transid`)
+                SELECT " . $before . ", " . $delta . ", " . ($before + $delta) . ", '" . addslashes(gettime()) . "', '"
+                . addslashes((string) $reason) . "', " . $user_id . ", '" . $transid . "'
+                FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `dongtien` WHERE `transid` = '" . $transid . "')";
+        if(!parent::query($sql)) {
+            return -1;
+        }
+        return parent::affectedRows() === 1 ? 1 : 0;
+    }
+    /**
+     * Credit a user and say what actually happened: "credited", "duplicate" or "failed".
+     *
+     * Callbacks need the three cases apart. A retried callback usually finds the ledger row it wrote
+     * last time — that is not an error, it is proof the money is already there, and the invoice must
+     * still be closed. A real SQL/balance failure is the opposite: the invoice has to stay open so
+     * the provider's next retry can finish it. AddCredits() keeps its old boolean contract.
+     */
+    public function AddCreditsChecked($user_id, $amount, $reason, $transid = NULL)
     {
         if($transid == NULL) {
             $transid = uniqid() . "_" . mt_rand(0, 9999999);
         }
+        $this->credit_outcome = "failed";
         /* Ledger row + balance move together: a failed balance update must not leave a ledger entry. */
-        return $this->transaction(function () use ($user_id, $amount, $reason, $transid) {
+        $ok = $this->transaction(function () use ($user_id, $amount, $reason, $transid) {
             $user_id = (int) $user_id;
             $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " ");
             $before = $balance ? $balance["money"] : 0;
-            $isInsert = parent::insert("dongtien", ["sotientruoc" => $before, "sotienthaydoi" => $amount, "sotiensau" => $before + $amount, "thoigian" => gettime(), "noidung" => $reason, "user_id" => $user_id, "transid" => $transid]);
-            if(!$isInsert) {
+            $claim = $this->ledger_claim($user_id, $amount, $reason, $transid, $before);
+            if($claim === -1) {
                 return false;
+            }
+            if($claim === 0) {
+                $this->credit_outcome = "duplicate";
+                return true;
             }
             $isUpdate = parent::cong("users", "money", $amount, " `id` = " . $user_id . " ");
             if(!$isUpdate) {
                 return false;
             }
-            return (bool) parent::cong("users", "total_money", $amount, " `id` = " . $user_id . " ");
+            if(!parent::cong("users", "total_money", $amount, " `id` = " . $user_id . " ")) {
+                return false;
+            }
+            $this->credit_outcome = "credited";
+            return true;
         });
+        return $ok === false ? "failed" : $this->credit_outcome;
+    }
+    public function AddCredits($user_id, $amount, $reason, $transid = NULL)
+    {
+        return $this->AddCreditsChecked($user_id, $amount, $reason, $transid) === "credited";
     }
     public function RefundCredits($user_id, $amount, $reason, $transid = NULL)
     {
@@ -77,8 +129,7 @@ class users extends DB
             $user_id = (int) $user_id;
             $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " ");
             $before = $balance ? $balance["money"] : 0;
-            $isInsert = parent::insert("dongtien", ["sotientruoc" => $before, "sotienthaydoi" => $amount, "sotiensau" => $before + $amount, "thoigian" => gettime(), "noidung" => $reason, "user_id" => $user_id, "transid" => $transid]);
-            if(!$isInsert) {
+            if($this->ledger_claim($user_id, $amount, $reason, $transid, $before) !== 1) {
                 return false;
             }
             return (bool) parent::cong("users", "money", $amount, " `id` = " . $user_id . " ");
@@ -93,8 +144,7 @@ class users extends DB
             $user_id = (int) $user_id;
             $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " ");
             $before = $balance ? $balance["money"] : 0;
-            $isInsert = parent::insert("dongtien", ["sotientruoc" => $before, "sotienthaydoi" => $amount, "sotiensau" => $before - $amount, "thoigian" => gettime(), "noidung" => $reason, "user_id" => $user_id, "transid" => $transid]);
-            if(!$isInsert) {
+            if($this->ledger_claim($user_id, -$amount, $reason, $transid, $before) !== 1) {
                 return false;
             }
             return (bool) parent::tru("users", "money", $amount, " `id` = " . $user_id . " ");

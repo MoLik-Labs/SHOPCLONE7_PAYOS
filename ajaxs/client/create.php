@@ -134,7 +134,7 @@ if($_POST["action"] == "nap_the") {
     if(5 < $CMSNT->num_rows(" SELECT * FROM `cards` WHERE `user_id` = '" . $getUser["id"] . "' AND `status` = 'pending'  ")) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng không spam!")]));
     }
-    if(5 <= $CMSNT->num_rows("SELECT * FROM `cards` WHERE `status` = 'error' AND `user_id` = '" . $getUser["id"] . "' AND `create_date` >= DATE(NOW()) AND `create_date` < DATE(NOW()) + INTERVAL 1 DAY  ") - $CMSNT->num_rows("SELECT * FROM `cards` WHERE `status` = 'complted' AND `user_id` = '" . $getUser["id"] . "' AND `create_date` >= DATE(NOW()) AND `create_date` < DATE(NOW()) + INTERVAL 1 DAY  ")) {
+    if(5 <= $CMSNT->num_rows("SELECT * FROM `cards` WHERE `status` = 'error' AND `user_id` = '" . $getUser["id"] . "' AND `create_date` >= DATE(NOW()) AND `create_date` < DATE(NOW()) + INTERVAL 1 DAY  ") - $CMSNT->num_rows("SELECT * FROM `cards` WHERE `status` = 'completed' AND `user_id` = '" . $getUser["id"] . "' AND `create_date` >= DATE(NOW()) AND `create_date` < DATE(NOW()) + INTERVAL 1 DAY  ")) {
         exit(json_encode(["status" => "error", "msg" => __("Bạn đã bị chặn sử dụng chức năng nạp thẻ trong 1 ngày")]));
     }
     $trans_id = random("QWERTYUIOPASDFGHJKLZXCVBNM", 6) . time();
