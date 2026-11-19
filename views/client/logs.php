@@ -116,7 +116,7 @@ store_shell_open($storeShell);
             "action" => "logs",
             "limit" => $storeLimit,
             "q" => stripslashes($storeSearch),
-        )); ?>
+        ), "client/logs"); ?>
       </div>
 <?php } ?>
     </div>

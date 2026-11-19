@@ -34,10 +34,17 @@ if($_POST["action"] == "WithdrawCommission") {
     if($CMSNT->site("affiliate_status") != 1) {
         exit(json_encode(["status" => "error", "msg" => __("Chức năng này đang được bảo trì")]));
     }
-    if(empty($_POST["token"])) {
+    /* The withdrawal form used to print the session token into a hidden input. The session already
+       knows who is signed in, so accept it and only fall back to the posted token for older clients. */
+    if (!verify_csrf_token(isset($_POST["csrf_token"]) ? (string) $_POST["csrf_token"] : "")) {
+        exit(json_encode(["status" => "error", "msg" => __("Phiên làm việc đã hết, vui lòng tải lại trang")]));
+    }
+    $withdrawToken = !empty($_POST["token"]) ? check_string($_POST["token"])
+        : (isset($_SESSION["login"]) ? check_string($_SESSION["login"]) : "");
+    if($withdrawToken === "") {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng đăng nhập")]));
     }
-    if(!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token` = '" . check_string($_POST["token"]) . "' AND `banned` = 0 "))) {
+    if(!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token` = '" . $withdrawToken . "' AND `banned` = 0 "))) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng đăng nhập")]));
     }
     if(time() - $getUser["time_request"] < $config["max_time_load"]) {

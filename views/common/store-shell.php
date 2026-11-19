@@ -312,14 +312,14 @@ if (!function_exists("store_pager")) {
      * Accessible, plain-link pagination. $query keeps the current filters; only known scalars are
      * carried, and every value is urlencoded.
      */
-    function store_pager($page, $total, $limit, $query = array())
+    function store_pager($page, $total, $limit, $query = array(), $path = "client/home")
     {
         $pages = max(1, (int) ceil(((int) $total) / max(1, (int) $limit)));
         $page = max(1, min($pages, (int) $page));
         if ($pages <= 1) {
             return "";
         }
-        $href = function ($number) use ($query) {
+        $href = function ($number) use ($query, $path) {
             $params = array();
             foreach ($query as $key => $value) {
                 if (is_scalar($value) && (string) $value !== "") {
@@ -327,7 +327,7 @@ if (!function_exists("store_pager")) {
                 }
             }
             $params["page"] = (int) $number;
-            return BASE_URL("client/home") . "?" . http_build_query($params);
+            return BASE_URL($path) . "?" . http_build_query($params);
         };
         $out = '<nav class="pager" aria-label="Phân trang">';
         if ($page > 1) {

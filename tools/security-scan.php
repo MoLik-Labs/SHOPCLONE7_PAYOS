@@ -66,6 +66,7 @@ $request = array('$_GET', '$_POST', '$_COOKIE', '$_REQUEST');
 $sanitizers = array("check_string", "htmlspecialchars", "store_e", "intval", "(int)", "addslashes",
     "mysqli_real_escape_string", "preg_replace", "filter_var", "order_quantity", "store_account_search",
     "store_account_limit", "store_account_page", "store_account_date_range", "orbit_post_id_list",
+    "store_pager", "stripslashes",
     "json_encode(array_values(array_intersect");
 $dbCalls = array("get_row", "get_list", "query", "num_rows", "update", "insert", "remove", "cong", "tru");
 
@@ -108,7 +109,9 @@ foreach ($files as $file) {
             $statement .= $text;
             continue;
         }
-        if ($text === ";" || $text === "{") {
+        /* A close tag ends a statement just like ";" does: everything before it is one echo. */
+        $isCloseTag = is_array($token) && defined("T_CLOSE_TAG") && $token[0] === T_CLOSE_TAG;
+        if ($text === ";" || $text === "{" || $isCloseTag) {
             /* A finished statement is where echo/print can be judged as a whole: the tainted variable
                is usually appended after the echo keyword. */
             if (preg_match('/\b(echo|print)\b/', $statement)) {
@@ -118,7 +121,8 @@ foreach ($files as $file) {
                 $printed = preg_replace('/\$\w+\s*(===|!==|==|!=|<=|>=|<|>)\s*(\"[^\"]*\"|\'[^\']*\'|[^?:;\s]+)/', " ", $printed);
                 $hasDirty = false;
                 foreach ($tainted as $variable => $isDirty) {
-                    if ($isDirty && strpos($printed, $variable) !== false) {
+                    /* Match the whole variable name: $x must not match $xLabel. */
+                    if ($isDirty && preg_match('/' . preg_quote($variable, "/") . '(?![A-Za-z0-9_])/', $printed)) {
                         $hasDirty = true;
                     }
                 }
@@ -134,6 +138,15 @@ foreach ($files as $file) {
                         "note" => "Request value printed without escaping.");
                 }
             }
+            $statement = "";
+            $statementLine = 0;
+            $line += substr_count($text, "\n");
+            if ($isCloseTag) {
+                $line += 1;
+            }
+            continue;
+        }
+        if (is_array($token) && defined("T_OPEN_TAG") && $token[0] === T_OPEN_TAG) {
             $statement = "";
             $statementLine = 0;
             $line += substr_count($text, "\n");
@@ -208,7 +221,8 @@ foreach ($files as $file) {
                 }
             }
             foreach ($tainted as $variable => $isDirty) {
-                if ($isDirty && !$argumentIsClean && strpos($argument, $variable) !== false) {
+                if ($isDirty && !$argumentIsClean
+                    && preg_match('/' . preg_quote($variable, "/") . '(?![A-Za-z0-9_])/', $argument)) {
                     $findings[] = array("rule" => "SQL", "severity" => "high", "file" => $relative,
                         "line" => $line, "code" => $token[1] . "() uses " . $variable,
                         "note" => "Request value reaches SQL; confirm it is escaped.");

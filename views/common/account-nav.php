@@ -20,7 +20,7 @@ if (!function_exists("store_account_links")) {
     /** The account area, in the order a customer needs it. */
     function store_account_links()
     {
-        return array(
+        $links = array(
             array("key" => "profile", "label" => "Tổng quan", "href" => BASE_URL("client/profile")),
             array("key" => "purchase-history", "label" => "Lịch sử mua hàng", "href" => BASE_URL("client/purchase-history")),
             array("key" => "orders", "label" => "Đơn hàng", "href" => BASE_URL("product-orders")),
@@ -30,6 +30,7 @@ if (!function_exists("store_account_links")) {
             array("key" => "change-password", "label" => "Đổi mật khẩu", "href" => BASE_URL("client/change-password")),
             array("key" => "logs", "label" => "Nhật ký", "href" => BASE_URL("client/logs")),
         );
+        return $links;
     }
 }
 
@@ -38,6 +39,28 @@ if (!function_exists("store_account_nav")) {
     {
         echo '<nav class="account-nav" aria-label="Khu vực tài khoản">';
         foreach (store_account_links() as $link) {
+            $isCurrent = $link["key"] === $current;
+            echo '<a href="' . store_e($link["href"]) . '"'
+                . ($isCurrent ? ' aria-current="page"' : "") . ">" . store_e($link["label"]) . "</a>";
+        }
+        echo "</nav>";
+    }
+}
+
+if (!function_exists("store_affiliate_nav")) {
+    /**
+     * The affiliate area has three routes of its own. Kept out of store_account_nav() so the main
+     * account map stays eight items long instead of eleven.
+     */
+    function store_affiliate_nav($current = "")
+    {
+        $links = array(
+            array("key" => "affiliates", "label" => "Chương trình", "href" => BASE_URL("client/affiliates")),
+            array("key" => "affiliate-history", "label" => "Lịch sử hoa hồng", "href" => BASE_URL("client/affiliate-history")),
+            array("key" => "affiliate-withdraw", "label" => "Rút hoa hồng", "href" => BASE_URL("client/affiliate-withdraw")),
+        );
+        echo '<nav class="account-nav account-nav--sub" aria-label="Khu vực cộng tác viên">';
+        foreach ($links as $link) {
             $isCurrent = $link["key"] === $current;
             echo '<a href="' . store_e($link["href"]) . '"'
                 . ($isCurrent ? ' aria-current="page"' : "") . ">" . store_e($link["label"]) . "</a>";

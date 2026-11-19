@@ -1163,6 +1163,14 @@
 .auth__status { margin: 0; font-size: var(--text-sm); min-height: 1.2em; }
 .auth__status.is-error { color: var(--danger); }
 .auth__status.is-ok { color: var(--ok); }
+/* One-time code: wide tracking so six digits are countable at a glance. */
+.input--code {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  letter-spacing: 0.32em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 .auth__switch {
   margin: var(--space-5) 0 0;
   padding-top: var(--space-4);
@@ -1219,6 +1227,7 @@
 /* Account facts first: one step less air above the section than a marketing page needs. */
 .page-account { --section-pad: var(--space-7); }
 
+.page-head__aside { text-align: right; }
 .page-head {
   display: flex;
   align-items: flex-end;
@@ -1242,6 +1251,7 @@
   max-width: 100%;
   overflow-x: auto;
 }
+.account-nav--sub { margin-top: calc(var(--space-4) * -1); }
 .account-nav a {
   display: inline-flex;
   align-items: center;

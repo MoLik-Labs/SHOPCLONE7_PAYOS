@@ -34,10 +34,15 @@ class DB
             "order_by_product_home" => "1",
             "product_photo_display" => "0",
             "api_status" => "0",
-            "affiliate_status" => "0",
+            "affiliate_status" => "1",
             "product_selling" => "1",
             "bank_status" => "1",
             "momo_status" => "0",
+            "affiliate_min" => "100000",
+            "affiliate_ck" => "20",
+            "affiliate_banks" => "Vietcombank\nTPBank\nMB Bank",
+            "affiliate_chat_id_telegram" => "",
+            "affiliate_note" => "<p>Hoa hồng được cộng sau khi đơn của khách hoàn tất.</p>",
             "card_status" => "0",
             "crypto_status" => "0",
             "paypal_status" => "0",
@@ -122,6 +127,12 @@ class DB
         }
         if (strpos($sql, "FROM `payment_manual`") !== false) {
             return $f["payment_manual"];
+        }
+        if (strpos($sql, "`token_2fa`") !== false && strpos($sql, "`token` =") === false) {
+            return array("id" => 1, "banned" => 0, "status_2fa" => 1);
+        }
+        if (strpos($sql, "`token_otp_mail`") !== false && strpos($sql, "`token` =") === false) {
+            return array("id" => 1, "banned" => 0, "status_otp_mail" => 1);
         }
         if (strpos($sql, "FROM `favorites`") !== false && strpos($sql, "COUNT(") !== false) {
             return array("total" => count($f["favorites"]));
@@ -274,6 +285,15 @@ class DB
         if (strpos($sql, "FROM `payment_manual`") !== false) {
             return array();
         }
+        if (strpos($sql, "FROM `users`") !== false && strpos($sql, "`ref_id`") !== false) {
+            return $f["aff_referrals"];
+        }
+        if (strpos($sql, "FROM `aff_log`") !== false) {
+            return $f["aff_log"];
+        }
+        if (strpos($sql, "FROM `aff_withdraw`") !== false) {
+            return $f["aff_withdraw"];
+        }
         if (strpos($sql, "FROM `favorites`") !== false) {
             $rows = array();
             foreach ($f["favorites"] as $favorite) {
@@ -319,6 +339,15 @@ class DB
         }
         if (strpos($sql, "FROM `posts`") !== false) {
             return count(self::$fixtures["posts"]);
+        }
+        if (strpos($sql, "FROM `aff_log`") !== false) {
+            return count(self::$fixtures["aff_log"]);
+        }
+        if (strpos($sql, "FROM `aff_withdraw`") !== false) {
+            return count(self::$fixtures["aff_withdraw"]);
+        }
+        if (strpos($sql, "`ref_id`") !== false) {
+            return count(self::$fixtures["aff_referrals"]);
         }
         return 0;
     }
@@ -449,7 +478,8 @@ if (!function_exists("preview_fixtures")) {
                 "telegram_chat_id" => "khachhang7", "api_key" => "preview-api-key",
                 "ip" => "203.0.113.7", "device" => "Chrome · macOS",
                 "create_date" => "2025-11-02 09:14:00", "update_date" => "2026-10-01 18:02:00",
-                "admin" => 0, "banned" => 0, "token_forgot_password" => null, "token" => "tok"),
+                "admin" => 0, "banned" => 0, "token_forgot_password" => null, "token" => "tok",
+                "ref_price" => 480000, "ref_total_price" => 2150000, "ref_click" => 128, "ref_ck" => 0),
             "admin_user" => array("id" => 1, "username" => "orbit", "email" => "ops@example.com", "money" => 0,
                 "admin" => 1, "banned" => 0, "token_forgot_password" => null, "token" => "admintok"),
             "current" => array("orders" => $currentOrders, "revenue" => $currentRevenue, "cost" => $currentCost),
@@ -527,6 +557,28 @@ if (!function_exists("preview_fixtures")) {
                 array("product_code" => "WN1", "c" => 11), array("product_code" => "TC1", "c" => 100),
             ),
             "store_total" => 8,
+            /* Affiliate programme: three referred customers, a commission ledger and two withdrawals. */
+            "aff_referrals" => array(
+                array("id" => 21, "username" => "minhanh", "create_date" => "2026-11-14 10:12:00", "ref_amount" => 96000),
+                array("id" => 19, "username" => "tuanvu", "create_date" => "2026-11-09 20:40:00", "ref_amount" => 48000),
+                array("id" => 16, "username" => "hainguyen", "create_date" => "2026-10-28 08:05:00", "ref_amount" => 144000),
+            ),
+            "aff_log" => array(
+                array("reason" => "Hoa hồng đơn #ORB00118", "sotientruoc" => 384000,
+                    "sotienthaydoi" => 96000, "sotienhientai" => 480000, "create_gettime" => "2026-11-16 09:20:00"),
+                array("reason" => "Hoa hồng đơn #ORB00097", "sotientruoc" => 336000,
+                    "sotienthaydoi" => 48000, "sotienhientai" => 384000, "create_gettime" => "2026-11-08 21:02:00"),
+                array("reason" => "Hoa hồng đơn #ORB00081", "sotientruoc" => 192000,
+                    "sotienthaydoi" => 144000, "sotienhientai" => 336000, "create_gettime" => "2026-10-28 09:30:00"),
+            ),
+            "aff_withdraw" => array(
+                array("trans_id" => "K7Q2M9", "bank" => "Vietcombank", "stk" => "0123456789",
+                    "name" => "NGUYEN NGOC LAN", "amount" => 300000, "status" => "pending",
+                    "reason" => null, "create_gettime" => "2026-11-15 11:00:00"),
+                array("trans_id" => "C4T8X1", "bank" => "TPBank", "stk" => "9876543210",
+                    "name" => "NGUYEN NGOC LAN", "amount" => 200000, "status" => "completed",
+                    "reason" => "Đã chuyển khoản", "create_gettime" => "2026-11-02 15:20:00"),
+            ),
             /* Account pages: rows the signed-in sample customer owns. */
             "favorites" => array(
                 array("id" => 1, "product_id" => 101, "user_id" => 1, "create_gettime" => "2026-11-02 10:20:00"),

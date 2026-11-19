@@ -168,7 +168,7 @@ store_shell_open($storeShell);
             "reason" => stripslashes($storeReason),
             "time" => $storeRange !== null ? substr($storeRange[0], 0, 10) . " to " . substr($storeRange[1], 0, 10) : "",
             "shortByDate" => $storeShort > 0 ? $storeShort : "",
-        )); ?>
+        ), "client/transactions"); ?>
       </div>
 <?php } ?>
     </div>

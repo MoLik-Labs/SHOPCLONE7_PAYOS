@@ -462,6 +462,90 @@
     });
   }
 
+  /* --- second-step sign-in (2FA / e-mail OTP) ----------------------------- */
+
+  function setupVerify() {
+    var form = document.querySelector("[data-verify-form]");
+    if (!form) {
+      return;
+    }
+    var endpoint = form.getAttribute("data-endpoint");
+    var action = form.getAttribute("data-action");
+    var redirect = form.getAttribute("data-redirect") || "/";
+    var tokenField = form.querySelector('input[type="hidden"][name^="token_"]');
+    var tokenInput = form.querySelector('[name="code"]');
+    var statusEl = form.querySelector("[data-verify-status]");
+    var submit = form.querySelector("button[type=submit]");
+
+    if (tokenInput) {
+      /* One-time codes are digits; keep a paste of "123 456" working, drop everything else. */
+      tokenInput.addEventListener("input", function () {
+        var clean = tokenInput.value.replace(/\D/g, "").slice(0, Number(tokenInput.maxLength) || 8);
+        if (clean !== tokenInput.value) {
+          tokenInput.value = clean;
+        }
+      });
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var code = tokenInput ? tokenInput.value.trim() : "";
+      var errorEl = form.querySelector('[data-error-for="code"]');
+      setStatus(statusEl, "");
+      if (errorEl) {
+        errorEl.textContent = "";
+        errorEl.hidden = true;
+      }
+      if (!code) {
+        if (errorEl) {
+          errorEl.textContent = "Vui lòng nhập mã xác minh.";
+          errorEl.hidden = false;
+        }
+        if (tokenInput) {
+          tokenInput.setAttribute("aria-invalid", "true");
+          tokenInput.focus();
+        }
+        return;
+      }
+      if (tokenInput) {
+        tokenInput.removeAttribute("aria-invalid");
+      }
+
+      var payload = { action: action, code: code, recaptcha: recaptchaValue() };
+      if (tokenField) {
+        payload[tokenField.name] = tokenField.value;
+      }
+      if (submit) {
+        submit.disabled = true;
+        submit.textContent = "Đang xác minh…";
+      }
+      postForm(endpoint, payload).then(function (response) {
+        if (response.status === "success") {
+          setStatus(statusEl, response.msg || "Xác minh thành công.", "ok");
+          window.setTimeout(function () {
+            window.location.href = redirect;
+          }, 700);
+          return;
+        }
+        if (response.status === "verify" && response.url) {
+          window.location.href = response.url;
+          return;
+        }
+        setStatus(statusEl, response.msg || "Mã chưa đúng. Vui lòng thử lại.", "error");
+        if (submit) {
+          submit.disabled = false;
+          submit.textContent = "Xác minh";
+        }
+      }).catch(function () {
+        setStatus(statusEl, "Không kết nối được máy chủ. Vui lòng thử lại.", "error");
+        if (submit) {
+          submit.disabled = false;
+          submit.textContent = "Xác minh";
+        }
+      });
+    });
+  }
+
   /* --- account profile ---------------------------------------------------- */
 
   function setupProfile() {
@@ -619,6 +703,71 @@
         });
       });
     }
+  }
+
+  /* --- affiliate withdrawal ----------------------------------------------- */
+
+  function setupWithdraw() {
+    var form = document.querySelector("[data-withdraw-form]");
+    if (!form) {
+      return;
+    }
+    var endpoint = form.getAttribute("data-endpoint");
+    var statusEl = form.querySelector("[data-withdraw-status]");
+    var submit = form.querySelector("button[type=submit]");
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var data = new FormData(form);
+      var fields = {};
+      ["bank", "stk", "name", "amount", "csrf_token"].forEach(function (name) {
+        fields[name] = (data.get(name) || "").toString().trim();
+      });
+      setStatus(statusEl, "");
+      var missing = "";
+      if (!fields.bank) {
+        missing = "Vui lòng chọn ngân hàng nhận tiền.";
+      } else if (!fields.stk) {
+        missing = "Vui lòng nhập số tài khoản.";
+      } else if (!fields.name) {
+        missing = "Vui lòng nhập tên chủ tài khoản.";
+      } else if (!/^[0-9]+$/.test(fields.amount) || Number(fields.amount) <= 0) {
+        missing = "Số tiền chỉ gồm chữ số và lớn hơn 0.";
+      }
+      if (missing) {
+        setStatus(statusEl, missing, "error");
+        return;
+      }
+      if (submit) {
+        submit.disabled = true;
+        submit.textContent = "Đang gửi…";
+      }
+      postForm(endpoint, {
+        action: "WithdrawCommission",
+        csrf_token: fields.csrf_token,
+        bank: fields.bank,
+        stk: fields.stk,
+        name: fields.name,
+        amount: fields.amount
+      }).then(function (response) {
+        var ok = response.status === "success";
+        setStatus(statusEl, response.msg || (ok ? "Đã gửi yêu cầu." : "Không thể gửi yêu cầu."), ok ? "ok" : "error");
+        if (ok) {
+          window.setTimeout(function () {
+            window.location.reload();
+          }, 900);
+        } else if (submit) {
+          submit.disabled = false;
+          submit.textContent = "Gửi yêu cầu";
+        }
+      }).catch(function () {
+        setStatus(statusEl, "Không kết nối được máy chủ. Vui lòng thử lại.", "error");
+        if (submit) {
+          submit.disabled = false;
+          submit.textContent = "Gửi yêu cầu";
+        }
+      });
+    });
   }
 
   /* --- order history ------------------------------------------------------ */
@@ -943,8 +1092,10 @@
     setupGallery();
     setupBuy();
     setupAuth();
+    setupVerify();
     setupProfile();
     setupAccountForms();
+    setupWithdraw();
     setupOrders();
     setupOrderDetail();
     setupCopy();

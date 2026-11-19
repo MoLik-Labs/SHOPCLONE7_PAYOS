@@ -379,6 +379,35 @@ $pages["contact.html"] = array(
         array("module" => "client", "action" => "contact"), $fixtures),
 );
 
+/* 6g. second-step sign-in */
+$pages["verify-2fa.html"] = array(
+    "title" => "Xác minh 2FA — bản xem trước",
+    "html" => preview_render($root, "views/client/verify_2fa.php", array(),
+        array("module" => "client", "action" => "verify_2fa", "token" => "preview2fatoken123"), $fixtures),
+);
+$pages["verify-otp.html"] = array(
+    "title" => "Xác minh OTP — bản xem trước",
+    "html" => preview_render($root, "views/client/verify_otp.php", array(),
+        array("module" => "client", "action" => "verify_otp", "token" => "previewotptoken123"), $fixtures),
+);
+
+/* 6h. the affiliate programme */
+$pages["affiliates.html"] = array(
+    "title" => "Cộng tác viên — bản xem trước",
+    "html" => preview_render($root, "views/client/affiliates.php", array("login" => "tok"),
+        array("module" => "client", "action" => "affiliates"), $fixtures),
+);
+$pages["affiliate-history.html"] = array(
+    "title" => "Lịch sử hoa hồng — bản xem trước",
+    "html" => preview_render($root, "views/client/affiliate-history.php", array("login" => "tok"),
+        array("module" => "client", "action" => "affiliate-history"), $fixtures),
+);
+$pages["affiliate-withdraw.html"] = array(
+    "title" => "Rút hoa hồng — bản xem trước",
+    "html" => preview_render($root, "views/client/affiliate-withdraw.php", array("login" => "tok"),
+        array("module" => "client", "action" => "affiliate-withdraw"), $fixtures),
+);
+
 /* 7. the styleguide (design system reference) */
 $pages["styleguide.html"] = array(
     "title" => "Orbit design system — bản xem trước",

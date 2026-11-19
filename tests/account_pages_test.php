@@ -69,6 +69,23 @@ if (!function_exists("redirect")) {
     }
 }
 
+if (!function_exists("getRowRealtime")) {
+    /* One-row helper from libs/helper.php; the stub answers from the same fixture user. */
+    function getRowRealtime($table, $id, $column)
+    {
+        $user = DB::$stub->users;
+        return $table === "users" && isset($user[$column]) ? $user[$column] : 0;
+    }
+}
+
+if (!function_exists("generate_csrf_token")) {
+    /* production: one token per session (libs/helper.php). Fixed here so the form is deterministic. */
+    function generate_csrf_token()
+    {
+        return "csrf-test-token";
+    }
+}
+
 /* A tiny stand-in for the vendored QR library. getQRCodeInline() returns a data: URI in production. */
 if (!class_exists("PragmaRX\\Google2FAQRCode\\Google2FA")) {
     eval('namespace PragmaRX\\Google2FAQRCode; class Google2FA {
@@ -101,6 +118,9 @@ class AccountStubDB
     public $ledger;
     public $logs;
     public $sites;
+    public $referrals = array();
+    public $affLog = array();
+    public $withdrawals = array();
     public $sql = array();
     public $updates = array();
 
@@ -114,6 +134,8 @@ class AccountStubDB
             "fullname" => "Ngọc Lan", "phone" => "0909000111", "telegram_chat_id" => "",
             "ip" => "203.0.113.9", "device" => "Firefox on Linux", "create_date" => "2026-01-02 09:00:00",
             "update_date" => "2026-11-16 08:00:00", "token_forgot_password" => null,
+            "token_2fa" => null, "token_otp_mail" => null,
+            "ref_price" => 250000, "ref_total_price" => 800000, "ref_click" => 12, "ref_ck" => 25,
         );
         $this->products = array(
             1 => array("id" => 1, "name" => "Netflix Premium 1 tháng", "slug" => "netflix-1-thang",
@@ -138,10 +160,28 @@ class AccountStubDB
             array("id" => 1, "user_id" => 7, "createdate" => "2026-11-10 08:00:00",
                 "action" => "Đổi mật khẩu", "ip" => "203.0.113.9", "device" => "Firefox on Linux"),
         );
+        $this->referrals = array(
+            array("id" => 21, "username" => "minhanh", "create_date" => "2026-11-14 10:12:00", "ref_amount" => 96000),
+            array("id" => 19, "username" => "tuanvu", "create_date" => "2026-11-09 20:40:00", "ref_amount" => 48000),
+        );
+        $this->affLog = array(
+            array("reason" => "Hoa hồng đơn #ORB00118", "sotientruoc" => 154000, "sotienthaydoi" => 96000,
+                "sotienhientai" => 250000, "create_gettime" => "2026-11-16 09:20:00"),
+        );
+        $this->withdrawals = array(
+            array("trans_id" => "K7Q2M9", "bank" => "Vietcombank", "stk" => "0123456789",
+                "name" => "NGUYEN NGOC LAN", "amount" => 300000, "status" => "pending",
+                "reason" => null, "create_gettime" => "2026-11-15 11:00:00"),
+            array("trans_id" => "C4T8X1", "bank" => "TPBank", "stk" => "9876543210",
+                "name" => "NGUYEN NGOC LAN", "amount" => 200000, "status" => "cancel",
+                "reason" => "Sai số tài khoản", "create_gettime" => "2026-11-02 15:20:00"),
+        );
         $this->sites = array(
             "title" => "Orbit Shop", "description" => "Shop bán tài khoản", "hotline" => "0909 123 456",
             "email" => "support@orbit.example", "address" => "Quận 1, TP. Hồ Chí Minh",
             "page_contact" => "<p>Gửi mã đơn kèm mô tả lỗi.</p>", "smtp_status" => "1",
+            "affiliate_status" => "1", "affiliate_ck" => "20", "affiliate_min" => "100000",
+            "affiliate_banks" => "Vietcombank\nTPBank", "affiliate_note" => "<p>Ghi chú cộng tác viên</p>",
             "bank_status" => "1", "momo_status" => "0",
         );
     }
@@ -187,10 +227,38 @@ class AccountStubDB
     {
         $this->sql[] = $sql;
         if (strpos($sql, "FROM `users`") !== false) {
+            /* Second-step sign-in lookups: only the exact token opens a row. */
+            if (strpos($sql, "`token_2fa`") !== false && strpos($sql, "SELECT") !== false
+                && strpos($sql, "`token` =") === false) {
+                if (strpos($sql, "'2fa0a1b2c3d4e5f60718'") !== false) {
+                    return array_merge($this->users, array("status_2fa" => 1, "token_2fa" => "2fa0a1b2c3d4e5f60718"));
+                }
+                if (strpos($sql, "'2faban00000000000000'") !== false) {
+                    return array_merge($this->users, array("status_2fa" => 1, "banned" => 1,
+                        "token_2fa" => "2faban00000000000000"));
+                }
+                return false;
+            }
+            if (strpos($sql, "`token_otp_mail`") !== false && strpos($sql, "SELECT") !== false
+                && strpos($sql, "`token` =") === false) {
+                if (strpos($sql, "'otp0a1b2c3d4e5f60718'") !== false) {
+                    return array_merge($this->users, array("status_otp_mail" => 1,
+                        "token_otp_mail" => "otp0a1b2c3d4e5f60718"));
+                }
+                if (strpos($sql, "'otpclosed00000000000'") !== false) {
+                    return array_merge($this->users, array("status_otp_mail" => 0,
+                        "token_otp_mail" => "otpclosed00000000000"));
+                }
+                return false;
+            }
             if (strpos($sql, "token_forgot_password") !== false) {
                 return strpos($sql, "'a1b2c3d4e5f60718293a4b5c6d7e8f90'") !== false ? $this->users : false;
             }
             return $this->users;
+        }
+        if (strpos($sql, "FROM `users`") !== false && strpos($sql, "`ref_id`") !== false
+            && strpos($sql, "COUNT(") === false) {
+            return count($this->referrals);
         }
         if (strpos($sql, "FROM `favorites`") !== false && strpos($sql, "COUNT(") !== false) {
             return array("total" => count($this->favorites));
@@ -211,6 +279,19 @@ class AccountStubDB
         $limit = 99;
         if (preg_match('/LIMIT ([0-9]+), ([0-9]+)/', $sql, $match)) {
             $limit = (int) $match[2];
+        }
+        if (strpos($sql, "FROM `users`") !== false && strpos($sql, "`ref_id`") !== false) {
+            return array_slice($this->referrals, 0, $limit);
+        }
+        if (strpos($sql, "FROM `aff_log`") !== false) {
+            return array_slice($this->affLog, 0, $limit);
+        }
+        if (strpos($sql, "FROM `aff_withdraw`") !== false) {
+            $rows = $this->withdrawals;
+            if (strpos($sql, "`status` = 'cancel'") !== false) {
+                $rows = array_values(array_filter($rows, function ($row) { return $row["status"] === "cancel"; }));
+            }
+            return array_slice($rows, 0, $limit);
         }
         if (strpos($sql, "FROM `favorites`") !== false) {
             $rows = array();
@@ -251,6 +332,15 @@ class AccountStubDB
     public function num_rows($sql)
     {
         $this->sql[] = $sql;
+        if (strpos($sql, "FROM `aff_log`") !== false) {
+            return count($this->affLog);
+        }
+        if (strpos($sql, "FROM `aff_withdraw`") !== false) {
+            return count($this->withdrawals);
+        }
+        if (strpos($sql, "FROM `users`") !== false && strpos($sql, "`ref_id`") !== false) {
+            return count($this->referrals);
+        }
         return count($this->logs);
     }
 }
@@ -486,6 +576,75 @@ $page = render_view("views/client/reset-password.php", array("action" => "reset-
 check("a malformed token redirects too", $page["redirect"] === BASE_URL("client/forgot-password"));
 
 /* ------------------------------------------------------------------ guests are refused */
+
+echo "\ntwo-factor challenge\n";
+$page = render_view("views/client/verify_2fa.php",
+    array("action" => "verify_2fa", "token" => "2fa0a1b2c3d4e5f60718"), array(), array());
+assert_clean("2FA", $page["html"]);
+check("2FA does not redirect a valid token", $page["redirect"] === null);
+
+check("2FA keeps the Verify2FA endpoint contract", strpos($page["html"], 'data-action="Verify2FA"') !== false);
+check("2FA posts the token in the legacy field", strpos($page["html"], 'name="token_2fa"') !== false);
+check("2FA explains which app to open", strpos($page["html"], "Authenticator") !== false);
+check("2FA hides the CAPTCHA while the owner has it off", strpos($page["html"], "g-recaptcha") === false);
+check("2FA offers a way out", strpos($page["html"], "client/logout") !== false);
+$page = render_view("views/client/verify_2fa.php",
+    array("action" => "verify_2fa", "token" => "unknown0000000000000"), array(), array());
+check("an unknown 2FA token goes back to sign-in", $page["redirect"] === BASE_URL("client/login"));
+$page = render_view("views/client/verify_2fa.php",
+    array("action" => "verify_2fa", "token" => "2faban00000000000000"), array(), array());
+check("a banned 2FA token goes back to sign-in", $page["redirect"] === BASE_URL("client/login"));
+$page = render_view("views/client/verify_2fa.php", array("action" => "verify_2fa"), array(), array());
+check("a missing 2FA token goes back to sign-in", $page["redirect"] === BASE_URL("client/login"));
+
+echo "\ne-mail OTP challenge\n";
+$page = render_view("views/client/verify_otp.php",
+    array("action" => "verify_otp", "token" => "otp0a1b2c3d4e5f60718"), array(), array());
+assert_clean("OTP", $page["html"]);
+check("OTP does not redirect a valid token", $page["redirect"] === null);
+check("OTP keeps the VerifyOTP endpoint contract", strpos($page["html"], 'data-action="VerifyOTP"') !== false);
+check("OTP posts the token in the legacy field", strpos($page["html"], 'name="token_otp_mail"') !== false);
+check("OTP tells the customer to check spam", strpos($page["html"], "Spam") !== false);
+$page = render_view("views/client/verify_otp.php",
+    array("action" => "verify_otp", "token" => "otpclosed00000000000"), array(), array());
+check("a closed OTP account goes back to sign-in", $page["redirect"] === BASE_URL("client/login"));
+$page = render_view("views/client/verify_otp.php", array("action" => "verify_otp", "token" => ""), array(), array());
+check("an empty OTP token goes back to sign-in", $page["redirect"] === BASE_URL("client/login"));
+
+echo "\naffiliate programme\n";
+$page = render_view("views/client/affiliates.php", array("action" => "affiliates"),
+    array("login" => "tok-lan"), array("token" => "tok-lan"));
+assert_clean("affiliates", $page["html"]);
+check("affiliates shows the commission balance", strpos($page["html"], "250.000đ") !== false);
+check("affiliates shows the referral rate", strpos($page["html"], "25%") !== false);
+check("affiliates prints a referral link for this account", strpos($page["html"], "aff=7") !== false);
+check("affiliates lists referred customers", strpos($page["html"], "minhanh") !== false);
+check("affiliates has its own sub-navigation", strpos($page["html"], "account-nav--sub") !== false);
+check("affiliates does not print the account token", strpos($page["html"], "tok-lan") === false);
+
+$page = render_view("views/client/affiliate-history.php", array("action" => "affiliate-history"),
+    array("login" => "tok-lan"), array("token" => "tok-lan"));
+assert_clean("affiliate history", $page["html"]);
+check("commission rows show the change", strpos($page["html"], "96.000đ") !== false);
+check("commission rows show the balance after", strpos($page["html"], "250.000đ") !== false);
+check("the history explains what a row is", strpos($page["html"], "số dư trước và sau") !== false);
+
+$page = render_view("views/client/affiliate-withdraw.php", array("action" => "affiliate-withdraw"),
+    array("login" => "tok-lan"), array("token" => "tok-lan"));
+assert_clean("affiliate withdraw", $page["html"]);
+check("withdraw lists the configured banks", strpos($page["html"], "TPBank") !== false);
+check("withdraw states the minimum", strpos($page["html"], "100.000đ") !== false);
+check("withdraw sends a CSRF token", strpos($page["html"], 'name="csrf_token"') !== false);
+check("withdraw does not print the session token", strpos($page["html"], 'name="token"') === false);
+check("withdraw shows pending and cancelled requests", strpos($page["html"], "Chờ duyệt") !== false
+    && strpos($page["html"], "Đã huỷ") !== false);
+check("withdraw explains the payout steps", strpos($page["html"], "chờ duyệt") !== false);
+
+$page = render_view("views/client/affiliate-withdraw.php",
+    array("action" => "affiliate-withdraw", "status" => "cancel", "limit" => "5000", "page" => "-9"),
+    array("login" => "tok-lan"), array("token" => "tok-lan"));
+check("an unknown page size is clamped to a real one", strpos(implode("\n", $GLOBALS["CMSNT"]->sql), "LIMIT 0, 20") !== false);
+check("a negative page does not reach SQL", strpos(implode("\n", $GLOBALS["CMSNT"]->sql), "LIMIT -") === false);
 
 echo "\nguest access\n";
 /* is_user.php runs once per process, so this is a source-level check: a request without a session is

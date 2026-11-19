@@ -141,7 +141,8 @@ store_shell_open($storeShell);
       </div>
 <?php if ($storeFavoriteTotal > $storeLimit) { ?>
       <div class="panel__foot">
-        <?php echo store_pager($storePage, $storeFavoriteTotal, $storeLimit, array("action" => "favorites", "limit" => $storeLimit)); ?>
+        <?php echo store_pager($storePage, $storeFavoriteTotal, $storeLimit,
+            array("limit" => $storeLimit), "client/favorites"); ?>
       </div>
 <?php } ?>
     </div>
