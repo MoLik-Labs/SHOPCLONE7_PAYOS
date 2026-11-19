@@ -345,6 +345,13 @@ check("profile fields are labelled", strpos($html, 'for="fullname"') !== false
 check("the token is carried in the form", strpos($html, 'name="token" value="tok"') !== false);
 check("no inline style attribute on the account page", strpos($html, 'style="') === false);
 
+/* --- retired routes ------------------------------------------------------ */
+echo "\nwidget_tools (retired)\n";
+$html = render_view("views/client/widget_tools.php", array(), array("login" => "tok"), $CMSNT);
+check("the retired tools widget redirects to the real page",
+    strpos($html, "REDIRECT:https://shop.example/client/tools") !== false, $html);
+check("no legacy tool card markup is printed", strpos($html, "box-product-main") === false);
+
 /* --- warnings ------------------------------------------------------------ */
 check("no PHP warning or notice reached any page", empty($errors), implode(" | ", $errors));
 

@@ -117,7 +117,26 @@ Preview after the change: 35 pages rebuild, `class check: 358 class(es) used, al
 - **`gtf.php` and `payos.php` were left alone.** They already verify their own token, and their clients
   (the GTF card form, the payOS checkout poll) send it explicitly.
 
-## 6. Not done / next
+## 6. Two loose ends closed with evidence
+
+**LCP `fetchpriority` was a non-issue.** The standing queue asked for `fetchpriority="high"` on the home
+hero. The home page has no hero image — the `<img>` tags are category icons (36 px), product covers and
+payment marks, all `loading="lazy"`. Measured with a `PerformanceObserver` in Chromium on the preview
+(35 pages, home at 1440 and 390):
+
+| Viewport | LCP time | LCP element | Size |
+| --- | --- | --- | --- |
+| 1440 | 112 ms | text block | 2 014 px² |
+| 390 | 92 ms | the shop name (`span.topbar__name`) | 1 824 px² |
+
+(painted after the preview's own gallery banner is removed). LCP is paint-bound text, so a priority hint
+would have nothing to raise. The item is closed rather than "still open".
+
+**`/client/widget_tools` retired.** It printed four legacy cards with inline styles, `mod/img/`
+backgrounds and links to `/tool/<name>`; nothing included it. It is now a redirect to `/client/tools`,
+covered by two new checks in `tests/client_pages_test.php` (48 passed).
+
+## 7. Not done / next
 
 - The admin panel has not been exercised end-to-end against MySQL (no database here): the guard is unit
   tested and every admin page that posts was statically confirmed to load `csrf.js`.
