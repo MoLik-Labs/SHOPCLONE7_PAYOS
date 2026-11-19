@@ -1,150 +1,180 @@
 <?php
+/*
+ * Balance history — Orbit v3.
+ *
+ * The legacy page read `$_GET["reason"]` into `$content` and then used `$reason` (undefined) both in
+ * the LIKE filter and in the pagination URL: the search never filtered, and every page produced a PHP
+ * warning. This version reads one validated variable, caps its length, and carries it through the
+ * pager. The table now states whether a line is a credit or a debit in words as well as colour.
+ */
 
-if(!defined("IN_SITE")) {
+if (!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
-$body = ["title" => __("Biến động số dư") . " | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/client/") . "css/wallet.css\">\n";
-$body["footer"] = "\n\n";
-require_once __DIR__ . "/../../models/is_user.php";
-require_once __DIR__ . "/header.php";
-require_once __DIR__ . "/nav.php";
-if(isset($_GET["limit"])) {
-    $limit = (int) check_string($_GET["limit"]);
-} else {
-    $limit = 10;
-}
-if(isset($_GET["page"])) {
-    $page = check_string((int) $_GET["page"]);
-} else {
-    $page = 1;
-}
-$from = ($page - 1) * $limit;
-$where = " `user_id` = '" . $getUser["id"] . "' ";
-$shortByDate = "";
-$reason = "";
-$time = "";
-if(!empty($_GET["time"])) {
-    $time = check_string($_GET["time"]);
-    $create_date_1 = str_replace("-", "/", $time);
-    $create_date_1 = explode(" to ", $create_date_1);
-    if($create_date_1[0] != $create_date_1[1]) {
-        $create_date_1 = [$create_date_1[0] . " 00:00:00", $create_date_1[1] . " 23:59:59"];
-        $where .= " AND `thoigian` >= '" . $create_date_1[0] . "' AND `thoigian` <= '" . $create_date_1[1] . "' ";
-    }
-}
-if(!empty($_GET["reason"])) {
-    $content = check_string($_GET["reason"]);
-    $where .= " AND `noidung` LIKE \"%" . $reason . "%\" ";
-}
-if(isset($_GET["shortByDate"])) {
-    $shortByDate = check_string($_GET["shortByDate"]);
-    $yesterday = date("Y-m-d", strtotime("-1 day"));
-    $currentWeek = date("W");
-    $currentMonth = date("m");
-    $currentYear = date("Y");
-    $currentDate = date("Y-m-d");
-    if($shortByDate == 1) {
-        $where .= " AND `thoigian` LIKE '%" . $currentDate . "%' ";
-    }
-    if($shortByDate == 2) {
-        $where .= " AND YEAR(thoigian) = " . $currentYear . " AND WEEK(thoigian, 1) = " . $currentWeek . " ";
-    }
-    if($shortByDate == 3) {
-        $where .= " AND MONTH(thoigian) = '" . $currentMonth . "' AND YEAR(thoigian) = '" . $currentYear . "' ";
-    }
-}
-$listDatatable = $CMSNT->get_list(" SELECT * FROM `dongtien` WHERE " . $where . " ORDER BY `id` DESC LIMIT " . $from . "," . $limit . " ");
-$totalDatatable = $CMSNT->num_rows(" SELECT * FROM `dongtien` WHERE " . $where . " ORDER BY id DESC ");
-$urlDatatable = pagination_client(base_url("?action=transactions&limit=" . $limit . "&shortByDate=" . $shortByDate . "&reason=" . $reason . "&time=" . $time . "&"), $from, $totalDatatable, $limit);
-echo "\n<section class=\"py-5 inner-section profile-part\">\n    <div class=\"container\">\n        <div class=\"row content-reverse\">\n            <div class=\"col-lg-3\">\n                ";
-require_once __DIR__ . "/sidebar.php";
-echo "            </div>\n            <div class=\"col-lg-9\">\n                <div class=\"account-card\">\n                    <h4 class=\"account-title\">";
-echo __("Biến động số dư");
-echo "</h4>\n                    <form action=\"\" method=\"GET\">\n                        <input type=\"hidden\" name=\"action\" value=\"transactions\">\n                        <div class=\"row\">\n                            <div class=\"col-lg col-md-4 col-6\">\n                                <input class=\"form-control mb-2\" type=\"text\" value=\"";
-echo $reason;
-echo "\" name=\"reason\"\n                                    placeholder=\"";
-echo __("Lý do");
-echo "\">\n                            </div>\n                            <div class=\"col-lg col-md-4 col-6\">\n                                <input type=\"text\" class=\"js-flatpickr form-control mb-2\" id=\"example-flatpickr-range\"\n                                    name=\"time\" placeholder=\"";
-echo __("Chọn thời gian cần tìm");
-echo "\" value=\"";
-echo $time;
-echo "\"\n                                    data-mode=\"range\">\n                            </div>\n                            <div class=\"col-lg col-md-4 col-6\">\n                                <button class=\"shop-widget-btn mb-2\"><i\n                                        class=\"fas fa-search\"></i><span>";
-echo __("Tìm kiếm");
-echo "</span></button>\n                            </div>\n                            <div class=\"col-lg col-md-4 col-6\">\n                                <a href=\"";
-echo base_url("?action=transactions");
-echo "\" class=\"shop-widget-btn mb-2\"><i\n                                        class=\"far fa-trash-alt\"></i><span>";
-echo __("Bỏ lọc");
-echo "</span></a>\n                            </div>\n                        </div>\n                        <div class=\"top-filter\">\n                            <div class=\"filter-show\"><label class=\"filter-label\">Show :</label>\n                                <select name=\"limit\" onchange=\"this.form.submit()\" class=\"form-select filter-select\">\n                                    <option ";
-echo $limit == 5 ? "selected" : "";
-echo " value=\"5\">5</option>\n                                    <option ";
-echo $limit == 10 ? "selected" : "";
-echo " value=\"10\">10</option>\n                                    <option ";
-echo $limit == 20 ? "selected" : "";
-echo " value=\"20\">20</option>\n                                    <option ";
-echo $limit == 50 ? "selected" : "";
-echo " value=\"50\">50</option>\n                                    <option ";
-echo $limit == 100 ? "selected" : "";
-echo " value=\"100\">100</option>\n                                    <option ";
-echo $limit == 500 ? "selected" : "";
-echo " value=\"500\">500</option>\n                                    <option ";
-echo $limit == 1000 ? "selected" : "";
-echo " value=\"1000\">1000</option>\n                                </select>\n                            </div>\n                            <div class=\"filter-short\">\n                                <label class=\"filter-label\">";
-echo __("Short by Date:");
-echo "</label>\n                                <select name=\"shortByDate\" onchange=\"this.form.submit()\"\n                                    class=\"form-select filter-select\">\n                                    <option value=\"\">";
-echo __("Tất cả");
-echo "</option>\n                                    <option ";
-echo $shortByDate == 1 ? "selected" : "";
-echo " value=\"1\">";
-echo __("Hôm nay");
-echo "                                    </option>\n                                    <option ";
-echo $shortByDate == 2 ? "selected" : "";
-echo " value=\"2\">";
-echo __("Tuần này");
-echo "                                    </option>\n                                    <option ";
-echo $shortByDate == 3 ? "selected" : "";
-echo " value=\"3\">";
-echo __("Tháng này");
-echo "                                    </option>\n                                </select>\n                            </div>\n                        </div>\n                    </form>\n                    <div class=\"table-scroll table-wrapper\">\n                        <table class=\"table text-nowrap fs-sm mb-0\">\n                            <thead>\n                                <th width=\"20%\">";
-echo __("Thời gian");
-echo "</th>\n                                <th class=\"text-center\">";
-echo __("Số dư ban đầu");
-echo "</th>\n                                <th class=\"text-center\">";
-echo __("Số dư thay đổi");
-echo "</th>\n                                <th class=\"text-center\">";
-echo __("Số dư hiện tại");
-echo "</th>\n                                <th>";
-echo __("Lý do");
-echo "</th>\n                            </thead>\n                            <tbody>\n                                ";
-foreach ($listDatatable as $row) {
-    echo "                                <tr>\n                                    <td>";
-    echo $row["thoigian"];
-    echo "</td>\n                                    <td class=\"text-right\"><b\n                                            style=\"color: green;\">";
-    echo format_currency($row["sotientruoc"]);
-    echo "</b>\n                                    </td>\n                                    <td class=\"text-right\"><b\n                                            style=\"color:red;\">";
-    echo format_currency($row["sotienthaydoi"]);
-    echo "</b>\n                                    </td>\n                                    <td class=\"text-right\"><b\n                                            style=\"color: blue;\">";
-    echo format_currency($row["sotiensau"]);
-    echo "</b>\n                                    </td>\n                                    <td><small>";
-    echo $row["noidung"];
-    echo "</small></td>\n                                </tr>\n                                ";
-}
-echo "                            </tbody>\n                        </table>\n                    </div>\n                    ";
-if($totalDatatable == 0) {
-    echo "                    <div class=\"empty-state\">\n                        <svg width=\"184\" height=\"152\" viewBox=\"0 0 184 152\" xmlns=\"http://www.w3.org/2000/svg\">\n                            <g fill=\"none\" fill-rule=\"evenodd\">\n                                <g transform=\"translate(24 31.67)\">\n                                    <ellipse fill-opacity=\".8\" fill=\"#F5F5F7\" cx=\"67.797\" cy=\"106.89\" rx=\"67.797\"\n                                        ry=\"12.668\"></ellipse>\n                                    <path\n                                        d=\"M122.034 69.674L98.109 40.229c-1.148-1.386-2.826-2.225-4.593-2.225h-51.44c-1.766 0-3.444.839-4.592 2.225L13.56 69.674v15.383h108.475V69.674z\"\n                                        fill=\"#AEB8C2\"></path>\n                                    <path\n                                        d=\"M101.537 86.214L80.63 61.102c-1.001-1.207-2.507-1.867-4.048-1.867H31.724c-1.54 0-3.047.66-4.048 1.867L6.769 86.214v13.792h94.768V86.214z\"\n                                        fill=\"url(#linearGradient-1)\" transform=\"translate(13.56)\"></path>\n                                    <path\n                                        d=\"M33.83 0h67.933a4 4 0 0 1 4 4v93.344a4 4 0 0 1-4 4H33.83a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4z\"\n                                        fill=\"#F5F5F7\"></path>\n                                    <path\n                                        d=\"M42.678 9.953h50.237a2 2 0 0 1 2 2V36.91a2 2 0 0 1-2 2H42.678a2 2 0 0 1-2-2V11.953a2 2 0 0 1 2-2zM42.94 49.767h49.713a2.262 2.262 0 1 1 0 4.524H42.94a2.262 2.262 0 0 1 0-4.524zM42.94 61.53h49.713a2.262 2.262 0 1 1 0 4.525H42.94a2.262 2.262 0 0 1 0-4.525zM121.813 105.032c-.775 3.071-3.497 5.36-6.735 5.36H20.515c-3.238 0-5.96-2.29-6.734-5.36a7.309 7.309 0 0 1-.222-1.79V69.675h26.318c2.907 0 5.25 2.448 5.25 5.42v.04c0 2.971 2.37 5.37 5.277 5.37h34.785c2.907 0 5.277-2.421 5.277-5.393V75.1c0-2.972 2.343-5.426 5.25-5.426h26.318v33.569c0 .617-.077 1.216-.221 1.789z\"\n                                        fill=\"#DCE0E6\"></path>\n                                </g>\n                                <path\n                                    d=\"M149.121 33.292l-6.83 2.65a1 1 0 0 1-1.317-1.23l1.937-6.207c-2.589-2.944-4.109-6.534-4.109-10.408C138.802 8.102 148.92 0 161.402 0 173.881 0 184 8.102 184 18.097c0 9.995-10.118 18.097-22.599 18.097-4.528 0-8.744-1.066-12.28-2.902z\"\n                                    fill=\"#DCE0E6\"></path>\n                                <g transform=\"translate(149.65 15.383)\" fill=\"#FFF\">\n                                    <ellipse cx=\"20.654\" cy=\"3.167\" rx=\"2.849\" ry=\"2.815\"></ellipse>\n                                    <path d=\"M5.698 5.63H0L2.898.704zM9.259.704h4.985V5.63H9.259z\"></path>\n                                </g>\n                            </g>\n                        </svg>\n                        <p>";
-    echo __("Không có dữ liệu");
-    echo "</p>\n                    </div>\n                    ";
-}
-echo "                    <div class=\"bottom-paginate\">\n                        <p class=\"page-info\">Showing ";
-echo $limit;
-echo " of ";
-echo $totalDatatable;
-echo " Results</p>\n                        <div class=\"pagination\">\n                            ";
-echo $limit < $totalDatatable ? $urlDatatable : "";
-echo "                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</section>\n\n\n";
-require_once __DIR__ . "/footer.php";
-echo "<script>\nDashmix.helpersOnLoad(['js-flatpickr', 'jq-datepicker', 'jq-maxlength', 'jq-select2', 'jq-rangeslider',\n    'jq-masked-inputs', 'jq-pw-strength'\n]);\n</script>\n<script type=\"text/javascript\">\nnew ClipboardJS(\".copy\");\n\nfunction copy() {\n    showMessage(\"";
-echo __("Đã sao chép vào bộ nhớ tạm");
-echo "\", 'success');\n}\n</script>";
 
+require_once __DIR__ . "/../common/store-shell.php";
+require_once __DIR__ . "/../common/account-nav.php";
+require_once __DIR__ . "/../../models/is_user.php";
+if (!isset($getUser) || !is_array($getUser)) {
+    $getUser = store_current_user();
+}
+
+$storeLimit = store_account_limit(isset($_GET["limit"]) ? $_GET["limit"] : 20);
+$storePage = store_account_page(isset($_GET["page"]) ? $_GET["page"] : 1);
+$storeFrom = ($storePage - 1) * $storeLimit;
+$storeReason = isset($_GET["reason"]) ? store_account_search($_GET["reason"]) : "";
+$storeTime = isset($_GET["time"]) ? (string) $_GET["time"] : "";
+$storeShort = isset($_GET["shortByDate"]) ? (int) $_GET["shortByDate"] : 0;
+
+$storeWhere = " `user_id` = " . (int) $getUser["id"] . " ";
+if ($storeReason !== "") {
+    $storeWhere .= " AND `noidung` LIKE '%" . $storeReason . "%' ";
+}
+$storeRange = store_account_date_range($storeTime);
+if ($storeRange !== null) {
+    $storeWhere .= " AND `thoigian` >= '" . $storeRange[0] . "' AND `thoigian` <= '" . $storeRange[1] . "' ";
+}
+if ($storeShort === 1) {
+    $storeWhere .= " AND `thoigian` LIKE '" . date("Y-m-d") . "%' ";
+} elseif ($storeShort === 2) {
+    $storeWhere .= " AND YEAR(`thoigian`) = " . (int) date("Y") . " AND WEEK(`thoigian`, 1) = " . (int) date("W") . " ";
+} elseif ($storeShort === 3) {
+    $storeWhere .= " AND YEAR(`thoigian`) = " . (int) date("Y") . " AND MONTH(`thoigian`) = " . (int) date("m") . " ";
+}
+
+$storeRows = $CMSNT->get_list(
+    "SELECT `id`, `thoigian`, `sotientruoc`, `sotienthaydoi`, `sotiensau`, `noidung`"
+    . " FROM `dongtien` WHERE " . $storeWhere . " ORDER BY `id` DESC LIMIT " . $storeFrom . ", " . $storeLimit
+);
+$storeTotalRow = $CMSNT->get_row("SELECT COUNT(`id`) AS total FROM `dongtien` WHERE " . $storeWhere);
+$storeTotal = $storeTotalRow ? (int) $storeTotalRow["total"] : 0;
+
+/* Totals for the rows on this page only — clearly labelled, never presented as an all-time figure. */
+$storeIn = 0;
+$storeOut = 0;
+foreach ($storeRows as $row) {
+    $delta = (float) $row["sotienthaydoi"];
+    if ($delta > 0) {
+        $storeIn += $delta;
+    } elseif ($delta < 0) {
+        $storeOut += -$delta;
+    }
+}
+
+$storeShell = array(
+    "title" => __("Biến động số dư") . " | " . $CMSNT->site("title"),
+    "desc" => $CMSNT->site("description"),
+    "nav" => store_nav_default($CMSNT),
+    "body_class" => "page-account",
+);
+store_shell_open($storeShell);
 ?>
+<section class="section section--tight" aria-labelledby="transactions-title">
+  <div class="container">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Tài khoản</p>
+        <h1 id="transactions-title">Biến động số dư</h1>
+        <p class="muted m0">Mỗi lần cộng hoặc trừ tiền đều được ghi lại kèm số dư trước và sau.</p>
+      </div>
+      <p class="stat stat--accent">
+        <span class="stat__label">Số dư hiện tại</span>
+        <strong class="stat__value stat__value--sm"><?php echo format_currency($getUser["money"]); ?></strong>
+      </p>
+    </div>
+
+<?php store_account_nav("transactions"); ?>
+
+    <form class="toolbar" method="get" action="<?php echo BASE_URL("index.php"); ?>" role="search">
+      <input type="hidden" name="action" value="transactions">
+      <div class="toolbar__field">
+        <label class="toolbar__label" for="tx-reason">Lý do</label>
+        <input class="input" id="tx-reason" type="search" name="reason" maxlength="64"
+          value="<?php echo store_e(stripslashes($storeReason)); ?>" placeholder="Ví dụ: nạp tiền">
+      </div>
+      <div class="toolbar__field">
+        <label class="toolbar__label" for="tx-time">Khoảng ngày</label>
+        <input class="input" id="tx-time" type="text" name="time"
+          value="<?php echo store_e($storeRange !== null ? substr($storeRange[0], 0, 10) . " to " . substr($storeRange[1], 0, 10) : ""); ?>"
+          placeholder="2026-01-01 to 2026-01-31" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="toolbar__field">
+        <label class="toolbar__label" for="tx-short">Thời gian</label>
+        <select class="select" id="tx-short" name="shortByDate">
+          <option value="0">Tất cả</option>
+          <option value="1"<?php echo $storeShort === 1 ? " selected" : ""; ?>>Hôm nay</option>
+          <option value="2"<?php echo $storeShort === 2 ? " selected" : ""; ?>>Tuần này</option>
+          <option value="3"<?php echo $storeShort === 3 ? " selected" : ""; ?>>Tháng này</option>
+        </select>
+      </div>
+      <div class="toolbar__field">
+        <label class="toolbar__label" for="tx-limit">Số dòng</label>
+        <select class="select" id="tx-limit" name="limit">
+<?php foreach (array(10, 20, 50, 100) as $size) { ?>
+          <option value="<?php echo $size; ?>"<?php echo $storeLimit === $size ? " selected" : ""; ?>><?php echo $size; ?></option>
+<?php } ?>
+        </select>
+      </div>
+      <div class="toolbar__spacer"></div>
+      <button class="btn btn--primary" type="submit">Lọc</button>
+      <a class="btn btn--ghost" href="<?php echo BASE_URL("client/transactions"); ?>">Bỏ lọc</a>
+    </form>
+
+    <div class="panel">
+      <div class="panel__head">
+        <h2 class="panel__title"><?php echo (int) $storeTotal; ?> dòng</h2>
+        <p class="muted small m0">Trang này: +<?php echo format_currency($storeIn); ?> · −<?php echo format_currency($storeOut); ?></p>
+      </div>
+      <div class="panel__body">
+<?php if (empty($storeRows)) { ?>
+        <div class="empty">
+          <h3 class="empty__title">Không có dòng nào khớp bộ lọc</h3>
+          <p class="muted">Thử bỏ lọc hoặc chọn khoảng thời gian rộng hơn.</p>
+          <p class="empty__actions"><a class="btn" href="<?php echo BASE_URL("client/transactions"); ?>">Xem tất cả</a></p>
+        </div>
+<?php } else { ?>
+        <div class="table-wrap">
+          <table class="table table--zebra table--responsive">
+            <caption class="sr-only">Biến động số dư của bạn</caption>
+            <thead>
+              <tr>
+                <th scope="col">Thời gian</th>
+                <th scope="col">Lý do</th>
+                <th scope="col" class="num">Trước</th>
+                <th scope="col" class="num">Thay đổi</th>
+                <th scope="col" class="num">Sau</th>
+              </tr>
+            </thead>
+            <tbody>
+<?php foreach ($storeRows as $row) { ?>
+              <tr>
+                <td class="mono small" data-label="Thời gian"><?php echo store_e($row["thoigian"]); ?></td>
+                <td data-label="Lý do"><?php echo store_e($row["noidung"]); ?></td>
+                <td class="num" data-label="Trước"><?php echo format_currency($row["sotientruoc"]); ?></td>
+                <td class="num" data-label="Thay đổi"><?php echo store_account_badge($row["sotienthaydoi"]); ?></td>
+                <td class="num" data-label="Sau"><?php echo format_currency($row["sotiensau"]); ?></td>
+              </tr>
+<?php } ?>
+            </tbody>
+          </table>
+        </div>
+<?php } ?>
+      </div>
+<?php if ($storeTotal > $storeLimit) { ?>
+      <div class="panel__foot">
+        <?php echo store_pager($storePage, $storeTotal, $storeLimit, array(
+            "action" => "transactions",
+            "limit" => $storeLimit,
+            "reason" => stripslashes($storeReason),
+            "time" => $storeRange !== null ? substr($storeRange[0], 0, 10) . " to " . substr($storeRange[1], 0, 10) : "",
+            "shortByDate" => $storeShort > 0 ? $storeShort : "",
+        )); ?>
+      </div>
+<?php } ?>
+    </div>
+
+    <p class="orders-foot muted small">Số dư chỉ thay đổi qua các giao dịch trong danh sách này. Nếu thấy sai, hãy gửi mã đơn cho <a href="<?php echo BASE_URL("client/contact"); ?>">hỗ trợ</a>.</p>
+  </div>
+</section>
+<?php
+store_shell_close($storeShell);

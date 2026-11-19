@@ -1274,6 +1274,20 @@
 .panel__title { margin: 0; font-size: var(--text-lg); }
 .panel__body .field:last-of-type { margin-bottom: 0; }
 
+/* Two-factor enrolment: the library returns a data: URI image, so this is the only decoration. */
+.qr {
+  display: inline-flex;
+  padding: var(--space-3);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: var(--space-4);
+}
+.qr img { display: block; width: 180px; height: 180px; }
+/* A switch whose label carries a title and an explanation stacks them. */
+.switch__label { display: grid; gap: 2px; }
+.switch__label .small { font-weight: var(--weight-regular); }
+
 @media (max-width: 900px) {
   .account-grid { grid-template-columns: 1fr; }
   .account-nav { border-radius: var(--radius-lg); }

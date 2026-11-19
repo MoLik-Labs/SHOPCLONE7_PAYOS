@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>[preview] Biến động số dư | Orbit Shop</title>
+<meta name="description" content="Shop bán tài khoản &amp; licence">
+<meta name="keywords" content="shop, licence">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Biến động số dư | Orbit Shop">
+<meta property="og:description" content="Shop bán tài khoản &amp; licence">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#fbf9f4">
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/latin-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/vietnamese-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/client/orbit/tokens.css?v=1795098061">
+<link rel="stylesheet" href="assets/client/orbit/base.css?v=1795098061">
+<link rel="stylesheet" href="assets/client/orbit/components.css?v=1795098616">
+<link rel="stylesheet" href="assets/client/orbit/shell.css?v=1795098061">
+<link rel="stylesheet" href="assets/client/orbit/store.css?v=1795098403">
+<link rel="stylesheet" href="assets/preview.css">
+</head>
+<body class="page-account">
+<div class="preview-banner"><strong>Bản xem trước tĩnh</strong> — trang thật chạy trong shop, ở đây dùng dữ liệu mẫu. Không có dữ liệu thật, không gọi mạng, không phát nhạc. Biểu đồ vẽ bằng SVG nội bộ; bảng vẫn đọc được khi tắt JavaScript.</div>
+
+<a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+<header class="topbar" data-topbar>
+  <div class="container topbar__inner">
+    <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+    <nav class="topbar__nav" aria-label="Điều hướng chính">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__actions">
+      <a class="topbar__balance" href="#preview-client-profile">
+        <span>Số dư</span>
+        <strong>250.000đ</strong>
+      </a>
+      <a class="btn btn--ghost topbar__account" href="#preview-client-profile">Tài khoản</a>
+      <a class="btn topbar__cta" href="#preview-action-recharge-bank">Nạp tiền</a>
+      <button class="topbar__toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-toggle>
+        <span class="sr-only">Mở menu</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+    </div>
+  </div>
+  <div class="topbar__sheet" id="site-menu" data-menu-sheet hidden>
+    <nav aria-label="Điều hướng trên điện thoại">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__sheet-actions">
+      <a class="btn btn--ghost btn--block" href="#preview-client-logout">Đăng xuất</a>
+      <a class="btn btn--primary btn--block" href="#preview-action-recharge-bank">Nạp tiền</a>
+    </div>
+  </div>
+</header>
+<main id="main" class="container section">
+<section class="section section--tight" aria-labelledby="transactions-title">
+  <div class="container">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Tài khoản</p>
+        <h1 id="transactions-title">Biến động số dư</h1>
+        <p class="muted m0">Mỗi lần cộng hoặc trừ tiền đều được ghi lại kèm số dư trước và sau.</p>
+      </div>
+      <p class="stat stat--accent">
+        <span class="stat__label">Số dư hiện tại</span>
+        <strong class="stat__value stat__value--sm">250.000đ</strong>
+      </p>
+    </div>
+
+<nav class="account-nav" aria-label="Khu vực tài khoản"><a href="#preview-client-profile">Tổng quan</a><a href="#preview-client-purchase-history">Lịch sử mua hàng</a><a href="#preview-product-orders">Đơn hàng</a><a href="#preview-client-transactions" aria-current="page">Biến động số dư</a><a href="#preview-client-favorites">Yêu thích</a><a href="#preview-client-security">Bảo mật</a><a href="#preview-client-change-password">Đổi mật khẩu</a><a href="#preview-client-logs">Nhật ký</a></nav>
+    <form class="toolbar" method="get" action="#preview-index-php" role="search">
+      <input type="hidden" name="action" value="transactions">
+      <div class="toolbar__field">
+        <label class="toolbar__label" for="tx-reason">Lý do</label>
+        <input class="input" id="tx-reason" type="search" name="reason" maxlength="64"
+          value="" placeholder="Ví dụ: nạp tiền">
+      </div>
+      <div class="toolbar__field">
+        <label class="toolbar__label" for="tx-time">Khoảng ngày</label>
+        <input class="input" id="tx-time" type="text" name="time"
+          value=""
+          placeholder="2026-01-01 to 2026-01-31" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="toolbar__field">
+        <label class="toolbar__label" for="tx-short">Thời gian</label>
+        <select class="select" id="tx-short" name="shortByDate">
+          <option value="0">Tất cả</option>
+          <option value="1">Hôm nay</option>
+          <option value="2">Tuần này</option>
+          <option value="3">Tháng này</option>
+        </select>
+      </div>
+      <div class="toolbar__field">
+        <label class="toolbar__label" for="tx-limit">Số dòng</label>
+        <select class="select" id="tx-limit" name="limit">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+      <div class="toolbar__spacer"></div>
+      <button class="btn btn--primary" type="submit">Lọc</button>
+      <a class="btn btn--ghost" href="#preview-client-transactions">Bỏ lọc</a>
+    </form>
+
+    <div class="panel">
+      <div class="panel__head">
+        <h2 class="panel__title">4 dòng</h2>
+        <p class="muted small m0">Trang này: +1.300.000đ · −370.000đ</p>
+      </div>
+      <div class="panel__body">
+        <div class="table-wrap">
+          <table class="table table--zebra table--responsive">
+            <caption class="sr-only">Biến động số dư của bạn</caption>
+            <thead>
+              <tr>
+                <th scope="col">Thời gian</th>
+                <th scope="col">Lý do</th>
+                <th scope="col" class="num">Trước</th>
+                <th scope="col" class="num">Thay đổi</th>
+                <th scope="col" class="num">Sau</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono small" data-label="Thời gian">2026-11-16 09:12:00</td>
+                <td data-label="Lý do">Mua Netflix Premium 1 tháng — đơn #ORB00118</td>
+                <td class="num" data-label="Trước">1.740.000đ</td>
+                <td class="num" data-label="Thay đổi"><span class="pill pill--danger">-120.000đ</span></td>
+                <td class="num" data-label="Sau">1.620.000đ</td>
+              </tr>
+              <tr>
+                <td class="mono small" data-label="Thời gian">2026-11-12 14:30:00</td>
+                <td data-label="Lý do">Nạp tiền qua payOS — mã 4821</td>
+                <td class="num" data-label="Trước">1.240.000đ</td>
+                <td class="num" data-label="Thay đổi"><span class="pill pill--ok">+500.000đ</span></td>
+                <td class="num" data-label="Sau">1.740.000đ</td>
+              </tr>
+              <tr>
+                <td class="mono small" data-label="Thời gian">2026-11-08 20:02:00</td>
+                <td data-label="Lý do">Mua Canva Pro 1 năm — đơn #ORB00097</td>
+                <td class="num" data-label="Trước">1.490.000đ</td>
+                <td class="num" data-label="Thay đổi"><span class="pill pill--danger">-250.000đ</span></td>
+                <td class="num" data-label="Sau">1.240.000đ</td>
+              </tr>
+              <tr>
+                <td class="mono small" data-label="Thời gian">2026-11-01 08:45:00</td>
+                <td data-label="Lý do">Nạp tiền qua payOS — mã 4760</td>
+                <td class="num" data-label="Trước">690.000đ</td>
+                <td class="num" data-label="Thay đổi"><span class="pill pill--ok">+800.000đ</span></td>
+                <td class="num" data-label="Sau">1.490.000đ</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <p class="orders-foot muted small">Số dư chỉ thay đổi qua các giao dịch trong danh sách này. Nếu thấy sai, hãy gửi mã đơn cho <a href="#preview-client-contact">hỗ trợ</a>.</p>
+  </div>
+</section>
+</main>
+<footer class="footer">
+  <div class="container">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+        <p class="footer__note">Shop bán tài khoản &amp; licence</p>
+        <ul class="footer__contact">
+<li><span class="footer__label">Hotline</span> <a href="tel:0909123456">0909 123 456</a></li>
+<li><span class="footer__label">Email</span> <a href="mailto:support@orbit.example">support@orbit.example</a></li>
+<li><span class="footer__label">Địa chỉ</span> Quận 1, TP. Hồ Chí Minh</li>        </ul>
+      </div>
+      <div class="footer__cols">
+        <nav class="footer__col" aria-label="Mua hàng">
+          <h2 class="footer__heading">Mua hàng</h2>
+          <ul>
+            <li><a href="#preview-client-home#san-pham">Tất cả sản phẩm</a></li>
+            <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+            <li><a href="#preview-product-orders">Lịch sử đơn hàng</a></li>
+            <li><a href="#preview-client-favorites">Sản phẩm yêu thích</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Hỗ trợ">
+          <h2 class="footer__heading">Hỗ trợ</h2>
+          <ul>
+            <li><a href="#preview-client-faq">Câu hỏi thường gặp</a></li>
+            <li><a href="#preview-client-contact">Liên hệ</a></li>
+            <li><a href="#preview-client-policy">Chính sách</a></li>
+            <li><a href="#preview-client-document-api">Tài liệu API</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Tài khoản">
+          <h2 class="footer__heading">Tài khoản</h2>
+          <ul>
+            <li><a href="#preview-client-login">Đăng nhập</a></li>
+            <li><a href="#preview-client-register">Đăng ký</a></li>
+            <li><a href="#preview-client-login">Nạp tiền</a></li>
+            <li><a href="#preview-client-profile">Trang cá nhân</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+    <div class="footer__legal">
+      <p>© 2026 Orbit Shop</p>
+      <p class="footer__credit">Thiết kế &amp; vận hành: <strong>Orbit Office</strong></p>
+      <ul class="footer__legal-links">
+        <li><a href="#preview-client-policy">Chính sách</a></li>
+        <li><a href="#preview-client-faq">FAQ</a></li>
+        <li><a href="#preview-client-contact">Liên hệ</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+<script defer src="assets/client/orbit/store.js?v=1795098413"></script>
+</body>
+</html>

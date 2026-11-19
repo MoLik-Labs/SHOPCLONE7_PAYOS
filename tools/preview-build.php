@@ -357,6 +357,28 @@ $pages["blog.html"] = array(
         array("module" => "client", "action" => "blog", "slug" => "bao-hanh-tai-khoan-hoat-dong-the-nao"), $fixtures),
 );
 
+/* 6f. the account pages rebuilt this round */
+$pages["favorites.html"] = array(
+    "title" => "Sản phẩm yêu thích — bản xem trước",
+    "html" => preview_render($root, "views/client/favorites.php", array("login" => "tok"),
+        array("module" => "client", "action" => "favorites"), $fixtures),
+);
+$pages["transactions.html"] = array(
+    "title" => "Biến động số dư — bản xem trước",
+    "html" => preview_render($root, "views/client/transactions.php", array("login" => "tok"),
+        array("module" => "client", "action" => "transactions"), $fixtures),
+);
+$pages["change-password.html"] = array(
+    "title" => "Đổi mật khẩu — bản xem trước",
+    "html" => preview_render($root, "views/client/change-password.php", array("login" => "tok"),
+        array("module" => "client", "action" => "change-password"), $fixtures),
+);
+$pages["contact.html"] = array(
+    "title" => "Liên hệ — bản xem trước",
+    "html" => preview_render($root, "views/client/contact.php", array(),
+        array("module" => "client", "action" => "contact"), $fixtures),
+);
+
 /* 7. the styleguide (design system reference) */
 $pages["styleguide.html"] = array(
     "title" => "Orbit design system — bản xem trước",

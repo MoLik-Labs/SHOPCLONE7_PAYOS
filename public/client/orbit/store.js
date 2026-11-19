@@ -499,6 +499,128 @@
     });
   }
 
+  /* --- account: favourites, password, security, password reset ------------ */
+
+  /* One submit helper: disables the button, posts the named action, prints the server's sentence. */
+  function bindAccountForm(selector, statusSelector, action, build) {
+    var form = document.querySelector(selector);
+    if (!form) {
+      return;
+    }
+    var endpoint = form.getAttribute("data-endpoint");
+    var statusEl = form.querySelector(statusSelector);
+    var submit = form.querySelector("button[type=submit]");
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var data = new FormData(form);
+      var fields = build(data);
+      fields.action = action;
+      if (submit) {
+        submit.disabled = true;
+      }
+      setStatus(statusEl, "Đang lưu…");
+      postForm(endpoint, fields).then(function (response) {
+        setStatus(statusEl, response.msg || "", response.status === "success" ? "ok" : "error");
+        if (response.status === "success" && form.getAttribute("data-redirect")) {
+          window.setTimeout(function () {
+            window.location.href = form.getAttribute("data-redirect");
+          }, 1200);
+        }
+        if (submit) {
+          submit.disabled = false;
+        }
+      }).catch(function () {
+        setStatus(statusEl, "Không kết nối được máy chủ. Vui lòng thử lại.", "error");
+        if (submit) {
+          submit.disabled = false;
+        }
+      });
+    });
+  }
+
+  function value(data, name) {
+    return (data.get(name) || "").toString();
+  }
+
+  function setupAccountForms() {
+    bindAccountForm("[data-password-form]", "[data-password-status]", "ChangePasswordProfile", function (data) {
+      return {
+        token: value(data, "token"),
+        password: value(data, "password"),
+        newpassword: value(data, "newpassword"),
+        renewpassword: value(data, "renewpassword")
+      };
+    });
+
+    bindAccountForm("[data-security-form]", "[data-security-status]", "changeSecurity", function (data) {
+      var form = document.querySelector("[data-security-form]");
+      function on(name) {
+        var field = form && form.querySelector('[name="' + name + '"]');
+        return field && field.checked ? "1" : "0";
+      }
+      return {
+        token: value(data, "token"),
+        status_otp_mail: on("status_otp_mail"),
+        status_noti_login_to_mail: on("status_noti_login_to_mail"),
+        status_view_order: on("status_view_order")
+      };
+    });
+
+    bindAccountForm("[data-2fa-form]", "[data-2fa-status]", "Save2FA", function (data) {
+      var form = document.querySelector("[data-2fa-form]");
+      var toggle = form && form.querySelector('[name="status_2fa"]');
+      return {
+        token: value(data, "token"),
+        secret: value(data, "secret"),
+        status_2fa: toggle && toggle.checked ? "1" : "0"
+      };
+    });
+
+    bindAccountForm("[data-forgot-form]", "[data-forgot-status]", "ForgotPassword", function (data) {
+      return { email: value(data, "email") };
+    });
+
+    bindAccountForm("[data-reset-form]", "[data-reset-status]", "ChangePassword", function (data) {
+      return {
+        token: value(data, "token"),
+        newpassword: value(data, "newpassword"),
+        renewpassword: value(data, "renewpassword")
+      };
+    });
+
+    /* Favourites: the remove button sits in a table row; the token is in a hidden form on the page. */
+    var favoritesForm = document.querySelector("[data-favorites-form]");
+    if (favoritesForm) {
+      var tokenField = favoritesForm.querySelector('[name="token"]');
+      var favoritesStatus = document.querySelector("[data-favorites-status]");
+      document.querySelectorAll("[data-favorite-remove]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          button.disabled = true;
+          setStatus(favoritesStatus, "Đang bỏ lưu…");
+          postForm(favoritesForm.getAttribute("data-endpoint"), {
+            action: "removeFavorite",
+            id: button.getAttribute("data-favorite-remove"),
+            token: tokenField ? tokenField.value : ""
+          }).then(function (response) {
+            if (response.status === "success") {
+              var row = button.closest("tr");
+              if (row) {
+                row.parentNode.removeChild(row);
+              }
+              setStatus(favoritesStatus, response.msg || "Đã bỏ lưu.", "ok");
+            } else {
+              setStatus(favoritesStatus, response.msg || "Không bỏ lưu được.", "error");
+              button.disabled = false;
+            }
+          }).catch(function () {
+            setStatus(favoritesStatus, "Không kết nối được máy chủ. Vui lòng thử lại.", "error");
+            button.disabled = false;
+          });
+        });
+      });
+    }
+  }
+
   /* --- order history ------------------------------------------------------ */
 
   function downloadText(filename, text) {
@@ -822,6 +944,7 @@
     setupBuy();
     setupAuth();
     setupProfile();
+    setupAccountForms();
     setupOrders();
     setupOrderDetail();
     setupCopy();

@@ -11,6 +11,7 @@ if (!defined("IN_SITE")) {
 }
 
 require_once __DIR__ . "/../common/store-shell.php";
+require_once __DIR__ . "/../common/account-nav.php";
 require_once __DIR__ . "/../../models/is_user.php";
 if (!isset($getUser) || !is_array($getUser)) {
     $getUser = store_current_user();
@@ -62,14 +63,7 @@ store_shell_open($storeShell);
       </div>
     </div>
 
-    <nav class="account-nav" aria-label="Khu vực tài khoản">
-      <a href="<?php echo BASE_URL("client/purchase-history"); ?>">Lịch sử mua hàng</a>
-      <a href="<?php echo BASE_URL("product-orders"); ?>">Đơn hàng</a>
-      <a href="<?php echo BASE_URL("client/transactions"); ?>">Biến động số dư</a>
-      <a href="<?php echo BASE_URL("client/security"); ?>">Bảo mật</a>
-      <a href="<?php echo BASE_URL("client/change-password"); ?>">Đổi mật khẩu</a>
-      <a href="<?php echo BASE_URL("client/favorites"); ?>">Yêu thích</a>
-    </nav>
+<?php store_account_nav("profile"); ?>
 
     <div class="account-grid">
       <section class="panel" aria-labelledby="profile-title">

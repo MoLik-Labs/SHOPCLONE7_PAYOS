@@ -123,6 +123,15 @@ class DB
         if (strpos($sql, "FROM `payment_manual`") !== false) {
             return $f["payment_manual"];
         }
+        if (strpos($sql, "FROM `favorites`") !== false && strpos($sql, "COUNT(") !== false) {
+            return array("total" => count($f["favorites"]));
+        }
+        if (strpos($sql, "FROM `dongtien`") !== false && strpos($sql, "COUNT(") !== false) {
+            return array("total" => count($f["ledger"]));
+        }
+        if (strpos($sql, "FROM `logs`") !== false && strpos($sql, "COUNT(") !== false) {
+            return array("total" => count($f["logs"]));
+        }
         if (strpos($sql, "FROM `product_sold`") !== false && strpos($sql, "COUNT(") !== false) {
             return array("total" => count($f["order_accounts"]));
         }
@@ -264,6 +273,28 @@ class DB
         }
         if (strpos($sql, "FROM `payment_manual`") !== false) {
             return array();
+        }
+        if (strpos($sql, "FROM `favorites`") !== false) {
+            $rows = array();
+            foreach ($f["favorites"] as $favorite) {
+                foreach ($f["store_products"] as $product) {
+                    if ((int) $product["id"] === (int) $favorite["product_id"]) {
+                        $rows[] = array_merge($favorite, array(
+                            "favorite_id" => $favorite["id"], "product_id" => $product["id"],
+                            "name" => $product["name"], "slug" => $product["slug"],
+                            "price" => $product["price"], "code" => $product["code"],
+                            "supplier_id" => $product["supplier_id"], "api_stock" => $product["api_stock"],
+                        ));
+                    }
+                }
+            }
+            return $rows;
+        }
+        if (strpos($sql, "FROM `dongtien`") !== false) {
+            return $f["ledger"];
+        }
+        if (strpos($sql, "FROM `logs`") !== false) {
+            return $f["logs"];
         }
         if (strpos($sql, "FROM `categories`") !== false) {
             return $f["store_categories"];
@@ -496,6 +527,36 @@ if (!function_exists("preview_fixtures")) {
                 array("product_code" => "WN1", "c" => 11), array("product_code" => "TC1", "c" => 100),
             ),
             "store_total" => 8,
+            /* Account pages: rows the signed-in sample customer owns. */
+            "favorites" => array(
+                array("id" => 1, "product_id" => 101, "user_id" => 1, "create_gettime" => "2026-11-02 10:20:00"),
+                array("id" => 2, "product_id" => 105, "user_id" => 1, "create_gettime" => "2026-11-06 16:40:00"),
+                array("id" => 3, "product_id" => 108, "user_id" => 1, "create_gettime" => "2026-11-11 09:05:00"),
+            ),
+            "ledger" => array(
+                array("id" => 5, "user_id" => 1, "thoigian" => "2026-11-16 09:12:00",
+                    "sotientruoc" => 1740000, "sotienthaydoi" => -120000, "sotiensau" => 1620000,
+                    "noidung" => "Mua Netflix Premium 1 tháng — đơn #ORB00118"),
+                array("id" => 4, "user_id" => 1, "thoigian" => "2026-11-12 14:30:00",
+                    "sotientruoc" => 1240000, "sotienthaydoi" => 500000, "sotiensau" => 1740000,
+                    "noidung" => "Nạp tiền qua payOS — mã 4821"),
+                array("id" => 3, "user_id" => 1, "thoigian" => "2026-11-08 20:02:00",
+                    "sotientruoc" => 1490000, "sotienthaydoi" => -250000, "sotiensau" => 1240000,
+                    "noidung" => "Mua Canva Pro 1 năm — đơn #ORB00097"),
+                array("id" => 2, "user_id" => 1, "thoigian" => "2026-11-01 08:45:00",
+                    "sotientruoc" => 690000, "sotienthaydoi" => 800000, "sotiensau" => 1490000,
+                    "noidung" => "Nạp tiền qua payOS — mã 4760"),
+            ),
+            "logs" => array(
+                array("id" => 8, "user_id" => 1, "createdate" => "2026-11-16 08:02:00",
+                    "action" => "Đăng nhập", "ip" => "203.0.113.24", "device" => "Chrome trên Windows"),
+                array("id" => 7, "user_id" => 1, "createdate" => "2026-11-14 21:10:00",
+                    "action" => "Đổi mật khẩu", "ip" => "203.0.113.24", "device" => "Chrome trên Windows"),
+                array("id" => 6, "user_id" => 1, "createdate" => "2026-11-12 14:31:00",
+                    "action" => "Nạp tiền qua payOS (500.000đ)", "ip" => "203.0.113.24", "device" => "Chrome trên Windows"),
+                array("id" => 5, "user_id" => 1, "createdate" => "2026-11-08 20:00:00",
+                    "action" => "Mua Canva Pro 1 năm", "ip" => "203.0.113.24", "device" => "Chrome trên Windows"),
+            ),
             "new_users" => 23,
             "mine_total" => count($mineOrders),
             "payment_manual" => array("id" => 3, "slug" => "bank", "display" => 1,

@@ -18,7 +18,9 @@ if [ "${1:-}" = "--tests-only" ]; then MODE=tests; shift; fi
 fails=0; runs=0; notrun=0
 
 if [ "$MODE" != "tests" ]; then
-  git ls-files -z '*.php' | python3 -c 'import sys,json; print(json.dumps([p for p in sys.stdin.buffer.read().decode().split("\0") if p]))' > /tmp/shopclone7-lint.json
+  # Tracked files plus anything newly created: a brand-new page must be linted before it is committed.
+  { git ls-files -z '*.php'; git ls-files -z --others --exclude-standard '*.php'; } \
+    | python3 -c 'import sys,json; names=sorted(set(p for p in sys.stdin.buffer.read().decode().split("\0") if p)); print(json.dumps(names))' > /tmp/shopclone7-lint.json
   node tools/dev/phpcl.mjs tools/dev/lintlist.php /tmp/shopclone7-lint.json || fails=$((fails+1))
 fi
 

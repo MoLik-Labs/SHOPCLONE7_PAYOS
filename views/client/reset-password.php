@@ -1,93 +1,67 @@
 <?php
+/*
+ * Reset password — Orbit v3.
+ *
+ * The link carries `?token=…` (the same value `ForgotPassword` stored in `token_forgot_password`).
+ * A missing or unknown token redirects away instead of printing an empty form; the server re-checks
+ * the token and its 15-minute window when the form is submitted.
+ */
 
-if(!defined("IN_SITE")) {
+if (!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
-$body = ["title" => __("Thay đổi mật khẩu") . " | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n\n";
-$body["footer"] = "\n\n";
-if(empty($_GET["token"])) {
-    redirect(base_url());
-}
-if(!($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `token_forgot_password` = '" . check_string($_GET["token"]) . "' AND `token_forgot_password` IS NOT NULL "))) {
-    if(empty($getUser["token_forgot_password"])) {
-        redirect(base_url());
-    }
-    redirect(base_url());
-}
-require_once __DIR__ . "/header.php";
-echo "\n<body>\n    <section class=\"user-form-part\">\n        <div class=\"container\">\n            <div class=\"row justify-content-center\">\n                <div class=\"col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5\">\n                    <div class=\"user-form-logo\"><a href=\"";
-echo base_url();
-echo "\"><img\n                                src=\"";
-echo BASE_URL($CMSNT->site("logo_light"));
-echo "\" alt=\"logo\"></a></div>\n                    <div class=\"user-form-card\">\n                        <div class=\"user-form-title\">\n                            <h2>";
-echo __("Thay đổi mật khẩu");
-echo "</h2>\n                        </div>\n                        <form class=\"user-form\">\n                        <input type=\"hidden\" id=\"csrf_token\" value=\"";
-echo generate_csrf_token();
-echo "\">\n                         <input type=\"hidden\" id=\"ChangePassword_token\" value=\"";
-echo $getUser["token_forgot_password"];
-echo "\">\n                            <div class=\"form-group\">\n                                <input type=\"password\" id=\"ChangePassword_password\" class=\"form-control\"\n                                    placeholder=\"";
-echo __("Vui lòng nhập mật khẩu mới");
-echo "\">\n                            </div>\n                            <div class=\"form-group\">\n                                <input type=\"password\" id=\"ChangePassword_repassword\" class=\"form-control\"\n                                    placeholder=\"";
-echo __("Nhập lại mật khẩu mới");
-echo "\">\n                            </div>\n                            <div class=\"form-button\"><button type=\"button\"\n                                    id=\"btnChangePassword\">";
-echo __("Thay đổi mật khẩu");
-echo "</button></div>\n                        </form>\n                    </div>\n                    <div class=\"user-form-remind\">\n                        <p>";
-echo __("Bạn đã có tài khoản?");
-echo " <a href=\"";
-echo BASE_URL();
-echo "\">";
-echo __("Đăng Nhập");
-echo "</a></p>\n                    </div>\n                    <div class=\"user-form-footer\">\n                        <p>&COPY; Copyright by <a href=\"";
-echo BASE_URL();
-echo "\">";
-echo $CMSNT->site("title");
-echo "</a></p>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </section>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "vendor/bootstrap/jquery-1.12.4.min.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "vendor/bootstrap/popper.min.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "vendor/bootstrap/bootstrap.min.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "vendor/countdown/countdown.min.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "vendor/niceselect/nice-select.min.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "vendor/slickslider/slick.min.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "vendor/venobox/venobox.min.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "js/nice-select.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "js/countdown.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "js/accordion.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "js/venobox.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "js/slick.js\"></script>\n    <script src=\"";
-echo BASE_URL("public/client/");
-echo "js/main.js\"></script>\n</body>\n\n</html>\n\n \n\n<script type=\"text/javascript\">\n\$(\"#btnChangePassword\").on(\"click\", function() {\n    \$('#btnChangePassword').html('<i class=\"fa fa-spinner fa-spin\"></i> ";
-echo __("Processing...");
-echo "').prop(\n        'disabled',\n        true);\n    \n    \$.ajax({\n        url: \"";
-echo base_url("ajaxs/client/auth.php");
-echo "\",\n        method: \"POST\",\n        dataType: \"JSON\",\n        data: {\n            action: 'ChangePassword',\n            csrf_token: \$(\"#csrf_token\").val(),\n            token: \$(\"#ChangePassword_token\").val(),\n            newpassword: \$(\"#ChangePassword_password\").val(),\n            renewpassword: \$(\"#ChangePassword_repassword\").val()\n        },\n        success: function(respone) {\n            if (respone.status == 'success') {\n                Swal.fire({\n                    title: '";
-echo __("Successful !");
-echo "',\n                    text: respone.msg,\n                    icon: 'success',\n                    confirmButtonColor: '#3085d6',\n                    confirmButtonText: '";
-echo __("Sign In");
-echo "'\n                }).then((result) => {\n                    if (result.isConfirmed) {\n                        location.href = '";
-echo BASE_URL();
-echo "';\n                    }\n                });\n                location.href = '";
-echo BASE_URL();
-echo "';\n            } else {\n                Swal.fire('";
-echo __("Failure!");
-echo "', respone.msg, 'error');\n            }\n            \$('#btnChangePassword').html(\n                '";
-echo __("Thay đổi mật khẩu");
-echo "'\n                ).prop('disabled', false);\n        },\n        error: function() {\n            showMessage('";
-echo __("Không thể xử lý");
-echo "', 'error');\n            \$('#btnChangePassword').html(\n                '";
-echo __("Thay đổi mật khẩu");
-echo "'\n                ).prop('disabled', false);\n        }\n\n    });\n});\n</script>";
 
+require_once __DIR__ . "/../common/store-shell.php";
+
+$storeToken = isset($_GET["token"]) && is_string($_GET["token"]) ? trim($_GET["token"]) : "";
+if ($storeToken === "" || !preg_match('/^[A-Za-z0-9]{16,128}$/', $storeToken)) {
+    redirect(BASE_URL("client/forgot-password"));
+}
+$storeUser = $CMSNT->get_row(
+    "SELECT `id`, `username`, `token_forgot_password` FROM `users`"
+    . " WHERE `token_forgot_password` = '" . addslashes($storeToken) . "' AND `token_forgot_password` IS NOT NULL"
+);
+if (!$storeUser) {
+    redirect(BASE_URL("client/forgot-password"));
+}
+
+$storeShell = array(
+    "title" => __("Đặt lại mật khẩu") . " | " . $CMSNT->site("title"),
+    "desc" => $CMSNT->site("description"),
+    "noindex" => true,
+    "body_class" => "page-auth",
+);
+store_shell_open($storeShell);
 ?>
+<section class="auth" aria-labelledby="reset-title">
+  <div class="container container--narrow">
+    <div class="auth__card">
+      <p class="eyebrow">Tài khoản</p>
+      <h1 id="reset-title" class="auth__head">Đặt lại mật khẩu</h1>
+      <p class="muted">Tạo mật khẩu mới cho <strong><?php echo store_e($storeUser["username"]); ?></strong>. Sau khi lưu, mọi thiết bị phải đăng nhập lại.</p>
+
+      <form class="stack auth__form" data-reset-form
+        data-endpoint="<?php echo store_e(BASE_URL("ajaxs/client/auth.php")); ?>"
+        data-redirect="<?php echo store_e(BASE_URL("client/login")); ?>">
+        <input type="hidden" name="token" value="<?php echo store_e($storeToken); ?>">
+        <div class="field">
+          <label class="field__label" for="reset-password">Mật khẩu mới</label>
+          <input class="input" id="reset-password" name="newpassword" type="password"
+            autocomplete="new-password" minlength="5" required aria-describedby="reset-help">
+          <p class="field__help" id="reset-help">Tối thiểu 5 ký tự, theo yêu cầu hiện tại của shop.</p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="reset-confirm">Nhập lại mật khẩu mới</label>
+          <input class="input" id="reset-confirm" name="renewpassword" type="password"
+            autocomplete="new-password" minlength="5" required>
+        </div>
+        <button class="btn btn--primary btn--block" type="submit">Lưu mật khẩu mới</button>
+        <p class="auth__status" role="status" aria-live="polite" data-reset-status></p>
+      </form>
+
+      <p class="auth__switch muted"><a href="<?php echo BASE_URL("client/login"); ?>">Quay lại đăng nhập</a></p>
+    </div>
+  </div>
+</section>
+<?php
+store_shell_close($storeShell);

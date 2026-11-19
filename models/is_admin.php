@@ -44,7 +44,12 @@ if(!isset($_SESSION["admin_login"])) {
         $User->Banned($getUser["id"], "Tài khoản âm tiền, ghi vấn bug");
         redirect(base_url("common/banned"));
     }
-    $CMSNT->update("users", ["time_session" => time()], " `id` = '" . $getUser["id"] . "' ");
+    /* Presence only needs minute precision (display_online() uses a 5-minute window). Writing on
+       every request made each page view an UPDATE; throttling to once a minute keeps the indicator
+       correct and removes that write from almost every request. */
+    if (time() - (int) (isset($getUser["time_session"]) ? $getUser["time_session"] : 0) > 60) {
+        $CMSNT->update("users", ["time_session" => time()], " `id` = " . (int) $getUser["id"] . " ");
+    }
 }
 
 ?>
