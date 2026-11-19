@@ -270,11 +270,12 @@ if(isset($_POST["SaveSettings"])) {
     echo "</th>\n                                    <th>";
     echo __("Update date");
     echo "</th>\n                                </tr>\n                            </thead>\n                            <tbody>\n                                ";
+    $orbitUserNames = orbit_user_names($listDatatable, "user_id");
     foreach ($listDatatable as $row2) {
         echo "                                <tr>\n                                    <td class=\"text-center\"><a class=\"text-primary\"\n                                            href=\"";
         echo base_url_admin("user-edit&id=" . $row2["user_id"]);
         echo "\">";
-        echo getRowRealtime("users", $row2["user_id"], "username");
+        echo orbit_user_name($orbitUserNames, $row2["user_id"]);
         echo "                                            [ID ";
         echo $row2["user_id"];
         echo "]</a>\n                                    </td>\n                                    <td class=\"text-center\"><small><a class=\"text-primary\" target=\"_blank\"\n                                                href=\"";

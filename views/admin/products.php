@@ -211,6 +211,7 @@ echo __("Seller");
 echo "</th>\n                                        <th class=\"text-center\">";
 echo __("Thời gian");
 echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
+$orbitUserNames = orbit_user_names($listDatatable, "user_id");
 foreach ($listDatatable as $product) {
     echo "                                    <tr>\n                                        <td class=\"text-center\">\n                                            <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                <input type=\"checkbox\" class=\"form-check-input checkbox_product\"\n                                                    data-id=\"";
     echo $product["id"];
@@ -282,7 +283,7 @@ foreach ($listDatatable as $product) {
     echo "</b>\n                                        </td>\n                                        <td class=\"text-center\"><a class=\"text-primary\"\n                                                href=\"";
     echo base_url_admin("user-edit&id=" . $product["user_id"]);
     echo "\">";
-    echo getRowRealtime("users", $product["user_id"], "username");
+    echo orbit_user_name($orbitUserNames, $product["user_id"]);
     echo "                                                [ID ";
     echo $product["user_id"];
     echo "]</a>\n                                        </td>\n                                        <td><small>";

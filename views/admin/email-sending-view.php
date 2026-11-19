@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => "View Sending Report", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n\n";
+$body["header"] = "\n\n\n";
 $body["footer"] = "\n \n";
 require_once __DIR__ . "/../../models/is_admin.php";
 if(isset($_GET["id"])) {

@@ -791,6 +791,44 @@ function display_invoice_text($status)
     }
     return __("Khác");
 }
+/**
+ * Resolve a page of usernames in one query instead of one per row.
+ *
+ * `getRowRealtime("users", $row["user_id"], "username")` inside a table loop costs one round trip per
+ * row; an admin list of 100 orders paid 100 extra queries. Pass the rows and the key that holds the
+ * user id, then read the map with orbit_user_name().
+ *
+ *   $names = orbit_user_names($orders, "buyer");
+ *   echo orbit_user_name($names, $order["buyer"]);
+ */
+function orbit_user_names($rows, $key = "user_id")
+{
+    global $CMSNT;
+    if (!is_array($rows) || !$rows) {
+        return array();
+    }
+    $ids = array();
+    foreach ($rows as $row) {
+        if (is_array($row) && isset($row[$key]) && 0 < (int) $row[$key]) {
+            $ids[(int) $row[$key]] = true;
+        }
+    }
+    if (!$ids) {
+        return array();
+    }
+    $names = array();
+    foreach (array_chunk(array_keys($ids), 500) as $chunk) {
+        foreach ($CMSNT->get_list("SELECT `id`,`username` FROM `users` WHERE `id` IN (" . implode(",", $chunk) . ")") as $user) {
+            $names[(int) $user["id"]] = (string) $user["username"];
+        }
+    }
+    return $names;
+}
+/** Safe lookup into the map orbit_user_names() returns; unknown ids print as an empty cell. */
+function orbit_user_name($names, $id)
+{
+    return is_array($names) && isset($names[(int) $id]) ? $names[(int) $id] : "";
+}
 function getRowRealtime($table, $id, $row)
 {
     global $CMSNT;

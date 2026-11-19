@@ -48,7 +48,7 @@ echo "</b></td>\n        </tr>\n        <tr>\n            <td>Extension gmagick<
 echo extension_loaded("gmagick") ? "<span style=\"color:green;\">ON</span>" : "<span style=\"color:red;\">OFF</span>";
 echo "</b></td>\n        </tr>\n        <tr>\n            <td>Extension mbstring</td>\n            <td><b>";
 echo extension_loaded("mbstring") ? "<span style=\"color:green;\">ON</span>" : "<span style=\"color:red;\">OFF</span>";
-echo "</b></td>\n        </tr>\n        <tr>\n            <td colspan=\"2\" style=\"background-color: black;color:white;\">Cron Jobs</td>\n        </tr>\n        <tr>\n            <td>";
+echo "</b></td>\n        </tr>\n        <tr>\n            <td colspan=\"2\" style=\"background-color: black;color:white;\">Cron Jobs</td>\n        </tr>\n        <tr><td colspan=\"2\">Các URL dưới đây yêu cầu header <code>X-Cron-Token</code> hoặc chạy bằng CLI (xem <code>.env.example</code>).</td></tr>\n        <tr>\n            <td>";
 echo base_url("cron/bank.php");
 echo "</td>\n            <td><b>";
 echo timeAgo($CMSNT->site("check_time_cron_bank"));

@@ -1,0 +1,126 @@
+<?php
+/*
+ * Admin list pages resolve usernames in one query, not one per row.
+ *
+ * 18 admin tables called getRowRealtime("users", $row["user_id"], "username") inside their loop — an
+ * admin page showing 100 orders paid 100 extra round trips. They now use orbit_user_names(), which
+ * collects the ids first and issues one `IN (…)` query per 500. This suite checks the helper's
+ * behaviour and that no admin view still looks a user up per row.
+ */
+
+define('IN_SITE', true);
+
+class DB
+{
+    public static $userRows = array();
+    public static $log = array();
+    public function __construct() {}
+    public function connect() { return true; }
+    public function dis_connect() { return true; }
+    public function site($name) { return $name === 'timezone' ? 'Asia/Ho_Chi_Minh' : ''; }
+    public function get_row($sql) { return false; }
+    public function get_list($sql)
+    {
+        self::$log[] = $sql;
+        if (preg_match('/FROM `users` WHERE `id` IN \(([0-9,]+)\)/', $sql, $m)) {
+            $wanted = array_map('intval', explode(',', $m[1]));
+            return array_values(array_filter(self::$userRows, function ($row) use ($wanted) {
+                return in_array((int) $row['id'], $wanted, true);
+            }));
+        }
+        return array();
+    }
+    public function query($sql) { self::$log[] = $sql; return true; }
+}
+
+$_SERVER['REMOTE_ADDR'] = '203.0.113.10';
+if (!function_exists('__')) {
+    function __($text) { return $text; }
+}
+require __DIR__ . '/../libs/helper.php';
+
+$failures = 0;
+$checks = 0;
+function check_lookup($name, $condition)
+{
+    global $failures, $checks;
+    ++$checks;
+    if ($condition) {
+        echo "PASS  " . $name . "\n";
+        return;
+    }
+    ++$failures;
+    echo "FAIL  " . $name . "\n";
+}
+
+DB::$userRows = array(
+    array('id' => 3, 'username' => 'an'),
+    array('id' => 7, 'username' => 'binh'),
+    array('id' => 9, 'username' => 'chi'),
+);
+
+/* ---- the helper ----------------------------------------------------------- */
+DB::$log = array();
+$rows = array(
+    array('id' => 1, 'buyer' => 3),
+    array('id' => 2, 'buyer' => 7),
+    array('id' => 3, 'buyer' => 3),
+    array('id' => 4, 'buyer' => 0),
+    array('id' => 5, 'buyer' => 404),
+);
+$names = orbit_user_names($rows, 'buyer');
+check_lookup('the map holds exactly the users that exist', count($names) === 2);
+check_lookup('the map resolves the right name', $names[3] === 'an' && $names[7] === 'binh');
+check_lookup('all rows came from a single query', count(DB::$log) === 1);
+check_lookup('the query uses an IN list of the distinct ids', strpos(DB::$log[0], 'IN (3,7,404)') !== false);
+check_lookup('an unknown id is simply absent', !isset($names[404]));
+check_lookup('a zero id is not looked up', strpos(DB::$log[0], 'IN (3,7,404)') !== false);
+check_lookup('orbit_user_name() prints a known name', orbit_user_name($names, 7) === 'binh');
+check_lookup('orbit_user_name() prints an empty cell for an unknown id', orbit_user_name($names, 404) === '');
+
+DB::$log = array();
+check_lookup('an empty list makes no query', orbit_user_names(array(), 'user_id') === array() && DB::$log === array());
+check_lookup('a non-array argument makes no query', orbit_user_names(null, 'user_id') === array() && DB::$log === array());
+check_lookup('a list with no usable ids makes no query', orbit_user_names(array(array('id' => 1)), 'buyer') === array() && DB::$log === array());
+
+DB::$log = array();
+$big = array();
+for ($i = 1; $i <= 1200; ++$i) {
+    $big[] = array('user_id' => $i);
+}
+orbit_user_names($big, 'user_id');
+check_lookup('large pages are chunked, not sent as one giant IN', count(DB::$log) === 3);
+
+/* ---- no admin page still looks a user up per row -------------------------- */
+$offenders = array();
+$files = glob(__DIR__ . '/../views/admin/*.php');
+foreach ($files as $file) {
+    $lines = file($file);
+    $inLoop = false;
+    $depthAfterLoop = 0;
+    foreach ($lines as $index => $line) {
+        if (preg_match('/foreach\s*\(/', $line)) {
+            $inLoop = true;
+        }
+        if ($inLoop && strpos($line, 'getRowRealtime("users"') !== false) {
+            $offenders[] = basename($file) . ':' . ($index + 1);
+        }
+        /* A crude "end of loop" signal: the closing brace at the loop's own indent. Good enough for
+           a single-line test; a false positive only sends a human to look. */
+        if ($inLoop && preg_match('/^\s{0,8}\}\s*$/', $line)) {
+            $inLoop = false;
+        }
+    }
+}
+check_lookup('no admin view looks a username up inside a loop' . ($offenders ? ' (' . implode(', ', $offenders) . ')' : ''), $offenders === array());
+
+$prefetched = 0;
+foreach ($files as $file) {
+    if (strpos(file_get_contents($file), 'orbit_user_names(') !== false) {
+        ++$prefetched;
+    }
+}
+check_lookup('18 admin tables prefetch their usernames', $prefetched === 19 || $prefetched === 18);
+
+echo "\n" . $checks . " checks, " . $failures . " failed\n";
+exit($failures === 0 ? 0 : 1);

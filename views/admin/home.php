@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => __("Dashboard") . " | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n";
+$body["header"] = "\n<script src=\"" . BASE_URL("public/common/clipboard.js") . "\"></script>\n";
 $body["footer"] = "\n \n \n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";

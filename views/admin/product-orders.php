@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => __("Đơn hàng") . " | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n";
+$body["header"] = "\n<script src=\"" . BASE_URL("public/common/clipboard.js") . "\"></script>\n";
 $body["footer"] = "\n \n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
@@ -198,6 +198,7 @@ echo __("Sản phẩm");
 echo "</th>\n                                        <th class=\"text-center\">";
 echo __("Thời gian");
 echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
+$orbitUserNames = orbit_user_names($listDatatable, "buyer");
 foreach ($listDatatable as $order) {
     echo "                                    <tr>\n                                        <td class=\"text-center\">\n                                            <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                <input type=\"checkbox\" class=\"form-check-input checkbox_product\"\n                                                    data-id=\"";
     echo $order["id"];
@@ -220,7 +221,7 @@ foreach ($listDatatable as $order) {
     echo "`)\" type=\"button\"><i\n                                                    class=\"fa-solid fa-rotate-left\"></i> Hoàn tiền</button>\n                                        </td>\n                                        <td class=\"text-center\">\n                                            <a class=\"text-primary\"\n                                                href=\"";
     echo base_url_admin("user-edit&id=" . $order["buyer"]);
     echo "\">";
-    echo getRowRealtime("users", $order["buyer"], "username");
+    echo orbit_user_name($orbitUserNames, $order["buyer"]);
     echo "                                                [ID ";
     echo $order["buyer"];
     echo "]</a>\n                                        </td>\n                                        <td>\n                                            Mã đơn hàng: #<strong>";

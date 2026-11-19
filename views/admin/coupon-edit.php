@@ -5,7 +5,11 @@ if(!defined("IN_SITE")) {
 }
 $body = ["title" => "Chỉnh sửa mã giảm giá", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
 $body["header"] = "\n\n";
-$body["footer"] = "\n<!-- bs-custom-file-input -->\n<script src=\"" . BASE_URL("public/AdminLTE3/") . "plugins/bs-custom-file-input/bs-custom-file-input.min.js\"></script>\n<!-- Page specific script -->\n<script>\n\$(function () {\n  bsCustomFileInput.init();\n});\n</script> \n";
+/* This page pulled AdminLTE's bs-custom-file-input from public/AdminLTE3, which is not
+   part of this checkout: the script 404'd and bsCustomFileInput.init() threw before the
+   rest of the inline JS ran. The markup uses plain <input type="file"> and needs none
+   of it. */
+$body["footer"] = "";
 require_once __DIR__ . "/../../models/is_admin.php";
 if(isset($_GET["id"])) {
     $id = check_string($_GET["id"]);

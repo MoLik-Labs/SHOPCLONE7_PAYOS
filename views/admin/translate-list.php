@@ -4,8 +4,8 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => "Translate", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/1.12.1/css/dataTables.bootstrap5.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/responsive/2.3.0/css/responsive.bootstrap.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/buttons/2.2.3/css/buttons.bootstrap5.min.css\">\n";
-$body["footer"] = "\n<script src=\"https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js\"></script>\n<script src=\"https://cdn.datatables.net/1.12.1/js/dataTables.bootstrap5.min.js\"></script>\n<script src=\"https://cdn.datatables.net/responsive/2.3.0/js/dataTables.responsive.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/buttons.print.min.js\"></script>\n";
+$body["header"] = "\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/dataTables.bootstrap5.min.css") . "\">\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/responsive.bootstrap5.min.css") . "\">\n\n";
+$body["footer"] = "\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/jquery.dataTables.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.bootstrap5.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.responsive.min.js") . "\"></script>\n\n\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 if(isset($_GET["id"])) {
     $id = check_string($_GET["id"]);
