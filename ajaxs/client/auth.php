@@ -18,7 +18,9 @@ if(isset($_POST["action"])) {
     orbit_require_csrf(array("Login", "Register", "ForgotPassword", "Verify2FA", "VerifyOTP", "ChangePassword"));
     if($_POST["action"] == "Login") {
         $username = check_string($_POST["username"]);
-        $password = check_string($_POST["password"]);
+        /* Credentials are bytes, not HTML: a password containing ', &, < or leading spaces must not
+           be rewritten before hashing. The legacy sanitised form is still accepted below. */
+        $password = isset($_POST["password"]) && is_string($_POST["password"]) ? $_POST["password"] : "";
         if(!($username = check_string($_POST["username"]))) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập username")]));
         }
@@ -43,7 +45,7 @@ if(isset($_POST["action"])) {
             $max_attempts = $CMSNT->site("limit_block_ip_login");
             $lockout_time = 900;
             $attempt = $CMSNT->get_row("SELECT * FROM `failed_attempts` WHERE `ip_address` = '" . $ip_address . "' AND `type` = 'Login' ");
-            if($attempt && $max_attempts <= $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
+            if($attempt && 0 < (int) $max_attempts && (int) $max_attempts <= (int) $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
                 $CMSNT->insert("block_ip", ["ip" => $ip_address, "attempts" => $attempt["attempts"], "create_gettime" => gettime(), "banned" => 1, "reason" => __("Đăng nhập thất bại nhiều lần")]);
                 $CMSNT->remove("failed_attempts", " `ip_address` = '" . $ip_address . "' ");
                 exit(json_encode(["status" => "error", "msg" => __("IP của bạn đã bị khóa. Vui lòng thử lại sau.")]));
@@ -59,12 +61,12 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "error", "msg" => __("Bạn đang thao tác quá nhanh, vui lòng đợi")]));
         }
         if($CMSNT->site("type_password") == "bcrypt") {
-            if(!password_verify($password, $getUser["password"])) {
+            if(!orbit_password_matches($password, $getUser["password"])) {
                 $ip_address = myip();
                 $max_attempts = $CMSNT->site("limit_block_ip_login");
                 $lockout_time = 900;
                 $attempt = $CMSNT->get_row("SELECT * FROM `failed_attempts` WHERE `ip_address` = '" . $ip_address . "' AND `type` = 'Login' ");
-                if($attempt && $max_attempts <= $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
+                if($attempt && 0 < (int) $max_attempts && (int) $max_attempts <= (int) $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
                     $CMSNT->insert("block_ip", ["ip" => $ip_address, "attempts" => $attempt["attempts"], "create_gettime" => gettime(), "banned" => 1, "reason" => __("Đăng nhập thất bại nhiều lần")]);
                     $CMSNT->remove("failed_attempts", " `ip_address` = '" . $ip_address . "' ");
                     exit(json_encode(["status" => "error", "msg" => __("IP của bạn đã bị khóa. Vui lòng thử lại sau.")]));
@@ -82,12 +84,12 @@ if(isset($_POST["action"])) {
                 $CMSNT->cong("users", "login_attempts", 1, " `id` = '" . $getUser["id"] . "' ");
                 exit(json_encode(["status" => "error", "msg" => __("Thông tin đăng nhập không chính xác")]));
             }
-        } elseif($getUser["password"] != TypePassword($password)) {
+        } elseif(!orbit_password_matches($password, $getUser["password"])) {
             $ip_address = myip();
             $max_attempts = $CMSNT->site("limit_block_ip_login");
             $lockout_time = 900;
             $attempt = $CMSNT->get_row("SELECT * FROM `failed_attempts` WHERE `ip_address` = '" . $ip_address . "' AND `type` = 'Login' ");
-            if($attempt && $max_attempts <= $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
+            if($attempt && 0 < (int) $max_attempts && (int) $max_attempts <= (int) $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
                 $CMSNT->insert("block_ip", ["ip" => $ip_address, "attempts" => $attempt["attempts"], "create_gettime" => gettime(), "banned" => 1, "reason" => __("Đăng nhập thất bại nhiều lần")]);
                 $CMSNT->remove("failed_attempts", " `ip_address` = '" . $ip_address . "' ");
                 exit(json_encode(["status" => "error", "msg" => __("IP của bạn đã bị khóa. Vui lòng thử lại sau.")]));
@@ -161,6 +163,7 @@ if(isset($_POST["action"])) {
             $bcc = $CMSNT->site("title");
             sendCSM($getUser["email"], $getUser["username"], $subject, $content, $bcc);
         }
+        orbit_password_upgrade($getUser["id"], $password);
         set_auth_cookie($getUser["token"], time() + $CMSNT->site("session_login"));
         $_SESSION["login"] = $getUser["token"];
         exit(json_encode(["status" => "success", "msg" => __("Đăng nhập thành công!")]));
@@ -316,8 +319,9 @@ if(isset($_POST["action"])) {
         if(empty($_POST["repassword"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập lại mật khẩu")]));
         }
-        $password = check_string($_POST["password"]);
-        $repassword = check_string($_POST["repassword"]);
+        /* Hash the bytes the user typed; see orbit_password_matches() for why. */
+        $password = isset($_POST["password"]) && is_string($_POST["password"]) ? $_POST["password"] : "";
+        $repassword = isset($_POST["repassword"]) && is_string($_POST["repassword"]) ? $_POST["repassword"] : "";
         if($password != $repassword) {
             exit(json_encode(["status" => "error", "msg" => __("Xác minh mật khẩu không chính xác")]));
         }
@@ -395,16 +399,13 @@ if(isset($_POST["action"])) {
         if($_POST["renewpassword"] != $_POST["newpassword"]) {
             exit(json_encode(["status" => "error", "msg" => __("Xác nhận mật khẩu không chính xác")]));
         }
-        $password = check_string($_POST["password"]);
-        if($CMSNT->site("type_password") == "bcrypt") {
-            if(!password_verify($password, $getUser["password"])) {
-                exit(json_encode(["status" => "error", "msg" => __("Mật khẩu hiện tại không đúng")]));
-            }
-        } elseif($getUser["password"] != TypePassword($password)) {
+        $password = isset($_POST["password"]) && is_string($_POST["password"]) ? $_POST["password"] : "";
+        if(!orbit_password_matches($password, $getUser["password"])) {
             exit(json_encode(["status" => "error", "msg" => __("Mật khẩu hiện tại không đúng")]));
         }
         $token = random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 64) . time() . md5(random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 32));
-        $isUpdate = $CMSNT->update("users", ["password" => TypePassword(check_string($_POST["newpassword"])), "token" => $token], " `token` = '" . check_string($_POST["token"]) . "' ");
+        $newPassword = isset($_POST["newpassword"]) && is_string($_POST["newpassword"]) ? $_POST["newpassword"] : "";
+        $isUpdate = $CMSNT->update("users", ["password" => TypePassword($newPassword), "token" => $token], " `token` = '" . check_string($_POST["token"]) . "' ");
         if($isUpdate) {
             $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Change Password")]);
             exit(json_encode(["status" => "success", "msg" => __("Change password successfully!")]));
@@ -486,7 +487,7 @@ if(isset($_POST["action"])) {
         if($_POST["renewpassword"] != $_POST["newpassword"]) {
             exit(json_encode(["status" => "error", "msg" => __("Xác nhận mật khẩu không chính xác")]));
         }
-        $password = check_string($_POST["newpassword"]);
+        $password = isset($_POST["newpassword"]) && is_string($_POST["newpassword"]) ? $_POST["newpassword"] : "";
         $token = random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 64) . time() . md5(random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 32));
         $isUpdate = $CMSNT->update("users", ["token_forgot_password" => NULL, "password" => TypePassword($password), "token" => $token], " `id` = '" . $getUser["id"] . "' ");
         if($isUpdate) {

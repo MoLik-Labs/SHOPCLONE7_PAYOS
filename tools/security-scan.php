@@ -67,6 +67,8 @@ $sanitizers = array("check_string", "htmlspecialchars", "store_e", "intval", "(i
     "mysqli_real_escape_string", "preg_replace", "filter_var", "order_quantity", "store_account_search",
     "store_account_limit", "store_account_page", "store_account_date_range", "orbit_post_id_list",
     "store_pager", "stripslashes",
+    /* A hash is not the request string: passwords reach update() as md5/sha1/bcrypt output. */
+    "TypePassword",
     "json_encode(array_values(array_intersect");
 $dbCalls = array("get_row", "get_list", "query", "num_rows", "update", "insert", "remove", "cong", "tru");
 

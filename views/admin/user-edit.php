@@ -64,7 +64,11 @@ if(isset($_GET["id"])) {
         $isUpdate = $DBUser->update_by_id(["username" => check_string($_POST["username"]), "email" => check_string($_POST["email"]), "status_2fa" => check_string($_POST["status_2fa"]), "token" => check_string($_POST["token"]), "api_key" => check_string($_POST["api_key"]), "phone" => check_string($_POST["phone"]), "gender" => check_string($_POST["gender"]), "admin" => check_string($_POST["admin"]), "ctv" => check_string($_POST["ctv"]), "discount" => check_string($_POST["discount"]), "banned" => check_string($_POST["banned"])], $user["id"]);
         if($isUpdate) {
             if(!empty($_POST["password"])) {
-                $DBUser->update_by_id(["password" => TypePassword(check_string($_POST["password"]))], $user["id"]);
+                /* The admin typed this password; sanitising it would store a different string than the user will type. */
+                $newPassword = isset($_POST["password"]) && is_string($_POST["password"]) ? $_POST["password"] : "";
+                if(strlen($newPassword) >= 5) {
+                    $DBUser->update_by_id(["password" => TypePassword($newPassword)], $user["id"]);
+                }
             }
             $CMSNT->insert("logs", ["user_id" => $getUser["id"], "createdate" => gettime(), "device" => $Mobile_Detect->getUserAgent(), "ip" => myip(), "action" => "[Admin] Cập nhật thông tin thành viên " . $user["username"] . "[" . $user["id"] . "]."]);
             $CMSNT->insert("logs", ["user_id" => $user["id"], "createdate" => gettime(), "action" => __("You are changed information by Admin.")]);

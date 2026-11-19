@@ -772,7 +772,7 @@ file_put_contents($outDir . "/GENERATED.txt",
     "Orbit — static UI preview (generated)\n"
     . "=====================================\n\n"
     . "Built by: php tools/preview-build.php\n"
-    . "Built at: " . gmdate("Y-m-d H:i") . " UTC\n\n"
+    . "Built from the current checkout (no timestamp, so a rebuild stays byte-identical).\n\n"
     . "Contents: index.html, home.html (storefront home), sales.html (admin), purchase-history.html (buyer),\n"
     . "styleguide.html, assets/, and the review screenshots (*.png).\n"
     . "Every page is rendered from the same code the shop runs, with SAMPLE data — there is no real customer,\n"

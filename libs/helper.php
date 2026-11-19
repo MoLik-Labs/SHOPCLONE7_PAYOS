@@ -196,6 +196,50 @@ function orbit_coupon_release_uncommitted()
         error_log("[orbit-coupon] could not release an uncommitted claim");
     }
 }
+/**
+ * Verify a login password against the stored hash, accepting the legacy pre-sanitised form.
+ *
+ * Login used to run the password through check_string() before verifying: addslashes() and
+ * htmlspecialchars() rewrote `'`, `"`, `&`, `<` and trimmed spaces, so a password containing any of
+ * them was hashed differently from what the user typed. Passwords must be bytes, not HTML. New
+ * registrations store the raw password; this function still accepts the old form so existing
+ * accounts keep working, and orbit_password_upgrade() moves a bcrypt hash to the raw password after
+ * a successful login.
+ */
+function orbit_password_matches($raw, $stored)
+{
+    global $CMSNT;
+    $raw = (string) $raw;
+    $stored = (string) $stored;
+    if ($stored === "") {
+        return false;
+    }
+    if ($CMSNT->site("type_password") == "bcrypt") {
+        if (password_verify($raw, $stored)) {
+            return true;
+        }
+        $legacy = check_string($raw);
+        return $legacy !== $raw && password_verify($legacy, $stored);
+    }
+    $legacy = check_string($raw);
+    if (hash_equals($stored, (string) TypePassword($raw))) {
+        return true;
+    }
+    return $legacy !== $raw && hash_equals($stored, (string) TypePassword($legacy));
+}
+/** Re-hash a bcrypt password with its raw bytes after a successful legacy login. */
+function orbit_password_upgrade($user_id, $raw)
+{
+    global $CMSNT;
+    if ($CMSNT->site("type_password") != "bcrypt") {
+        return;
+    }
+    $stored = getRowRealtime("users", (int) $user_id, "password");
+    if (!is_string($stored) || $stored === "" || password_verify((string) $raw, $stored)) {
+        return;
+    }
+    $CMSNT->update("users", ["password" => password_hash((string) $raw, PASSWORD_BCRYPT)], " `id` = " . (int) $user_id . " ");
+}
 function checkPermission($admin_id, $role)
 {
     global $CMSNT;
