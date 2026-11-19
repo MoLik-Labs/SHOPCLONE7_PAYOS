@@ -587,7 +587,8 @@ if (!function_exists("store_shell_close")) {
 <?php
         /* Renders nothing at all while public/music/playlist.json has no tracks. */
         require_once __DIR__ . "/music_player.php";
-        ?></body>
+        ?><script defer src="<?php echo store_e(store_asset("public/common/csrf.js")); ?>"></script>
+</body>
 </html>
 <?php
     }

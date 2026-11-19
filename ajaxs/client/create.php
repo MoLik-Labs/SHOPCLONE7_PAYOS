@@ -27,6 +27,7 @@ if(!isset($_POST["action"])) {
 if($CMSNT->site("status_demo") != 0) {
     exit(json_encode(["status" => "error", "msg" => __("Chức năng này không thể sử dụng trên website demo")]));
 }
+orbit_require_csrf();
 if($_POST["action"] == "WithdrawCommission") {
     if($CMSNT->site("status_demo") != 0) {
         exit(json_encode(["status" => "error", "msg" => __("This function cannot be used because this is a demo site")]));

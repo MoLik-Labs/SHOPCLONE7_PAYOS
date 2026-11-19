@@ -12,6 +12,10 @@ if(isset($_POST["action"])) {
     if($CMSNT->site("status") != 1 && !isset($_SESSION["admin_login"])) {
         exit(json_encode(["status" => "error", "msg" => __("The system is under maintenance, please come back later!")]));
     }
+    /* Login, registration, the e-mail OTP and both password-reset links run before — or instead of —
+       a signed-in session, so they cannot carry its token. Every other action here changes the account
+       and must prove it came from a page we served. */
+    orbit_require_csrf(array("Login", "Register", "ForgotPassword", "Verify2FA", "VerifyOTP", "ChangePassword"));
     if($_POST["action"] == "Login") {
         $username = check_string($_POST["username"]);
         $password = check_string($_POST["password"]);

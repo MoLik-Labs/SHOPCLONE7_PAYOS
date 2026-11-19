@@ -188,6 +188,102 @@ function verify_csrf_token($token)
         && is_string($token) && $token !== ""
         && hash_equals($_SESSION["csrf_token"], $token);
 }
+/**
+ * The host this request was sent to, lower-cased, or null when it cannot be parsed.
+ *
+ * HTTP_HOST is the only source: it is what the browser put in the URL, so a cross-site page
+ * cannot make it name our domain while the request carries a foreign Origin.
+ */
+function orbit_csrf_host()
+{
+    $host = isset($_SERVER["HTTP_HOST"]) ? trim((string) $_SERVER["HTTP_HOST"]) : "";
+    if ($host === "" || strlen($host) > 255 || !preg_match('/^([A-Za-z0-9.\-]+|\[[0-9A-Fa-f:.]+\])(:[0-9]{1,5})?$/', $host)) {
+        return null;
+    }
+    $parts = parse_url("http://" . $host);
+    if (!is_array($parts) || empty($parts["host"])) {
+        return null;
+    }
+    return strtolower($parts["host"]);
+}
+/**
+ * Where the browser says the request came from: the Origin header, else the Referer.
+ *
+ * Returns the lower-cased host, or null for a missing header or the literal "null" origin that
+ * sandboxed frames and file:// pages send. The scheme is deliberately not part of the comparison:
+ * TLS may be terminated by a proxy (Render, Cloudflare) while PHP still sees http.
+ */
+function orbit_csrf_source()
+{
+    $raw = "";
+    if (!empty($_SERVER["HTTP_ORIGIN"]) && is_string($_SERVER["HTTP_ORIGIN"])) {
+        $raw = trim($_SERVER["HTTP_ORIGIN"]);
+    } elseif (!empty($_SERVER["HTTP_REFERER"]) && is_string($_SERVER["HTTP_REFERER"])) {
+        $raw = trim($_SERVER["HTTP_REFERER"]);
+    }
+    if ($raw === "" || strtolower($raw) === "null" || strlen($raw) > 2048) {
+        return null;
+    }
+    $parts = parse_url($raw);
+    if (!is_array($parts) || empty($parts["host"]) || empty($parts["scheme"])) {
+        return null;
+    }
+    if (!in_array(strtolower($parts["scheme"]), array("http", "https"), true)) {
+        return null;
+    }
+    return strtolower($parts["host"]);
+}
+/**
+ * True when the request proves it is not a cross-site forgery.
+ *
+ * First choice: the per-session token, sent as the `X-CSRF-Token` header by public/common/csrf.js
+ * or as a `csrf_token` form field. Older pages that have not shipped the script yet fall back to
+ * a same-origin Origin/Referer — every browser that can forge a cross-site POST sends a foreign
+ * Origin, so this still refuses the attack while never breaking a page that we have not touched.
+ * The fallback is logged once per request so it can be retired when the access log is quiet.
+ */
+function orbit_csrf_ok()
+{
+    $token = "";
+    if (isset($_POST["csrf_token"]) && is_string($_POST["csrf_token"])) {
+        $token = $_POST["csrf_token"];
+    } elseif (isset($_SERVER["HTTP_X_CSRF_TOKEN"]) && is_string($_SERVER["HTTP_X_CSRF_TOKEN"])) {
+        $token = $_SERVER["HTTP_X_CSRF_TOKEN"];
+    }
+    if ($token !== "" && verify_csrf_token($token)) {
+        return true;
+    }
+    $source = orbit_csrf_source();
+    $self = orbit_csrf_host();
+    if ($source !== null && $self !== null && hash_equals($self, $source)) {
+        error_log("[orbit-csrf] same-origin request without a token: " . (isset($_SERVER["REQUEST_URI"]) ? $_SERVER["REQUEST_URI"] : "-"));
+        return true;
+    }
+    return false;
+}
+/**
+ * Stop a state-changing request that did not come from our own pages.
+ *
+ * `$exemptActions` lists pre-authentication actions (login, register, password reset) that a
+ * visitor must be able to reach before a session exists. Everything else under ajaxs/ is guarded.
+ */
+function orbit_require_csrf($exemptActions = array())
+{
+    if (($_SERVER["REQUEST_METHOD"] ?? "GET") !== "POST") {
+        return;
+    }
+    $action = isset($_POST["action"]) && is_string($_POST["action"]) ? $_POST["action"] : "";
+    if ($action !== "" && in_array($action, $exemptActions, true)) {
+        return;
+    }
+    if (orbit_csrf_ok()) {
+        return;
+    }
+    http_response_code(403);
+    header("Content-Type: application/json; charset=utf-8");
+    echo json_encode(array("status" => "error", "msg" => __("Phiên làm việc đã hết, vui lòng tải lại trang")), JSON_UNESCAPED_UNICODE);
+    exit;
+}
 function display_camp($status)
 {
     if($status == 0) {

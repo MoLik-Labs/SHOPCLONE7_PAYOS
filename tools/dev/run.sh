@@ -28,6 +28,17 @@ if [ "$MODE" != "tests" ]; then
   if ! node tools/dev/phpcl.mjs tools/security-scan.php --fail-on=high; then
     fails=$((fails+1)); echo "FAILED: security_scan"
   fi
+
+  # Shipped JavaScript is not linted by anything else: a syntax error would only surface in a browser.
+  echo "=== js_syntax"
+  for js in public/client/orbit/*.js public/common/*.js; do
+    [ -f "$js" ] || continue
+    if node --check "$js" >/dev/null 2>&1; then
+      echo "  ok   $js"
+    else
+      fails=$((fails+1)); echo "FAILED: node --check $js"; node --check "$js"
+    fi
+  done
 fi
 
 if [ "$MODE" != "lint" ]; then

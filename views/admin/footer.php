@@ -15,7 +15,9 @@ if($CMSNT->site("status_update") == 1) {
     echo BASE_URL("install.php");
     echo "\",\n            type: \"GET\",\n            success: function(result) {\n            }\n        });\n    });\n</script>\n";
 }
-echo "\n\n<script>\n\n</script>\n<!-- Popper JS -->\n<script src=\"";
+echo "\n\n<script>\n\n</script>\n<script src=\"";
+echo base_url("public/common/csrf.js");
+echo "\"></script>\n<!-- Popper JS -->\n<script src=\"";
 echo base_url("public/theme/");
 echo "assets/libs/@popperjs/core/umd/popper.min.js\"></script>\n\n<!-- Bootstrap JS -->\n<script src=\"";
 echo base_url("public/theme/");

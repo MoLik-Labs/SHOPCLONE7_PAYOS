@@ -10,6 +10,7 @@ if(!isset($_POST["action"])) {
     $data = json_encode(["status" => "error", "msg" => "The Request Not Found"]);
     exit($data);
 }
+orbit_require_csrf();
 if(!isset($_POST["id"])) {
     $data = json_encode(["status" => "error", "msg" => __("The ID to delete does not exist")]);
     exit($data);

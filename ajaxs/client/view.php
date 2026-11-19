@@ -13,6 +13,7 @@ if(!isset($_POST["action"])) {
     $data = json_encode(["status" => "error", "msg" => __("The Request Not Found")]);
     exit($data);
 }
+orbit_require_csrf();
 if($_POST["action"] == "download_order") {
     if(empty($_POST["token"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng đăng nhập để sử dụng tính năng này")]));

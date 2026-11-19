@@ -14,6 +14,7 @@ if(!isset($_POST["action"])) {
 if($CMSNT->site("status_demo") != 0) {
     exit(json_encode(["status" => "error", "msg" => __("Chức năng này không thể sử dụng trên website demo")]));
 }
+orbit_require_csrf();
 if($_POST["action"] == "cap_nhat_san_pham_nhanh") {
     if(!checkPermission($getUser["admin"], "edit_product")) {
         exit(json_encode(["status" => "error", "msg" => "Bạn không có quyền sử dụng tính năng này"]));

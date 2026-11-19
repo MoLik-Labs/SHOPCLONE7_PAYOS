@@ -68,8 +68,15 @@ the JSON are still quotes), and a page that printed a session token into a hidde
 
 ## 3. CSRF and sessions
 
-- New POST endpoints that act on a cookie session need a CSRF token compared with `hash_equals`
-  (`ajaxs/client/payos.php`, `gtf.php` are the reference).
+- Every POST handler under `ajaxs/` calls `orbit_require_csrf()` before its first action branch. The
+  only exemptions are the actions that run before a session exists (login, register, e-mail OTP, the two
+  password-reset links), and they are named in the call rather than inferred from the request.
+- `orbit_csrf_ok()` accepts a token (`csrf_token` field or `X-CSRF-Token` header) **or** a same-origin
+  `Origin`/`Referer`. The origin branch is the compatibility path for pages that predate
+  `public/common/csrf.js`; it logs a line every time it is used, so `grep orbit-csrf` tells you whether it
+  can be removed. Never let it accept a cross-site or `null` origin.
+- `public/common/csrf.js` wraps XHR and fetch and reads the `orbit_csrf` cookie; drop it into a new layout
+  and every call site is covered without a meta tag.
 - Legacy endpoints authenticate with the random `token` value in the POST body. That is the existing
   contract; do not silently change it, but never add a new endpoint that relies on it.
 - Login must call `set_auth_cookie()` — it already regenerates the session id and sets

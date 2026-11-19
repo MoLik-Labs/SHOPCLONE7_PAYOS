@@ -630,6 +630,12 @@ foreach (glob($outDir . "/*.html") as $page) {
             }
             $source = $root . "/" . $relative;
             if (!is_file($source)) {
+                /* BASE_URL("public/…") renders as assets/…; the mirrored file still lives in public/. */
+                if (strpos($relative, "assets/") === 0) {
+                    $source = $root . "/public/" . substr($relative, strlen("assets/"));
+                }
+            }
+            if (!is_file($source)) {
                 continue; /* the asset check below reports it */
             }
             $target = $outDir . "/" . $relative;

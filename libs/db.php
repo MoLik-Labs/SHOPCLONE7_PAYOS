@@ -7,7 +7,31 @@ include_once __DIR__ . "/../vendor/autoload.php";
 require_once __DIR__ . "/settings_cache.php";
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . "/../");
 $dotenv->load();
+/* TLS may terminate at a proxy (Render, Cloudflare) while PHP still sees http. */
+$orbitHttps = (!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off")
+    || (isset($_SERVER["HTTP_X_FORWARDED_PROTO"]) && strtolower((string) $_SERVER["HTTP_X_FORWARDED_PROTO"]) === "https")
+    || (isset($_SERVER["SERVER_PORT"]) && (int) $_SERVER["SERVER_PORT"] === 443);
+if (PHP_SAPI !== "cli" && !headers_sent()) {
+    /* Refuse a session id the server never issued (session fixation), and keep the cookie away
+       from scripts and from cross-site form posts. */
+    ini_set("session.use_strict_mode", "1");
+    session_set_cookie_params(array("lifetime" => 0, "path" => "/", "secure" => $orbitHttps, "httponly" => true, "samesite" => "Lax"));
+}
 session_start();
+if (!isset($_SESSION["csrf_token"]) || !is_string($_SESSION["csrf_token"]) || strlen($_SESSION["csrf_token"]) < 32) {
+    try {
+        $orbitCsrfBytes = random_bytes(32);
+    } catch (Throwable $error) {
+        /* No CSPRNG is a broken host, but it must not take the whole site down with it. */
+        $orbitCsrfBytes = openssl_random_pseudo_bytes(32);
+    }
+    $_SESSION["csrf_token"] = base64_encode($orbitCsrfBytes);
+}
+/* The CSRF token (not the session id) is published as a readable cookie so public/common/csrf.js
+   can attach it to XHR and fetch calls without a meta tag on every template. */
+if (PHP_SAPI !== "cli" && !headers_sent() && (!isset($_COOKIE["orbit_csrf"]) || $_COOKIE["orbit_csrf"] !== $_SESSION["csrf_token"])) {
+    setcookie("orbit_csrf", $_SESSION["csrf_token"], array("expires" => 0, "path" => "/", "secure" => $orbitHttps, "httponly" => false, "samesite" => "Lax"));
+}
 class DB
 {
     private $ketnoi;
