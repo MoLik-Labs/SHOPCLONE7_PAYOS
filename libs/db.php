@@ -256,6 +256,18 @@ class DB
         $row = $this->run_sql("UPDATE `" . $table . "` SET `" . $data . "` = `" . $data . "` - '" . $sotien . "' WHERE " . $where . " ");
         return $row;
     }
+    /**
+     * Render one PHP value as a SQL literal. NULL must stay NULL: `'NULL'` is a five-character string,
+     * which is how a cleared 2FA token used to become a token that could literally be submitted, and
+     * how a nullable product_code became an empty string instead of "no code".
+     */
+    private function sql_value($value)
+    {
+        if ($value === NULL) {
+            return "NULL";
+        }
+        return "'" . mysqli_real_escape_string($this->ketnoi, (string) $value) . "'";
+    }
     public function insert($table, $data)
     {
         $this->connect();
@@ -263,7 +275,10 @@ class DB
         $value_list = "";
         foreach ($data as $key => $value) {
             $field_list .= "," . $key;
-            $value_list .= ",'" . mysqli_real_escape_string($this->ketnoi, $value) . "'";
+            /* INSERT keeps the legacy empty-string form: the schema is not shipped with the code, and
+               a NOT NULL product_code is written as NULL by every supplier purchase. UPDATE is where
+               "clear this token" is meant literally, so only it renders SQL NULL. */
+            $value_list .= ",'" . mysqli_real_escape_string($this->ketnoi, (string) $value) . "'";
         }
         $sql = "INSERT INTO " . $table . "(" . trim($field_list, ",") . ") VALUES (" . trim($value_list, ",") . ")";
         $result = $this->run_sql($sql);
@@ -272,12 +287,21 @@ class DB
         }
         return $result;
     }
+    /**
+     * The AUTO_INCREMENT value produced by the last INSERT on this connection (0 when there was none).
+     * Campaigns need their own id to attach recipients: reading "the newest row" instead races another
+     * admin's insert and can attach one campaign's recipients to another.
+     */
+    public function insertId()
+    {
+        return $this->ketnoi ? (int) mysqli_insert_id($this->ketnoi) : 0;
+    }
     public function update($table, $data, $where)
     {
         $this->connect();
         $sql = "";
         foreach ($data as $key => $value) {
-            $sql .= $key . " = '" . mysqli_real_escape_string($this->ketnoi, $value) . "',";
+            $sql .= $key . " = " . $this->sql_value($value) . ",";
         }
         $sql = "UPDATE " . $table . " SET " . trim($sql, ",") . " WHERE " . $where;
         $result = $this->run_sql($sql);
@@ -291,7 +315,7 @@ class DB
         $this->connect();
         $sql = "";
         foreach ($data as $key => $value) {
-            $sql .= $key . " = '" . mysqli_real_escape_string($this->ketnoi, $value) . "',";
+            $sql .= $key . " = " . $this->sql_value($value) . ",";
         }
         $sql = "UPDATE " . $table . " SET " . trim($sql, ",") . " WHERE " . $where . " LIMIT " . $value1;
         return $this->run_sql($sql);

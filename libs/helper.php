@@ -829,6 +829,141 @@ function orbit_user_name($names, $id)
 {
     return is_array($names) && isset($names[(int) $id]) ? $names[(int) $id] : "";
 }
+/**
+ * Normalise the `listUser[]` field of "create email campaign".
+ *
+ * The select posts user ids, but a request is not a select: an array can hold strings, nested arrays,
+ * or a quote. Return only positive integer ids (deduplicated) and a flag for anything that is neither
+ * an id nor the blank placeholder. A forged value makes the caller refuse the campaign instead of
+ * silently mailing every customer or writing a 0 into `email_sending`.
+ *
+ * @return array{ids:int[], invalid:bool}
+ */
+function orbit_campaign_selection($postedIds)
+{
+    $ids = array();
+    $invalid = false;
+    if (!is_array($postedIds)) {
+        return array("ids" => array(), "invalid" => $postedIds !== null && $postedIds !== "");
+    }
+    foreach ($postedIds as $id) {
+        if (is_int($id)) {
+            if (0 < $id) {
+                $ids[$id] = true;
+            }
+        } elseif (is_string($id)) {
+            $id = trim($id);
+            if ($id === "") {
+                continue; /* the "everyone" placeholder */
+            }
+            if (preg_match('/^[0-9]{1,9}$/D', $id) && 0 < (int) $id) {
+                $ids[(int) $id] = true;
+            } else {
+                $invalid = true;
+            }
+        } else {
+            $invalid = true;
+        }
+    }
+    return array("ids" => array_keys($ids), "invalid" => $invalid);
+}
+/**
+ * Keep only ids that exist. One `IN (…)` query per 500 ids, instead of a SELECT per recipient.
+ */
+function orbit_campaign_recipient_ids($CMSNT, array $ids)
+{
+    $valid = array();
+    $ids = array_values(array_unique(array_map("intval", $ids)));
+    $ids = array_values(array_filter($ids, function ($id) {
+        return 0 < $id;
+    }));
+    foreach (array_chunk($ids, 500) as $chunk) {
+        foreach ($CMSNT->get_list("SELECT `id` FROM `users` WHERE `id` IN (" . implode(",", $chunk) . ")") as $row) {
+            $valid[] = (int) $row["id"];
+        }
+    }
+    return $valid;
+}
+/**
+ * Queue a campaign for an explicit list of user ids.
+ *
+ * The old path inserted one row per recipient and read "the newest campaign id" inside the loop. That
+ * is N+2 round trips, and if another admin created a campaign at the same moment the recipients were
+ * attached to *that* campaign. Here the ids are inserted in batches of 200 inside one statement.
+ */
+function orbit_campaign_queue($CMSNT, $campaignId, array $userIds)
+{
+    $campaignId = (int) $campaignId;
+    if ($campaignId < 1) {
+        return 0;
+    }
+    $now = addslashes(gettime());
+    $queued = 0;
+    $userIds = array_values(array_unique(array_map("intval", $userIds)));
+    foreach (array_chunk($userIds, 200) as $chunk) {
+        $rows = array();
+        foreach ($chunk as $userId) {
+            if (0 < $userId) {
+                $rows[] = "(" . $campaignId . "," . $userId . ",0,'" . $now . "','" . $now . "')";
+            }
+        }
+        if (!$rows) {
+            continue;
+        }
+        $sql = "INSERT INTO `email_sending` (`camp_id`,`user_id`,`status`,`create_gettime`,`update_gettime`) VALUES " . implode(",", $rows);
+        if ($CMSNT->query($sql)) {
+            $queued += count($rows);
+        }
+    }
+    return $queued;
+}
+/**
+ * Queue a campaign for every mailable member in one INSERT … SELECT (no row set is fetched into PHP).
+ */
+function orbit_campaign_queue_all($CMSNT, $campaignId)
+{
+    $campaignId = (int) $campaignId;
+    if ($campaignId < 1) {
+        return 0;
+    }
+    $now = addslashes(gettime());
+    $sql = "INSERT INTO `email_sending` (`camp_id`,`user_id`,`status`,`create_gettime`,`update_gettime`)"
+        . " SELECT " . $campaignId . ", `id`, 0, '" . $now . "', '" . $now . "'"
+        . " FROM `users` WHERE `banned` = 0 AND `email` IS NOT NULL AND `email` <> ''";
+    if (!$CMSNT->query($sql)) {
+        return 0;
+    }
+    return (int) $CMSNT->affectedRows();
+}
+/**
+ * Create an email campaign and its recipient queue.
+ *
+ * @param array  $campaign      column => value (already sanitised by the caller)
+ * @param mixed  $postedUserIds raw `listUser[]` from the form; empty means "everyone"
+ * @return int  the new campaign id, or 0 when nothing usable was created
+ */
+function orbit_campaign_create($CMSNT, array $campaign, $postedUserIds = array())
+{
+    $selection = orbit_campaign_selection($postedUserIds);
+    if ($selection["invalid"]) {
+        return 0;
+    }
+    $campaignId = 0;
+    $created = $CMSNT->transaction(function () use ($CMSNT, $campaign, $selection, &$campaignId) {
+        if (!$CMSNT->insert("email_campaigns", $campaign)) {
+            return false;
+        }
+        $campaignId = (int) $CMSNT->insertId();
+        if ($campaignId < 1) {
+            return false;
+        }
+        $queued = $selection["ids"]
+            ? orbit_campaign_queue($CMSNT, $campaignId, orbit_campaign_recipient_ids($CMSNT, $selection["ids"]))
+            : orbit_campaign_queue_all($CMSNT, $campaignId);
+        return 0 < $queued;
+    });
+    return $created ? $campaignId : 0;
+}
 function getRowRealtime($table, $id, $row)
 {
     global $CMSNT;

@@ -19,17 +19,28 @@ if(isset($_POST["submit"])) {
     if(!checkPermission($getUser["admin"], "edit_email_campaigns")) {
         exit("<script type=\"text/javascript\">if(!alert(\"Bạn không có quyền sử dụng tính năng này\")){window.history.back();}</script>");
     }
-    $isInsert = $CMSNT->insert("email_campaigns", ["name" => check_string($_POST["name"]), "subject" => $_POST["subject"], "cc" => !empty($_POST["cc"]) ? check_string($_POST["cc"]) : NULL, "bcc" => !empty($_POST["bcc"]) ? check_string($_POST["bcc"]) : NULL, "content" => $_POST["content"], "create_gettime" => gettime(), "update_gettime" => gettime(), "status" => 0]);
-    if(empty($_POST["listUser"])) {
-        foreach ($CMSNT->get_list("SELECT * FROM `users` WHERE `banned` = 0 AND `email` IS NOT NULL ") as $user) {
-            $CMSNT->insert("email_sending", ["camp_id" => $CMSNT->get_row(" SELECT `id` FROM `email_campaigns` ORDER BY id DESC LIMIT 1 ")["id"], "user_id" => $user["id"], "status" => 0, "create_gettime" => gettime(), "update_gettime" => gettime()]);
-        }
-    } else {
-        foreach ($_POST["listUser"] as $user) {
-            $user = $CMSNT->get_row("SELECT * FROM `users` WHERE `id` = '" . $user . "' ");
-            $CMSNT->insert("email_sending", ["camp_id" => $CMSNT->get_row(" SELECT `id` FROM `email_campaigns` ORDER BY id DESC LIMIT 1 ")["id"], "user_id" => $user["id"], "status" => 0, "create_gettime" => gettime(), "update_gettime" => gettime()]);
-        }
+    $campaignName = isset($_POST["name"]) ? trim((string) $_POST["name"]) : "";
+    $campaignSubject = isset($_POST["subject"]) ? trim((string) $_POST["subject"]) : "";
+    if ($campaignName === "" || $campaignSubject === "") {
+        exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập tên và tiêu đề chiến dịch\")){window.history.back();}</script>");
     }
+    /*
+     * One helper owns the whole write: the campaign row, its own AUTO_INCREMENT id, and the recipient
+     * queue. The old code inserted one email_sending row per member and asked for "the newest campaign
+     * id" inside that loop, which was both N+2 queries and a race with any other admin creating a
+     * campaign at the same moment.
+     */
+    $camp_id = orbit_campaign_create($CMSNT, [
+        "name" => check_string($campaignName),
+        "subject" => $campaignSubject,
+        "cc" => !empty($_POST["cc"]) ? check_string($_POST["cc"]) : NULL,
+        "bcc" => !empty($_POST["bcc"]) ? check_string($_POST["bcc"]) : NULL,
+        "content" => $_POST["content"] ?? "",
+        "create_gettime" => gettime(),
+        "update_gettime" => gettime(),
+        "status" => 0,
+    ], isset($_POST["listUser"]) ? $_POST["listUser"] : array());
+    $isInsert = 0 < $camp_id;
     if($isInsert) {
         $Mobile_Detect = new Mobile_Detect();
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Tạo chiến dịch Email Makreting") . " (" . check_string($_POST["name"]) . ")"]);
