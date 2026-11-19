@@ -87,10 +87,21 @@ if ($apiAction == "get-balance") { // lấy sô dư
     } else {
         $discount = $money * $getUser["discount"] / 100;
     }
+    /* A total discount over 100% would make $pay negative, and RemoveCredits(-x) adds money. */
+    if ($money < $discount) {
+        $discount = $money;
+    }
     $pay = $money - $discount;
     if (!empty($_GET["coupon"])) {
-        $discount_coupon = checkCoupon($product["id"], check_string($_GET["coupon"]), $getUser["id"], $money, $pay);
+        /* Reserve the coupon before charging, then release it again unless the order is written. */
+        $discount_coupon = orbit_coupon_claim($product["id"], $_GET["coupon"], $getUser["id"], $money, $trans_id);
+        if ($discount_coupon === false) {
+            exit(json_encode(["code" => 201, "message" => __("Mã giảm giá không hợp lệ hoặc đã được sử dụng")]));
+        }
         $discount = $discount + $discount_coupon;
+        if ($money < $discount) {
+            $discount = $money;
+        }
         $pay = $money - $discount;
     }
     if (getRowRealtime("users", $getUser["id"], "money") < $pay) {
@@ -119,9 +130,9 @@ if ($apiAction == "get-balance") { // lấy sô dư
             if ($supplier["type"] == "SHOPCLONE6") {
                 $data = curl_get2($supplier["domain"] . "/api/BResource.php?username=" . $supplier["username"] . "&password=" . $supplier["password"] . "&id=" . $product["api_id"] . "&amount=" . $amount);
                 $data = json_decode($data, true);
-                if (!isset($data)) {
+                if (!is_array($data)) {
                     $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
-                    exit(json_encode(["code" => 201, "message" => __($data["msg"])]));
+                    exit(json_encode(["code" => 201, "message" => __("Nhà cung cấp trả về dữ liệu không hợp lệ, đã hoàn tiền")]));
                 }
                 if ($data["status"] == "error") {
                     $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
@@ -140,9 +151,9 @@ if ($apiAction == "get-balance") { // lấy sô dư
             if ($supplier["type"] == "SHOPCLONE7") {
                 $data = buy_API_SHOPCLONE7($supplier["domain"], $supplier["coupon"], $supplier["api_key"], $product["api_id"], $amount);
                 $data = json_decode($data, true);
-                if (!isset($data)) {
+                if (!is_array($data)) {
                     $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
-                    exit(json_encode(["code" => 201, "message" => __($data["msg"])]));
+                    exit(json_encode(["code" => 201, "message" => __("Nhà cung cấp trả về dữ liệu không hợp lệ, đã hoàn tiền")]));
                 }
                 if ($data["status"] == "error") {
                     $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
@@ -361,14 +372,10 @@ if ($apiAction == "get-balance") { // lấy sô dư
             } else {
                 $isInsertOrder = $CMSNT->insert("product_order", ["trans_id" => $trans_id, "api_transid" => $api_trans_id, "supplier_id" => $product["supplier_id"], "product_id" => $product["id"], "product_name" => $product["name"], "buyer" => $getUser["id"], "seller" => $product["user_id"], "amount" => $isValue, "money" => $money, "pay" => $pay, "cost" => $product["cost"] * $isValue, "create_gettime" => gettime(), "update_gettime" => gettime(), "trash" => 0, "status_view_order" => $getUser["status_view_order"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent()]);
                 if ($isInsertOrder) {
+                    /* The order exists; the reserved coupon use is now permanent. */
+                    orbit_coupon_commit();
                     if ($CMSNT->site("cong_tien_nguoi_ban") == 1) {
                         $User->AddCredits($product["user_id"], $pay, __("Doanh thu đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "DOANH_THU_" . $trans_id);
-                    }
-                    if (isset($discount_coupon) && 0 < $discount_coupon) {
-                        $isAddCoupon = $CMSNT->cong("coupons", "used", 1, " `code` = '" . check_string($_GET["coupon"]) . "' ");
-                        if ($isAddCoupon) {
-                            $CMSNT->insert("coupon_used", ["coupon_id" => $CMSNT->get_row("SELECT * FROM `coupons` WHERE `code` = '" . check_string($_GET["coupon"]) . "' ")["id"], "user_id" => $getUser["id"], "trans_id" => $trans_id, "create_gettime" => gettime()]);
-                        }
                     }
                     $CMSNT->cong("products", "sold", $amount, " `id` = '" . $product["id"] . "' ");
                     $accounts = [];

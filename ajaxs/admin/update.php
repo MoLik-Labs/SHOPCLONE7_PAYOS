@@ -111,6 +111,14 @@ if($_POST["action"] == "refundOrder") {
         }
         $user = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $product_order["buyer"] . "' ");
         if($user["ref_id"] != 0) {
+            /* The refunded money must not still pay a commission. The purchase wrote the exact
+               amount into aff_log with the order trans_id; legacy rows without the tag are skipped
+               rather than recomputed at today's rate. */
+            $commission = $CMSNT->get_row("SELECT `sotienthaydoi` FROM `aff_log` WHERE `user_id` = " . (int) $user["ref_id"]
+                . " AND `reason` LIKE '%#" . addslashes($product_order["trans_id"]) . "' ORDER BY `id` DESC LIMIT 1");
+            if($commission && 0 < (float) $commission["sotienthaydoi"]) {
+                $User->ClawbackCommission($user["ref_id"], $product_order["buyer"], $commission["sotienthaydoi"], __("Thu hồi hoa hồng đơn hoàn tiền") . " #" . $product_order["trans_id"]);
+            }
         }
         $Mobile_Detect = new Mobile_Detect();
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Hoàn tiền đơn hàng") . " (" . $product_order["trans_id"] . ")"]);

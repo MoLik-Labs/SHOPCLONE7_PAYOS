@@ -45,6 +45,17 @@ if(isset($_GET["shortByDate"])) {
 $listDatatable = $CMSNT->get_list(" SELECT * FROM `suppliers` WHERE " . $where . " ORDER BY `id` DESC LIMIT " . $from . "," . $limit . " ");
 $totalDatatable = $CMSNT->num_rows(" SELECT * FROM `suppliers` WHERE " . $where . " ORDER BY id DESC ");
 $urlDatatable = pagination(base_url_admin("product-api&limit=" . $limit . "&shortByDate=" . $shortByDate . "&"), $from, $totalDatatable, $limit);
+/* One grouped query for the page instead of three aggregates per supplier row. */
+$supplierStats = [];
+$supplierIds = [];
+foreach ($listDatatable as $supplierRow) {
+    $supplierIds[] = (int) $supplierRow["id"];
+}
+if ($supplierIds) {
+    foreach ($CMSNT->get_list("SELECT supplier_id, SUM(pay) AS total_pay, SUM(cost) AS total_cost, COUNT(id) AS total_orders FROM product_order WHERE supplier_id IN (" . implode(",", $supplierIds) . ") GROUP BY supplier_id") as $statsRow) {
+        $supplierStats[(int) $statsRow["supplier_id"]] = $statsRow;
+    }
+}
 $doanh_thu = $CMSNT->get_row(" SELECT SUM(pay) FROM product_order WHERE `refund` = 0 AND supplier_id != 0 ")["SUM(pay)"];
 $tien_von = $CMSNT->get_row(" SELECT SUM(cost) FROM product_order WHERE `refund` = 0 AND supplier_id != 0 ")["SUM(cost)"];
 $loi_nhuan = $doanh_thu - $tien_von;
@@ -114,11 +125,10 @@ echo __("Thao tác");
 echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
 foreach ($listDatatable as $supplier) {
     echo "                                    ";
-    $query = "SELECT \n                                        SUM(pay) AS total_pay, \n                                        SUM(cost) AS total_cost, \n                                        COUNT(id) AS total_orders \n                                        FROM product_order \n                                        WHERE supplier_id = '" . $supplier["id"] . "'";
-    $result = $CMSNT->get_row($query);
-    $doanh_thu = $result["total_pay"];
-    $loi_nhuan = $doanh_thu - $result["total_cost"];
-    $don_hang = $result["total_orders"];
+    $result = isset($supplierStats[(int) $supplier["id"]]) ? $supplierStats[(int) $supplier["id"]] : ["total_pay" => 0, "total_cost" => 0, "total_orders" => 0];
+    $doanh_thu = (float) $result["total_pay"];
+    $loi_nhuan = $doanh_thu - (float) $result["total_cost"];
+    $don_hang = (int) $result["total_orders"];
     echo "                                    <tr onchange=\"updateForm(`";
     echo $supplier["id"];
     echo "`)\">\n                                        <td>\n                                            <i class=\"fa-solid fa-link\"></i> Domain: <a class=\"text-primary\"\n                                                href=\"";

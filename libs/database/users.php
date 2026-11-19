@@ -186,6 +186,36 @@ class users extends DB
         }
         return false;
     }
+    /**
+     * Reverse the commission a purchase credited to the buyer's referrer.
+     *
+     * AddCommission() moved three values: the referrer's `ref_price` and `ref_total_price`, and the
+     * buyer's `ref_amount` counter. A refund must move all three back, otherwise the shop pays a
+     * commission on money it returned. The purchase tags its aff_log row with the order trans_id, so
+     * the exact amount is read back from history rather than recomputed from today's rate; an order
+     * with no tagged row (legacy purchase) is left alone instead of guessing.
+     */
+    public function ClawbackCommission($ref_id, $buyer_id, $amount, $reason)
+    {
+        $ref_id = (int) $ref_id;
+        $buyer_id = (int) $buyer_id;
+        $amount = (float) $amount;
+        if($ref_id <= 0 || $amount <= 0) {
+            return false;
+        }
+        if(parent::get_row("SELECT `id` FROM `aff_log` WHERE `user_id` = " . $ref_id . " AND `reason` = '" . addslashes((string) $reason) . "' ")) {
+            return false;
+        }
+        $before = getUser($ref_id, "ref_price");
+        $isInsert = parent::insert("aff_log", ["sotientruoc" => $before, "sotienthaydoi" => -$amount, "sotienhientai" => $before - $amount, "create_gettime" => gettime(), "reason" => $reason, "user_id" => $ref_id]);
+        if(!$isInsert) {
+            return false;
+        }
+        parent::cong("users", "ref_price", -$amount, " `id` = " . $ref_id . " ");
+        parent::cong("users", "ref_total_price", -$amount, " `id` = " . $ref_id . " ");
+        parent::cong("users", "ref_amount", -$amount, " `id` = " . $buyer_id . " ");
+        return true;
+    }
     public function RefundCommission($user_id, $amount, $reason)
     {
         parent::insert("aff_log", ["sotientruoc" => getUser($user_id, "ref_price"), "sotienthaydoi" => $amount, "sotienhientai" => getUser($user_id, "ref_price") + $amount, "create_gettime" => gettime(), "reason" => $reason, "user_id" => $user_id]);

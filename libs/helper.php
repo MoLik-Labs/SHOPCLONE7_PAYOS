@@ -117,6 +117,85 @@ function checkCoupon($product_id, $coupon, $user_id, $money, $pay)
     }
     return false;
 }
+/**
+ * Claim a coupon for one order, before the customer is charged — or refuse it.
+ *
+ * The old flow only *read* the coupon, charged the discounted price, and recorded the use after the
+ * order existed. Two concurrent orders from the same customer both passed the read, both got the
+ * discount, and the `used` counter could pass `amount`. This reserves the use first and returns the
+ * discount in money; a failed reservation means the checkout stops instead of charging full price
+ * for a coupon the customer believes is applied.
+ *
+ * Serialisation uses MySQL GET_LOCK on the coupon id: a per-connection advisory lock, so the
+ * "already used by this user" read and the "slots left" read cannot both succeed. Fail-closed: if the
+ * lock cannot be taken, the coupon is refused rather than trusted.
+ *
+ * The reservation is released by orbit_coupon_release_uncommitted() at shutdown unless the caller
+ * called orbit_coupon_commit() — every refund/error path exits, so no site has to remember it.
+ */
+function orbit_coupon_claim($product_id, $code, $user_id, $money, $trans_id)
+{
+    global $CMSNT;
+    $money = (float) $money;
+    if ($money <= 0) {
+        return false;
+    }
+    $row = $CMSNT->get_row("SELECT * FROM `coupons` WHERE `code` = '" . check_string($code) . "' AND `min` <= " . $money . " AND `max` >= " . $money . " ");
+    if (!$row) {
+        return false;
+    }
+    if ($row["product_id"] != "" && !in_array($product_id, (array) json_decode($row["product_id"]))) {
+        return false;
+    }
+    $couponId = (int) $row["id"];
+    $lockName = "orbit_coupon_" . $couponId;
+    $lock = $CMSNT->get_row("SELECT GET_LOCK('" . addslashes($lockName) . "', 3) AS `ok`");
+    if (!$lock || !isset($lock["ok"]) || (int) $lock["ok"] !== 1) {
+        return false;
+    }
+    $fresh = $CMSNT->get_row("SELECT * FROM `coupons` WHERE `id` = " . $couponId . " AND `used` < `amount` ");
+    $alreadyUsed = $CMSNT->get_row("SELECT `id` FROM `coupon_used` WHERE `coupon_id` = " . $couponId . " AND `user_id` = " . (int) $user_id . " ");
+    $claimed = false;
+    if ($fresh && !$alreadyUsed) {
+        $claimed = (bool) $CMSNT->insert("coupon_used", ["coupon_id" => $couponId, "user_id" => (int) $user_id, "trans_id" => $trans_id, "create_gettime" => gettime()]);
+        if ($claimed) {
+            $CMSNT->cong("coupons", "used", 1, " `id` = " . $couponId . " ");
+        }
+    }
+    $CMSNT->get_row("SELECT RELEASE_LOCK('" . addslashes($lockName) . "') AS `ok`");
+    if (!$claimed) {
+        return false;
+    }
+    $GLOBALS["orbit_coupon_claim"] = ["trans_id" => (string) $trans_id, "coupon_id" => $couponId, "committed" => false];
+    register_shutdown_function("orbit_coupon_release_uncommitted");
+    return $money * (float) $fresh["discount"] / 100;
+}
+/** The order exists: keep the coupon use that was reserved for it. */
+function orbit_coupon_commit()
+{
+    if (isset($GLOBALS["orbit_coupon_claim"])) {
+        $GLOBALS["orbit_coupon_claim"]["committed"] = true;
+    }
+}
+/** Shutdown guard: the request ended without a completed order, so give the coupon slot back. */
+function orbit_coupon_release_uncommitted()
+{
+    if (empty($GLOBALS["orbit_coupon_claim"]) || !empty($GLOBALS["orbit_coupon_claim"]["committed"])) {
+        return;
+    }
+    $claim = $GLOBALS["orbit_coupon_claim"];
+    $GLOBALS["orbit_coupon_claim"]["committed"] = true;
+    try {
+        $db = orbit_db();
+        $row = $db->get_row("SELECT `id`,`coupon_id` FROM `coupon_used` WHERE `trans_id` = '" . addslashes($claim["trans_id"]) . "' ");
+        if ($row) {
+            $db->remove("coupon_used", " `id` = " . (int) $row["id"]);
+            $db->cong("coupons", "used", -1, " `id` = " . (int) $row["coupon_id"] . " AND `used` > 0 ");
+        }
+    } catch (Throwable $error) {
+        error_log("[orbit-coupon] could not release an uncommitted claim");
+    }
+}
 function checkPermission($admin_id, $role)
 {
     global $CMSNT;

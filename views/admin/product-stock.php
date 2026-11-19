@@ -147,10 +147,31 @@ if(isset($_POST["RemoveAccounts"])) {
             exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng chọn file có định dạng .txt\")){window.history.back().location.reload();}</script>");
         }
     }
+    /* Pre-load the uids already in stock for the whole import, so the per-row SELECT disappears.
+       A file of 5 000 accounts used to make 5 000–10 000 round trips. */
+    $existingUids = [];
+    if(isset($_POST["loc_trung_uid"]) && $_POST["loc_trung_uid"] == 1) {
+        $importUids = [];
+        foreach ($list as $importLine) {
+            $importUid = (string) explode("|", $importLine)[0];
+            if($importUid !== "") {
+                $importUids[$importUid] = true;
+            }
+        }
+        foreach (array_chunk(array_keys($importUids), 500) as $uidChunk) {
+            $quoted = [];
+            foreach ($uidChunk as $uidValue) {
+                $quoted[] = "'" . addslashes($uidValue) . "'";
+            }
+            foreach ($CMSNT->get_list("SELECT `uid` FROM `product_stock` WHERE `uid` IN (" . implode(",", $quoted) . ")") as $existingRow) {
+                $existingUids[(string) $existingRow["uid"]] = true;
+            }
+        }
+    }
     foreach ($list as $account) {
         list($uid) = explode("|", $account);
         if(isset($_POST["loc_trung_uid"]) && $_POST["loc_trung_uid"] == 1) {
-            if($CMSNT->get_row(" SELECT * FROM `product_stock` WHERE `uid` = '" . $uid . "' ")) {
+            if(isset($existingUids[(string) $uid])) {
                 $isUpdate = $CMSNT->update("product_stock", ["product_code" => $code, "seller" => $getUser["id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()], " `uid` = '" . $uid . "' ");
                 if($isUpdate) {
                     $value_update++;
@@ -158,6 +179,7 @@ if(isset($_POST["RemoveAccounts"])) {
             } else {
                 $isAdd = $CMSNT->insert("product_stock", ["product_code" => $code, "seller" => $getUser["id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
                 if($isAdd) {
+                    $existingUids[(string) $uid] = true;
                     $value_add++;
                 }
             }
