@@ -1,65 +1,149 @@
 <?php
+/*
+ * API integration guide — Orbit v3.
+ *
+ * The legacy page loaded ClipboardJS from cdnjs and printed the session token into a button's
+ * onclick handler just to rotate the API key. Both are gone: copying is handled by the shell's
+ * `[data-copy]` helper, and rotation posts `changeAPIKey` with the CSRF token, resolved from the
+ * session on the server. Key format is unchanged (32 lower-case hex), so existing API clients keep
+ * working when a customer rotates.
+ */
 
-if(!defined("IN_SITE")) {
+if (!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
-$body = ["title" => __("Tài liệu tích hợp API") . " | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/client/") . "css/wallet.css\">\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n \n";
-$body["footer"] = "\n\n";
-require_once __DIR__ . "/../../models/is_user.php";
-if($CMSNT->site("api_status") != 1) {
-    redirect(base_url("client/home"));
-}
-require_once __DIR__ . "/header.php";
-require_once __DIR__ . "/nav.php";
-echo "\n\n<section class=\"py-5 inner-section profile-part\">\n    <div class=\"container\">\n        <div class=\"row\">\n            <div class=\"col-md-12\">\n                <div class=\"home-heading mb-3\">\n                    <h3><i class=\"fa-regular fa-file-code m-2\"></i>\n                        ";
-echo mb_strtoupper(__("Tài liệu tích hợp API"));
-echo "                    </h3>\n                </div>\n                <div class=\"account-card pt-3\">\n                    <div class=\"form-group row\">\n                        <label class=\"col-lg-4 col-form-label required fw-bold fs-6\">";
-echo __("API Key:");
-echo "</label>\n                        <div class=\"col-lg-8 fv-row\">\n                            <strong class=\"copy\" style=\"color: blue;\" id=\"api_key\" data-clipboard-target=\"#api_key\"\n                                onclick=\"copy()\" data-toggle=\"tooltip\" data-placement=\"bottom\"\n                                title=\"Nhấn vào để Copy\">";
-echo $getUser["api_key"];
-echo "</strong> <button\n                                onclick=\"changeAPIKey(`";
-echo $getUser["token"];
-echo "`)\" data-toggle=\"tooltip\"\n                                data-placement=\"bottom\"\n                                title=\"Thay đổi API KEY khác nếu API KEY cũ của bạn bị lộ ra ngoài\"\n                                class=\"btn btn-danger btn-sm\"><i class=\"fa-solid fa-rotate\"></i></button>\n                        </div>\n                    </div>\n                    <div class=\"form-group row\">\n                        <label\n                            class=\"col-lg-4 col-form-label required fw-bold fs-6\">";
-echo __("Lấy thông tin tài khoản");
-echo "</label>\n                        <div class=\"col-lg-8 fv-row\">\n                            <div class=\"input-group mb-3\">\n                                <span class=\"input-group-text\">GET</span>\n                                <input type=\"text\" class=\"form-control\" id=\"api_profile\" value=\"";
-echo base_url("api/profile.php?api_key=" . $getUser["api_key"]);
-echo "\">\n                                <button class=\"btn btn-primary btn-sm copy\" data-clipboard-target=\"#api_profile\" onclick=\"copy()\"><i class=\"fa-solid fa-copy\"></i> Copy</button>\n                            </div>\n                        </div>\n                    </div>\n                    <div class=\"form-group row\">\n                        <label\n                            class=\"col-lg-4 col-form-label required fw-bold fs-6\">";
-echo __("Lấy danh sách chuyên mục và sản phẩm");
-echo "</label>\n                        <div class=\"col-lg-8 fv-row\">\n                            <div class=\"input-group mb-3\">\n                                <span class=\"input-group-text\">GET</span>\n                                <input type=\"text\" class=\"form-control\" id=\"api_products\" value=\"";
-echo base_url("api/products.php?api_key=" . $getUser["api_key"]);
-echo "\">\n                                <button class=\"btn btn-primary btn-sm copy\" data-clipboard-target=\"#api_products\" onclick=\"copy()\"><i class=\"fa-solid fa-copy\"></i> Copy</button>\n                            </div>\n                        </div>\n                    </div>\n                    <div class=\"form-group row\">\n                        <label\n                            class=\"col-lg-4 col-form-label required fw-bold fs-6\">";
-echo __("Lấy chi tiết sản phẩm");
-echo "</label>\n                        <div class=\"col-lg-8 fv-row\">\n                            <div class=\"input-group mb-3\">\n                                <span class=\"input-group-text\">GET</span>\n                                <input type=\"text\" class=\"form-control\" id=\"api_product\" value=\"";
-echo base_url("api/product.php?api_key=" . $getUser["api_key"] . "&product=3");
-echo "\">\n                                <button class=\"btn btn-primary btn-sm copy\" data-clipboard-target=\"#api_product\" onclick=\"copy()\"><i class=\"fa-solid fa-copy\"></i> Copy</button>\n                            </div>\n                        </div>\n                    </div>\n                    <div class=\"form-group row\">\n                        <label\n                            class=\"col-lg-4 col-form-label required fw-bold fs-6\">";
-echo __("Mua hàng");
-echo "</label>\n                        <div class=\"col-lg-8 fv-row\">\n                            <div class=\"input-group mb-3\">\n                                <span class=\"input-group-text\">POST or GET</span>\n                                <input type=\"text\" class=\"form-control\" id=\"api_buy\" value=\"";
-echo base_url("api/buy_product");
-echo "\">\n                                <button class=\"btn btn-primary btn-sm copy\" data-clipboard-target=\"#api_buy\" onclick=\"copy()\"><i class=\"fa-solid fa-copy\"></i> Copy</button>\n                            </div>\n                            <p>form-data:</p>\n                            <ul class=\"mb-1\">\n                                <li><strong>action</strong>: buyProduct</li>\n                                <li><strong>id</strong>: ";
-echo __("ID sản phẩm cần mua");
-echo "</li>\n                                <li><strong>amount</strong>: ";
-echo __("Số lượng cần mua");
-echo "</li>\n                                <li><strong>coupon</strong>: ";
-echo __("Mã giảm giá nếu có");
-echo "</li>\n                                <li><strong>api_key</strong>: <span style=\"color:blue;\">";
-echo $getUser["api_key"];
-echo "</span></li>\n                            </ul>\n                            <p>Response:</p>\n                            <textarea class=\"form-control\">\n{\n    \"status\": \"success\",\n    \"msg\": \"Tạo đơn hàng thành công!\",\n    \"trans_id\": \"JF465f728224ce11\",\n    \"data\": [\n        \"1000040304952|GUTJXYIFPWLHCNDOMBRKVAQESZ\",\n        \"1000087676467|IVMRLABECWTQYUXHPOFNJDSZGK\",\n        \"1000073612513|ERKPFTVCAJDLINWMXSUOGBQZHY\",\n        \"1000011975745|JXEZTVLYOFBQNRHGDKMIPUCAWS\"\n    ]\n}\n                            </textarea>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</section>\n\n\n\n";
-require_once __DIR__ . "/footer.php";
-echo " \n\n\n<script type=\"text/javascript\">\nnew ClipboardJS(\".copy\");\n\nfunction copy() {\n    showMessage(\"";
-echo __("Đã sao chép vào bộ nhớ tạm");
-echo "\", 'success');\n}\n</script>\n<script>\nfunction changeAPIKey(token) {\n    Swal.fire({\n        title: \"";
-echo __("Bạn có chắc không?");
-echo "\",\n        text: \"";
-echo __("Hệ thống sẽ thay đổi API KEY nếu bạn Đồng Ý");
-echo "\",\n        icon: \"warning\",\n        showCancelButton: true,\n        confirmButtonColor: \"#3085d6\",\n        cancelButtonColor: \"#d33\",\n        confirmButtonText: \"";
-echo __("Tôi đồng ý");
-echo "\",\n        cancelButtonText: \"";
-echo __("Đóng");
-echo "\"\n    }).then((result) => {\n        if (result.isConfirmed) {\n            \$.ajax({\n                url: \"";
-echo BASE_URL("ajaxs/client/auth.php");
-echo "\",\n                method: \"POST\",\n                dataType: \"JSON\",\n                data: {\n                    token: token,\n                    action: 'changeAPIKey'\n                },\n                success: function(respone) {\n                    if (respone.status == 'success') {\n                        showMessage(result.msg, result.status);\n                        location.reload();\n                    } else {\n                        Swal.fire({\n                            title: \"";
-echo __("Thất bại!");
-echo "\",\n                            text: respone.msg,\n                            icon: \"error\"\n                        });\n                    }\n                },\n                error: function() {\n                    alert(html(response));\n                    location.reload();\n                }\n            });\n        }\n    });\n}\n</script>";
 
+require_once __DIR__ . "/../common/store-shell.php";
+require_once __DIR__ . "/../common/account-nav.php";
+require_once __DIR__ . "/../../models/is_user.php";
+if ((string) $CMSNT->site("api_status") !== "1") {
+    redirect(BASE_URL("client/home"));
+}
+if (!isset($getUser) || !is_array($getUser)) {
+    $getUser = store_current_user();
+}
+
+$storeApiKey = (string) $getUser["api_key"];
+$storeApiReady = $storeApiKey !== "";
+$storeApiEndpoints = array(
+    array(
+        "method" => "GET",
+        "label" => __("Thông tin tài khoản"),
+        "url" => BASE_URL("api/profile.php?api_key=" . urlencode($storeApiKey)),
+        "id" => "api-profile",
+    ),
+    array(
+        "method" => "GET",
+        "label" => __("Danh sách chuyên mục và sản phẩm"),
+        "url" => BASE_URL("api/products.php?api_key=" . urlencode($storeApiKey)),
+        "id" => "api-products",
+    ),
+    array(
+        "method" => "GET",
+        "label" => __("Chi tiết một sản phẩm"),
+        "url" => BASE_URL("api/product.php?api_key=" . urlencode($storeApiKey) . "&product=3"),
+        "id" => "api-product",
+    ),
+);
+
+$storeShell = array(
+    "title" => __("Tài liệu tích hợp API") . " | " . $CMSNT->site("title"),
+    "desc" => __("Khoá API và các điểm cuối để tích hợp shop vào hệ thống của bạn."),
+    "nav" => store_nav_default($CMSNT),
+    "body_class" => "page-account",
+);
+store_shell_open($storeShell);
 ?>
+<section class="section section--tight" aria-labelledby="api-title">
+  <div class="container">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Dành cho đối tác</p>
+        <h1 id="api-title">Tài liệu tích hợp API</h1>
+        <p class="muted m0">Dùng khoá API để lấy sản phẩm và tạo đơn từ hệ thống của bạn. Khoá này thay cho mật khẩu — không chia sẻ và không dán vào mã nguồn công khai.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__head">
+        <h2 class="panel__title">Khoá API của bạn</h2>
+      </div>
+      <div class="panel__body">
+<?php if (!$storeApiReady) { ?>
+        <p class="muted m0"><?php echo __("Tài khoản chưa có khoá API. Bấm nút bên dưới để tạo."); ?></p>
+<?php } else { ?>
+        <div class="copy-row">
+          <input class="input mono" id="api-key" type="text" readonly value="<?php echo store_e($storeApiKey); ?>"
+            aria-label="<?php echo store_e(__("Khoá API")); ?>">
+          <button class="btn btn--ghost" type="button" data-copy="#api-key">Sao chép</button>
+        </div>
+        <p class="field__hint">Nếu khoá bị lộ, hãy đổi ngay: khoá cũ ngừng hoạt động tức thì và mọi tích hợp phải cập nhật khoá mới.</p>
+<?php } ?>
+        <button class="btn btn--primary" type="button" data-api-key-rotate
+          data-endpoint="<?php echo store_e(BASE_URL("ajaxs/client/auth.php")); ?>">
+          <?php echo $storeApiReady ? __("Đổi khoá API") : __("Tạo khoá API"); ?>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel mt-4">
+      <div class="panel__head">
+        <h2 class="panel__title">Đọc dữ liệu</h2>
+      </div>
+      <div class="panel__body">
+        <p class="muted">Mọi yêu cầu gửi khoá qua tham số <code class="mono">api_key</code>. Kết quả trả về JSON.</p>
+<?php foreach ($storeApiEndpoints as $storeEndpoint) { ?>
+        <div class="field">
+          <label class="field__label" for="<?php echo store_e($storeEndpoint["id"]); ?>">
+            <span class="pill mono"><?php echo store_e($storeEndpoint["method"]); ?></span>
+            <?php echo store_e($storeEndpoint["label"]); ?>
+          </label>
+          <div class="copy-row">
+            <input class="input mono" id="<?php echo store_e($storeEndpoint["id"]); ?>" type="text" readonly
+              value="<?php echo store_e($storeEndpoint["url"]); ?>">
+            <button class="btn btn--ghost" type="button" data-copy="#<?php echo store_e($storeEndpoint["id"]); ?>">Sao chép</button>
+          </div>
+        </div>
+<?php } ?>
+      </div>
+    </div>
+
+    <div class="panel mt-4">
+      <div class="panel__head">
+        <h2 class="panel__title">Tạo đơn hàng</h2>
+      </div>
+      <div class="panel__body">
+        <div class="field">
+          <p class="field__label">
+            <span class="pill mono">POST</span>
+            <span class="mono mono--wrap"><?php echo store_e(BASE_URL("api/buy_product")); ?></span>
+          </p>
+          <div class="copy-row">
+            <label class="sr-only" for="api-buy"><?php echo store_e(__("Địa chỉ tạo đơn hàng")); ?></label>
+            <input class="input mono" id="api-buy" type="text" readonly value="<?php echo store_e(BASE_URL("api/buy_product")); ?>">
+            <button class="btn btn--ghost" type="button" data-copy="#api-buy">Sao chép</button>
+          </div>
+        </div>
+        <dl class="kv">
+          <dt><span class="mono">action</span></dt><dd><span class="mono">buyProduct</span></dd>
+          <dt><span class="mono">id</span></dt><dd>ID sản phẩm cần mua</dd>
+          <dt><span class="mono">amount</span></dt><dd>Số lượng cần mua</dd>
+          <dt><span class="mono">coupon</span></dt><dd>Mã giảm giá, bỏ trống nếu không có</dd>
+          <dt><span class="mono">api_key</span></dt><dd>Khoá API ở trên</dd>
+        </dl>
+        <p class="field__label mt-4">Phản hồi thành công</p>
+        <pre class="code-sample mono">{
+    "status": "success",
+    "msg": "Tạo đơn hàng thành công!",
+    "trans_id": "JF465f728224ce11",
+    "data": [
+        "1000040304952|GUTJXYIFPWLHCNDOMBRKVAQESZ",
+        "1000087676467|IVMRLABECWTQYUXHPOFNJDSZGK"
+    ]
+}</pre>
+        <p class="field__hint">Giữ <span class="mono">trans_id</span> để tra cứu đơn. Hệ thống không gửi lại tài khoản đã bán, nên hãy lưu phản hồi ngay khi nhận.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<?php store_shell_close(); ?>

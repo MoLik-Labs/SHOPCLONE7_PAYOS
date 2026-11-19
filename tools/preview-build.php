@@ -457,6 +457,34 @@ $pages["payment.html"] = array(
         array("module" => "client", "action" => "payment", "trans_id" => "INV7Q2M9X"), $fixtures),
 );
 
+/* 6l. the API integration guide (only reachable while the owner keeps the API on).
+   The page prints full endpoint URLs, and BASE_URL turns every route into an inert #preview-… anchor so
+   a click cannot 404 inside the folder. An input value is text, not a link, so put a readable example
+   host back for this one page — otherwise the documentation shows the preview's own plumbing. */
+$apiPreviewKey = "9f4c1d2a7b6e8c05d3a1f9e7b2c4d608";
+$apiPreviewHost = "https://shop.orbit.example";
+$apiPreviewHtml = preview_render($root, "views/client/document-api.php", array("login" => "tok"),
+    array("module" => "client", "action" => "document-api"), $fixtures);
+$apiPreviewHtml = str_replace(
+    array(
+        "#preview-api-profile-php-api-key-" . $apiPreviewKey,
+        "#preview-api-products-php-api-key-" . $apiPreviewKey,
+        "#preview-api-product-php-api-key-" . $apiPreviewKey . "-product-3",
+        "#preview-api-buy-product",
+    ),
+    array(
+        $apiPreviewHost . "/api/profile.php?api_key=" . $apiPreviewKey,
+        $apiPreviewHost . "/api/products.php?api_key=" . $apiPreviewKey,
+        $apiPreviewHost . "/api/product.php?api_key=" . $apiPreviewKey . "&product=3",
+        $apiPreviewHost . "/api/buy_product",
+    ),
+    $apiPreviewHtml
+);
+$pages["document-api.html"] = array(
+    "title" => "Tài liệu API — bản xem trước",
+    "html" => $apiPreviewHtml,
+);
+
 /* 6k. the 404 page, reachable through index.php for a missing route */
 $pages["404.html"] = array(
     "title" => "Không tìm thấy trang — bản xem trước",
@@ -581,6 +609,7 @@ $tileText = array(
     "orders.html" => array("Lịch sử đơn hàng", "Lọc theo mã, khoảng ngày; ghi chú riêng, tải .txt và xóa đơn."),
     "order.html" => array("Chi tiết đơn hàng", "Tài khoản đã giao, UID, chép từng dòng hoặc tải cả đơn."),
     "payment.html" => array("Hoá đơn USDT (kênh cũ)", "Trang email hoá đơn cũ trỏ tới: số tiền, địa chỉ, đếm ngược, cảnh báo kênh đã đóng."),
+    "document-api.html" => array("Tài liệu tích hợp API", "Khoá API kèm nút đổi khoá, ba điểm cuối đọc dữ liệu, ví dụ tạo đơn bằng JSON."),
     "recharge.html" => array("Nạp tiền qua payOS", "Số dư, số tiền trong giới hạn, ba bước thanh toán, trạng thái giao dịch."),
     "recharge-manual.html" => array("Nạp tiền thủ công", "Hướng dẫn do quản trị nhập, điền sẵn tên đăng nhập và mã khách."),
     "recharge-gtf-bank.html" => array("Kênh GachtheFast (đóng)", "Trang giải thích vì sao kênh chưa dùng được và lối sang phương thức khác."),

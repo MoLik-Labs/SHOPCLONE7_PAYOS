@@ -136,7 +136,30 @@ would have nothing to raise. The item is closed rather than "still open".
 backgrounds and links to `/tool/<name>`; nothing included it. It is now a redirect to `/client/tools`,
 covered by two new checks in `tests/client_pages_test.php` (48 passed).
 
-## 7. Not done / next
+## 7. The API guide, rebuilt
+
+`views/client/document-api.php` was the last legacy page a signed-in customer could reach that loaded a
+third-party script: ClipboardJS from `cdnjs.cloudflare.com`. It also printed the **session token** into a
+button's `onclick` (`changeAPIKey(\`<token>\`)`) purely so the old handler could re-authenticate.
+
+Rewritten on the shell:
+
+- `[data-copy]` from `store.js` replaces ClipboardJS; the page makes no third-party request.
+- Rotation posts `changeAPIKey` with the CSRF token; `ajaxs/client/auth.php` resolves the account from
+  the session and only falls back to a posted token for an older cached page.
+- New keys and registration keys are `bin2hex(random_bytes(16))` — same 32-hex shape the API endpoints
+  already index, without `md5(username . time)`.
+- The hidden page only renders while `api_status = 1`; turning it off redirects home (tested).
+
+Evidence: `document-api.html` in the preview (36th page), `document-api @1440/@390 → overflow 0 bytes
+h1=1 inline=0 errors=0 failed=0`; `tests/account_pages_test.php` **215 passed, 0 failed** (was 201),
+including "no clipboard CDN", "no session token in the page", "goes home when the API is off".
+
+One preview-only detail: `BASE_URL` turns routes into inert `#preview-…` anchors, which is right for a
+link and wrong for a URL printed as documentation. The builder swaps a readable example host back into
+that page's inputs, so the preview shows `https://shop.orbit.example/api/profile.php?api_key=…`.
+
+## 8. Not done / next
 
 - The admin panel has not been exercised end-to-end against MySQL (no database here): the guard is unit
   tested and every admin page that posts was statically confirmed to load `csrf.js`.

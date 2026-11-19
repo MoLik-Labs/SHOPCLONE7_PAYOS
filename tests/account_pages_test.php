@@ -139,6 +139,7 @@ class AccountStubDB
             "update_date" => "2026-11-16 08:00:00", "token_forgot_password" => null,
             "token_2fa" => null, "token_otp_mail" => null,
             "ref_price" => 250000, "ref_total_price" => 800000, "ref_click" => 12, "ref_ck" => 25,
+            "api_key" => "0123456789abcdef0123456789abcdef",
         );
         $this->products = array(
             1 => array("id" => 1, "name" => "Netflix Premium 1 tháng", "slug" => "netflix-1-thang",
@@ -185,7 +186,7 @@ class AccountStubDB
             "page_contact" => "<p>Gửi mã đơn kèm mô tả lỗi.</p>", "smtp_status" => "1",
             "affiliate_status" => "1", "affiliate_ck" => "20", "affiliate_min" => "100000",
             "affiliate_banks" => "Vietcombank\nTPBank", "affiliate_note" => "<p>Ghi chú cộng tác viên</p>",
-            "status_menu_tools" => "1",
+            "status_menu_tools" => "1", "api_status" => "1",
             "bank_status" => "1", "momo_status" => "0",
         );
     }
@@ -708,6 +709,28 @@ check("a malformed invoice id is rejected", $page["redirect"] === BASE_URL(""));
 $page = render_view("views/client/payment.php",
     array("action" => "payment", "trans_id" => "NOSUCHINVOICE"), array(), array());
 check("an unknown invoice id goes home", $page["redirect"] === BASE_URL(""));
+
+echo "\nAPI guide\n";
+$page = render_view("views/client/document-api.php", array("action" => "document-api"),
+    array("login" => "tok-lan"), array());
+assert_clean("api guide", $page["html"]);
+check("api guide does not redirect while the owner keeps the API on", $page["redirect"] === null);
+check("api guide shows the customer's own key", strpos($page["html"], "0123456789abcdef0123456789abcdef") !== false);
+check("api guide builds endpoints from the key",
+    strpos($page["html"], "api/profile.php?api_key=0123456789abcdef0123456789abcdef") !== false
+    && strpos($page["html"], "api/products.php?api_key=") !== false);
+check("api guide offers a copy button per field, not a clipboard CDN",
+    substr_count($page["html"], "data-copy=\"#") >= 5 && strpos($page["html"], "clipboard") === false);
+check("api guide documents the buy contract", strpos($page["html"], "buyProduct") !== false
+    && strpos($page["html"], "trans_id") !== false);
+check("api guide no longer prints the session token", strpos($page["html"], "tok-lan") === false);
+check("api guide has no inline style", strpos($page["html"], 'style="') === false);
+
+$GLOBALS["CMSNT"]->sites["api_status"] = "0";
+$page = render_view("views/client/document-api.php", array("action" => "document-api"),
+    array("login" => "tok-lan"), array());
+check("api guide goes home when the owner turns the API off", $page["redirect"] === BASE_URL("client/home"));
+$GLOBALS["CMSNT"]->sites["api_status"] = "1";
 
 echo "\nguest access\n";
 /* is_user.php runs once per process, so this is a source-level check: a request without a session is

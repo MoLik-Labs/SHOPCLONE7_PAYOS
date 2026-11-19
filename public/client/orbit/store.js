@@ -155,6 +155,43 @@
     return field && field.value ? field.value : "";
   }
 
+  /* --- API key rotation --------------------------------------------------- */
+
+  function setupApiKey() {
+    var button = document.querySelector("[data-api-key-rotate]");
+    if (!button) {
+      return;
+    }
+    button.addEventListener("click", function () {
+      if (button.disabled) {
+        return;
+      }
+      if (!window.confirm("Đổi khoá API? Khoá cũ ngừng hoạt động ngay và mọi tích hợp phải cập nhật khoá mới.")) {
+        return;
+      }
+      var endpoint = button.getAttribute("data-endpoint") || "";
+      var label = button.textContent;
+      button.disabled = true;
+      button.textContent = "Đang đổi…";
+      postForm(endpoint, { action: "changeAPIKey" }).then(function (response) {
+        if (response && response.status === "success") {
+          button.textContent = "Đã đổi khoá";
+          window.setTimeout(function () {
+            window.location.reload();
+          }, 700);
+          return;
+        }
+        button.disabled = false;
+        button.textContent = label;
+        window.alert((response && response.msg) || "Không đổi được khoá API. Vui lòng thử lại.");
+      }, function () {
+        button.disabled = false;
+        button.textContent = label;
+        window.alert("Không kết nối được máy chủ. Vui lòng thử lại.");
+      });
+    });
+  }
+
   /* --- product gallery ---------------------------------------------------- */
 
   function setupGallery() {
@@ -1114,5 +1151,6 @@
     setupOrders();
     setupOrderDetail();
     setupCopy();
+    setupApiKey();
   });
 })();

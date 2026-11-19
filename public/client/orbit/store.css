@@ -1845,3 +1845,19 @@
   .invoice { grid-template-columns: 1fr; gap: var(--space-4); }
   .invoice__qr img { max-width: 180px; }
 }
+
+/* --- API guide ------------------------------------------------------------ */
+.code-sample {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-4);
+  overflow-x: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  tab-size: 4;
+}
+
+/* A URL or a token has no spaces to wrap at; anywhere keeps it inside its column on a phone. */
+.mono--wrap { overflow-wrap: anywhere; }

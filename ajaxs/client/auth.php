@@ -344,7 +344,7 @@ if(isset($_POST["action"])) {
         }
         $google2fa = new PragmaRX\Google2FAQRCode\Google2FA();
         $token = random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 64) . time() . md5(random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 32));
-        $isCreate = $CMSNT->insert("users", ["ref_id" => isset($_COOKIE["aff"]) ? check_string($_COOKIE["aff"]) : 0, "utm_source" => isset($_COOKIE["utm_source"]) ? check_string($_COOKIE["utm_source"]) : "web", "token" => $token, "username" => $username, "email" => $email, "password" => TypePassword($password), "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "create_date" => gettime(), "update_date" => gettime(), "time_session" => time(), "api_key" => md5($username . time() . random("QWERTYUIOPASDFGHJKL", 6)), "SecretKey_2fa" => $google2fa->generateSecretKey()]);
+        $isCreate = $CMSNT->insert("users", ["ref_id" => isset($_COOKIE["aff"]) ? check_string($_COOKIE["aff"]) : 0, "utm_source" => isset($_COOKIE["utm_source"]) ? check_string($_COOKIE["utm_source"]) : "web", "token" => $token, "username" => $username, "email" => $email, "password" => TypePassword($password), "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "create_date" => gettime(), "update_date" => gettime(), "time_session" => time(), "api_key" => bin2hex(random_bytes(16)), "SecretKey_2fa" => $google2fa->generateSecretKey()]);
         if($isCreate) {
             $CMSNT->insert("logs", ["user_id" => $CMSNT->get_row("SELECT * FROM `users` WHERE `token` = '" . $token . "' ")["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Create an account")]);
             set_auth_cookie($token, time() + $CMSNT->site("session_login"));
@@ -503,13 +503,18 @@ if(isset($_POST["action"])) {
         exit(json_encode(["status" => "error", "msg" => __("Thay đổi mật khẩu thất bại")]));
     }
     if($_POST["action"] == "changeAPIKey") {
-        if(empty($_POST["token"])) {
+        /* The session already knows who is signed in; the posted token is only a fallback for an older
+           cached page. A new key is 32 lower-case hex (32 random bytes → 16 bytes hex), the same shape
+           the API endpoints already index, but from the CSPRNG instead of md5(username . time). */
+        $apiToken = !empty($_POST["token"]) ? check_string($_POST["token"])
+            : (isset($_SESSION["login"]) ? check_string($_SESSION["login"]) : "");
+        if($apiToken === "") {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng đăng nhập để sử dụng tính năng này")]));
         }
-        if(!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token` = '" . check_string($_POST["token"]) . "' AND `banned` = 0 "))) {
+        if(!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token` = '" . $apiToken . "' AND `banned` = 0 "))) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng đăng nhập để sử dụng tính năng này")]));
         }
-        $api_key = md5($getUser["username"] . time() . random("QWERTYUIOPASDFGHJKL", 6));
+        $api_key = bin2hex(random_bytes(16));
         $isUpdate = $CMSNT->update("users", ["api_key" => $api_key], " `id` = '" . $getUser["id"] . "' ");
         if($isUpdate) {
             $Mobile_Detect = new Mobile_Detect();

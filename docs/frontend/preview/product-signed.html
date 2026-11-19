@@ -13,11 +13,11 @@
 <meta name="theme-color" content="#fbf9f4">
 <link rel="preload" href="assets/client/fonts/be-vietnam-pro/latin-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/client/fonts/be-vietnam-pro/vietnamese-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/client/orbit/tokens.css?v=1795099775">
-<link rel="stylesheet" href="assets/client/orbit/base.css?v=1795099775">
-<link rel="stylesheet" href="assets/client/orbit/components.css?v=1795100119">
-<link rel="stylesheet" href="assets/client/orbit/shell.css?v=1795099775">
-<link rel="stylesheet" href="assets/client/orbit/store.css?v=1795100293">
+<link rel="stylesheet" href="assets/client/orbit/tokens.css?v=1795101534">
+<link rel="stylesheet" href="assets/client/orbit/base.css?v=1795101534">
+<link rel="stylesheet" href="assets/client/orbit/components.css?v=1795101534">
+<link rel="stylesheet" href="assets/client/orbit/shell.css?v=1795101534">
+<link rel="stylesheet" href="assets/client/orbit/store.css?v=1795101611">
 <link rel="stylesheet" href="assets/preview.css">
 </head>
 <body class="page-product">
@@ -108,7 +108,7 @@
         data-max="10"
         data-stock="24"
         data-token="tok"
-        data-api-key="preview-api-key"
+        data-api-key="9f4c1d2a7b6e8c05d3a1f9e7b2c4d608"
         data-order-url="#preview-product-order">
         <div class="buy-panel__head">
           <h2 class="buy-panel__title">Mua ngay</h2>
@@ -162,6 +162,34 @@
   </div>
 </section>
 
+<section class="section section--tight" aria-labelledby="product-api-title">
+  <div class="container container--narrow">
+    <div class="panel">
+      <div class="panel__head">
+        <h2 id="product-api-title" class="panel__title">Tích hợp API</h2>
+        <span class="pill">GET / POST</span>
+      </div>
+      <div class="panel__body">
+                <p class="small muted">Dùng đúng API key của tài khoản bạn. Không chia sẻ khoá này cho người khác.</p>
+        <div class="copy-row">
+          <label class="sr-only" for="api-key">API key</label>
+          <input class="input" id="api-key" type="text" readonly value="9f4c1d2a7b6e8c05d3a1f9e7b2c4d608">
+          <button class="btn" type="button" data-copy="#api-key">Sao chép</button>
+        </div>
+        <div class="copy-row">
+          <label class="sr-only" for="api-product">Lấy chi tiết sản phẩm</label>
+          <input class="input" id="api-product" type="text" readonly
+            value="#preview-api-product-php-api-key-9f4c1d2a7b6e8c05d3a1f9e7b2c4d608-product-101">
+          <button class="btn" type="button" data-copy="#api-product">Sao chép</button>
+        </div>
+        <dl class="kv">
+          <dt>Mua hàng</dt><dd><code>POST #preview-api-buy-product</code></dd>
+          <dt>Tham số</dt><dd><code>action=buyProduct · id=101 · amount · coupon · api_key</code></dd>
+        </dl>
+              </div>
+    </div>
+  </div>
+</section>
 
 <section class="section section--tight" aria-labelledby="product-aff-title">
   <div class="container container--narrow">
@@ -244,7 +272,7 @@
     </div>
   </div>
 </footer>
-<script defer src="assets/client/orbit/store.js?v=1795100086"></script>
-<script defer src="assets/common/csrf.js?v=1795100756"></script>
+<script defer src="assets/client/orbit/store.js?v=1795101534"></script>
+<script defer src="assets/common/csrf.js?v=1795101534"></script>
 </body>
 </html>
