@@ -10,17 +10,27 @@ require_once __DIR__ . "/../libs/suppliers.php";
 require_once __DIR__ . "/../libs/database/users.php";
 $Mobile_Detect = new Mobile_Detect();
 $CMSNT = new DB();
-if (empty($_GET["apikey"])) {
+/* Two names, one credential: the read-only endpoints (api/profile.php, api/products.php, api/product.php)
+   call it `api_key`, this one historically called it `apikey`. Accept either so an integrator can carry
+   one parameter name across the whole API. */
+$apiKey = "";
+if (!empty($_GET["apikey"])) {
+    $apiKey = check_string($_GET["apikey"]);
+} elseif (!empty($_GET["api_key"])) {
+    $apiKey = check_string($_GET["api_key"]);
+}
+if ($apiKey === "") {
     exit(json_encode(["code" => 201, "msg" => __("Thiếu apikey")]));
 }
-if (!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `api_key` = '" . check_string($_GET["apikey"]) . "' AND `banned` = 0 "))) {
+if (!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `api_key` = '" . $apiKey . "' AND `banned` = 0 "))) {
     exit(json_encode(["code" => 201, "msg" => __("apikey không hợp lệ")]));
 }
-if ($_GET['action'] == "get-balance") { // lấy sô dư
+$apiAction = isset($_GET["action"]) && is_string($_GET["action"]) ? $_GET["action"] : "";
+if ($apiAction == "get-balance") { // lấy sô dư
     $user = [];
     $user = ["username" => $getUser["username"], "balance" => $getUser["money"]];
     echo json_encode($user, JSON_PRETTY_PRINT);
-} elseif ($_GET['action'] == "get-services") { // lấy danh sách sản phẩm
+} elseif ($apiAction == "get-services") { // lấy danh sách sản phẩm
     $data_category = [];
     foreach ($CMSNT->get_list(" SELECT * FROM `categories` WHERE `parent_id` != 0 AND `status` = 1 ") as $category) {
         $data_product = [];
@@ -36,8 +46,10 @@ if ($_GET['action'] == "get-balance") { // lấy sô dư
         }
         $data_category[] = $data_product;
     }
-    exit(json_encode(["code" => 0, "msg" => __("Lấy dữ liệu thành công!"), "data" => $data_product], JSON_PRETTY_PRINT));
-} elseif ($_GET['action'] == "create-order") { // Tạo đơn
+    /* This used to return $data_product — the rows of the LAST category only — while $data_category
+       (every category, each with its own products) was built and thrown away. */
+    exit(json_encode(["code" => 0, "msg" => __("Lấy dữ liệu thành công!"), "data" => $data_category], JSON_PRETTY_PRINT));
+} elseif ($apiAction == "create-order") { // Tạo đơn
 
 
     if (empty($_GET["service_id"])) {
@@ -191,18 +203,24 @@ if ($_GET['action'] == "get-balance") { // lấy sô dư
                     exit(json_encode(["code" => 201, "message" => __($data["message"])]));
                 }
                 $api_trans_id = $data["order_id"];
-                while (true) {
-                    $response = curl_get2($supplier["domain"] . "/api.php?apikey=" . $supplier["api_key"] . "&action=get-order-detail&order_id=" . $api_trans_id);
-                    $data_account = json_decode($response, true);
-                    if ($data_account["order"]["status"] == 1) {
-                        break;
+                /* Bounded poll: a supplier that never reports "ready" must not spin forever. */
+                $data_account = orbit_poll_supplier(
+                    function () use ($supplier, $api_trans_id) {
+                        return curl_get2($supplier["domain"] . "/api.php?apikey=" . $supplier["api_key"] . "&action=get-order-detail&order_id=" . $api_trans_id);
+                    },
+                    function ($body) {
+                        return isset($body["order"]["status"]) && (int) $body["order"]["status"] === 1;
                     }
+                );
+                if ($data_account === null) {
+                    /* Tell the customer what actually happened: a failed refund must not be reported
+                       as a successful one. */
+                    $isRefunded = $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
+                    exit(json_encode(["code" => 201, "message" => $isRefunded
+                        ? __("Nhà cung cấp chưa trả đơn kịp, đã hoàn tiền. Vui lòng thử lại sau ít phút.")
+                        : __("Nhà cung cấp chưa trả đơn kịp và hệ thống chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.")]));
                 }
-                if (explode(PHP_EOL, $data_account["order"]["data"])) {
-                    $lines = explode(PHP_EOL, $data_account["order"]["data"]);
-                } else {
-                    $lines = $data_account["order"]["data"];
-                }
+                $lines = explode(PHP_EOL, isset($data_account["order"]["data"]) ? (string) $data_account["order"]["data"] : "");
                 foreach ($lines as $account) {
                     if ($account != "") {
                         $account = check_string($account);
@@ -240,13 +258,26 @@ if ($_GET['action'] == "get-balance") { // lấy sô dư
                     exit(json_encode(["code" => 201, "message" => __($data["message"])]));
                 }
                 $api_trans_id = $data["order_id"];
-                while (true) {
-                    $response = getOrder_API_14($supplier["domain"], $supplier["token"], $api_trans_id);
-                    $data_account = json_decode($response, true);
-                    if (!isset($data_account["data"])) {
+                /* This loop had no exit at all: an empty `if (!isset(...)) { }` fell straight back into
+                   the next iteration, so every API_14 order through the public API hung after the
+                   customer had been charged. Same bounded poll as the web flow, refund on timeout. */
+                $data_account = orbit_poll_supplier(
+                    function () use ($supplier, $api_trans_id) {
+                        return getOrder_API_14($supplier["domain"], $supplier["token"], $api_trans_id);
+                    },
+                    function ($body) {
+                        return isset($body["data"]);
                     }
+                );
+                if ($data_account === null) {
+                    /* Tell the customer what actually happened: a failed refund must not be reported
+                       as a successful one. */
+                    $isRefunded = $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
+                    exit(json_encode(["code" => 201, "message" => $isRefunded
+                        ? __("Nhà cung cấp chưa trả đơn kịp, đã hoàn tiền. Vui lòng thử lại sau ít phút.")
+                        : __("Nhà cung cấp chưa trả đơn kịp và hệ thống chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.")]));
                 }
-                $lines = explode(PHP_EOL, $data_account["data"]["data"]);
+                $lines = explode(PHP_EOL, isset($data_account["data"]["data"]) ? (string) $data_account["data"]["data"] : "");
                 foreach ($lines as $account) {
                     if ($account != "") {
                         $account = check_string($account);
@@ -371,10 +402,14 @@ if ($_GET['action'] == "get-balance") { // lấy sô dư
                         $subject = str_replace("{trans_id}", $trans_id, $subject);
                         $subject = str_replace("{pay}", format_currency($pay), $subject);
                         $bcc = $CMSNT->site("title");
-                        $file_txt_name = $trans_id . ".txt";
-                        file_put_contents($file_txt_name, $file_txt_email);
-                        sendCSM($getUser["email"], $getUser["username"], $subject, $content, $bcc, $file_txt_name);
-                        unlink($file_txt_name);
+                        /* The attachment used to be written into the document root: a crash between
+                           write and unlink left a file of sold accounts behind a web-served path. */
+                        $file_txt_name = rtrim(sys_get_temp_dir(), "/\\") . "/" . $trans_id . ".txt";
+                        sendCSM($getUser["email"], $getUser["username"], $subject, $content, $bcc,
+                            file_put_contents($file_txt_name, $file_txt_email) !== false ? $file_txt_name : "");
+                        if (is_file($file_txt_name)) {
+                            unlink($file_txt_name);
+                        }
                     }
                     if ($CMSNT->site("noti_buy_product") != "") {
                         $my_text = $CMSNT->site("noti_buy_product");
@@ -400,7 +435,7 @@ if ($_GET['action'] == "get-balance") { // lấy sô dư
     } else {
         exit(json_encode(["code" => 500, "message" => "ERROR 2 - " . __("Vui lòng thử lại")]));
     }
-} elseif ($_GET['action'] == 'get-order-detail') {
+} elseif ($apiAction == 'get-order-detail') {
     if (empty(check_string($_GET["order_id"]))) {
         exit(json_encode([
             "code" => 201,

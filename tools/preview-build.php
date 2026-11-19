@@ -470,13 +470,15 @@ $apiPreviewHtml = str_replace(
         "#preview-api-profile-php-api-key-" . $apiPreviewKey,
         "#preview-api-products-php-api-key-" . $apiPreviewKey,
         "#preview-api-product-php-api-key-" . $apiPreviewKey . "-product-3",
-        "#preview-api-buy-product",
+        "#preview-api-api-php-apikey-" . $apiPreviewKey . "-action-get-order-detail-order-id-ORD123",
+        "#preview-api-api-php-apikey-" . $apiPreviewKey . "-action-create-order-service-id-3-amount-1",
     ),
     array(
         $apiPreviewHost . "/api/profile.php?api_key=" . $apiPreviewKey,
         $apiPreviewHost . "/api/products.php?api_key=" . $apiPreviewKey,
         $apiPreviewHost . "/api/product.php?api_key=" . $apiPreviewKey . "&product=3",
-        $apiPreviewHost . "/api/buy_product",
+        $apiPreviewHost . "/api/api.php?apikey=" . $apiPreviewKey . "&action=get-order-detail&order_id=ORD123",
+        $apiPreviewHost . "/api/api.php?apikey=" . $apiPreviewKey . "&action=create-order&service_id=3&amount=1",
     ),
     $apiPreviewHtml
 );

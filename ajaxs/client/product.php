@@ -211,18 +211,24 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["message"])]));
                 }
                 $api_trans_id = $data["order_id"];
-                while (true) {
-                    $response = curl_get2($supplier["domain"] . "/api.php?apikey=" . $supplier["api_key"] . "&action=get-order-detail&order_id=" . $api_trans_id);
-                    $data_account = json_decode($response, true);
-                    if($data_account["order"]["status"] == 1) {
-                        break;
+                /* Bounded poll: a supplier that never reports "ready" must not spin forever. */
+                $data_account = orbit_poll_supplier(
+                    function () use ($supplier, $api_trans_id) {
+                        return curl_get2($supplier["domain"] . "/api.php?apikey=" . $supplier["api_key"] . "&action=get-order-detail&order_id=" . $api_trans_id);
+                    },
+                    function ($body) {
+                        return isset($body["order"]["status"]) && (int) $body["order"]["status"] === 1;
                     }
+                );
+                if($data_account === null) {
+                    /* Tell the customer what actually happened: a failed refund must not be reported
+                       as a successful one, or support gets a "you kept my money" ticket with no trail. */
+                    $isRefunded = $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
+                    exit(json_encode(["status" => "error", "msg" => $isRefunded
+                        ? __("Nhà cung cấp chưa trả đơn kịp, đã hoàn tiền. Vui lòng thử lại sau ít phút.")
+                        : __("Nhà cung cấp chưa trả đơn kịp và hệ thống chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.")]));
                 }
-                if(explode(PHP_EOL, $data_account["order"]["data"])) {
-                    $lines = explode(PHP_EOL, $data_account["order"]["data"]);
-                } else {
-                    $lines = $data_account["order"]["data"];
-                }
+                $lines = explode(PHP_EOL, isset($data_account["order"]["data"]) ? (string) $data_account["order"]["data"] : "");
                 foreach ($lines as $account) {
                     if(empty($account)) {
                     } else {
@@ -264,14 +270,24 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["message"])]));
                 }
                 $api_trans_id = $data["order_id"];
-                while (true) {
-                    $response = getOrder_API_14($supplier["domain"], $supplier["token"], $api_trans_id);
-                    $data_account = json_decode($response, true);
-                    if(isset($data_account["data"])) {
-                        break;
+                /* Bounded poll: same budget as API_6 — no worker can be pinned by a slow supplier. */
+                $data_account = orbit_poll_supplier(
+                    function () use ($supplier, $api_trans_id) {
+                        return getOrder_API_14($supplier["domain"], $supplier["token"], $api_trans_id);
+                    },
+                    function ($body) {
+                        return isset($body["data"]);
                     }
+                );
+                if($data_account === null) {
+                    /* Tell the customer what actually happened: a failed refund must not be reported
+                       as a successful one. */
+                    $isRefunded = $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
+                    exit(json_encode(["status" => "error", "msg" => $isRefunded
+                        ? __("Nhà cung cấp chưa trả đơn kịp, đã hoàn tiền. Vui lòng thử lại sau ít phút.")
+                        : __("Nhà cung cấp chưa trả đơn kịp và hệ thống chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.")]));
                 }
-                $lines = explode(PHP_EOL, $data_account["data"]["data"]);
+                $lines = explode(PHP_EOL, isset($data_account["data"]["data"]) ? (string) $data_account["data"]["data"] : "");
                 foreach ($lines as $account) {
                     if($account == "") {
                     } else {
@@ -487,10 +503,14 @@ if($_REQUEST["action"] == "buyProduct") {
                         $subject = str_replace("{trans_id}", $trans_id, $subject);
                         $subject = str_replace("{pay}", format_currency($pay), $subject);
                         $bcc = $CMSNT->site("title");
-                        $file_txt_name = $trans_id . ".txt";
-                        file_put_contents($file_txt_name, $file_txt_email);
-                        sendCSM($getUser["email"], $getUser["username"], $subject, $content, $bcc, $file_txt_name);
-                        unlink($file_txt_name);
+                        /* The attachment used to be written into the document root: a crash between
+                           write and unlink left a file of sold accounts behind a web-served path. */
+                        $file_txt_name = rtrim(sys_get_temp_dir(), "/\\") . "/" . $trans_id . ".txt";
+                        sendCSM($getUser["email"], $getUser["username"], $subject, $content, $bcc,
+                            file_put_contents($file_txt_name, $file_txt_email) !== false ? $file_txt_name : "");
+                        if (is_file($file_txt_name)) {
+                            unlink($file_txt_name);
+                        }
                     }
                     if($CMSNT->site("noti_buy_product") != "") {
                         $my_text = $CMSNT->site("noti_buy_product");

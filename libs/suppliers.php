@@ -213,4 +213,42 @@ function order_API_1($domain, $api_key, $order_id)
     return $response;
 }
 
-?>
+
+/**
+ * Poll a supplier until the order is ready — for a bounded time.
+ *
+ * The four supplier types below (API_6, API_14) used to sit in `while (true)` loops that called the
+ * supplier, checked a field, and repeated with no sleep and no deadline. A supplier that is slow, down,
+ * or that answers in a shape the check does not expect pinned the PHP worker forever and hammered their
+ * API as fast as the network allowed. This helper gives every poll three limits: a number of attempts,
+ * a wall-clock deadline and a delay between calls, and returns the last decoded body (or null) so the
+ * caller can refund and answer instead of hanging.
+ *
+ * @param callable $fetch   returns the raw response body for one attempt
+ * @param callable $ready   receives the decoded body, returns true when the order is complete
+ * @param int      $attempts maximum number of calls (>= 1)
+ * @param int      $delayMs  pause between calls in milliseconds
+ * @return array|null       the last decoded body, or null when the budget ran out or the body is not JSON
+ */
+function orbit_poll_supplier($fetch, $ready, $attempts = 10, $delayMs = 400)
+{
+    $attempts = max(1, min(60, (int) $attempts));
+    $delayMs = max(0, min(5000, (int) $delayMs));
+    $deadline = microtime(true) + 15.0;
+    $last = null;
+    for ($i = 0; $i < $attempts; ++$i) {
+        if (microtime(true) >= $deadline) {
+            break;
+        }
+        $raw = call_user_func($fetch);
+        $last = is_string($raw) ? json_decode($raw, true) : null;
+        if (is_array($last) && call_user_func($ready, $last)) {
+            return $last;
+        }
+        if ($i + 1 < $attempts && $delayMs > 0) {
+            usleep($delayMs * 1000);
+        }
+    }
+    return null;
+}
+

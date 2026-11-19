@@ -44,6 +44,12 @@ $storeApiEndpoints = array(
         "url" => BASE_URL("api/product.php?api_key=" . urlencode($storeApiKey) . "&product=3"),
         "id" => "api-product",
     ),
+    array(
+        "method" => "GET",
+        "label" => __("Mã đơn đã tạo (trạng thái và nội dung)"),
+        "url" => BASE_URL("api/api.php?apikey=" . urlencode($storeApiKey) . "&action=get-order-detail&order_id=ORD123"),
+        "id" => "api-order-detail",
+    ),
 );
 
 $storeShell = array(
@@ -115,33 +121,32 @@ store_shell_open($storeShell);
       <div class="panel__body">
         <div class="field">
           <p class="field__label">
-            <span class="pill mono">POST</span>
-            <span class="mono mono--wrap"><?php echo store_e(BASE_URL("api/buy_product")); ?></span>
+            <span class="pill mono">GET</span>
+            <span class="mono mono--wrap"><?php echo store_e(BASE_URL("api/api.php?apikey=" . urlencode($storeApiKey) . "&action=create-order&service_id=3&amount=1")); ?></span>
           </p>
           <div class="copy-row">
             <label class="sr-only" for="api-buy"><?php echo store_e(__("Địa chỉ tạo đơn hàng")); ?></label>
-            <input class="input mono" id="api-buy" type="text" readonly value="<?php echo store_e(BASE_URL("api/buy_product")); ?>">
+            <input class="input mono" id="api-buy" type="text" readonly
+              value="<?php echo store_e(BASE_URL("api/api.php?apikey=" . urlencode($storeApiKey) . "&action=create-order&service_id=3&amount=1")); ?>">
             <button class="btn btn--ghost" type="button" data-copy="#api-buy">Sao chép</button>
           </div>
         </div>
         <dl class="kv">
-          <dt><span class="mono">action</span></dt><dd><span class="mono">buyProduct</span></dd>
-          <dt><span class="mono">id</span></dt><dd>ID sản phẩm cần mua</dd>
-          <dt><span class="mono">amount</span></dt><dd>Số lượng cần mua</dd>
+          <dt><span class="mono">apikey</span></dt><dd>Khoá API ở trên (<span class="mono">api_key</span> cũng được chấp nhận)</dd>
+          <dt><span class="mono">action</span></dt><dd><span class="mono">create-order</span></dd>
+          <dt><span class="mono">service_id</span></dt><dd>ID sản phẩm cần mua (lấy từ danh sách ở trên)</dd>
+          <dt><span class="mono">amount</span></dt><dd>Số lượng cần mua, trong khoảng min–max của sản phẩm</dd>
           <dt><span class="mono">coupon</span></dt><dd>Mã giảm giá, bỏ trống nếu không có</dd>
-          <dt><span class="mono">api_key</span></dt><dd>Khoá API ở trên</dd>
         </dl>
+        <p class="field__hint">Yêu cầu tạo đơn làm thay đổi số dư, nên đừng đặt nó trong một liên kết mở sẵn hay gọi lại tự động: mỗi lần gọi thành công là một đơn thật. Hãy lưu <span class="mono">order_id</span> và tra cứu bằng <span class="mono">get-order-detail</span> khi cần.</p>
         <p class="field__label mt-4">Phản hồi thành công</p>
         <pre class="code-sample mono">{
-    "status": "success",
-    "msg": "Tạo đơn hàng thành công!",
-    "trans_id": "JF465f728224ce11",
-    "data": [
-        "1000040304952|GUTJXYIFPWLHCNDOMBRKVAQESZ",
-        "1000087676467|IVMRLABECWTQYUXHPOFNJDSZGK"
-    ]
+    "code": 200,
+    "message": "Tạo đơn hàng thành công!",
+    "order_id": "JF465f728224ce11",
+    "data": "1000040304952|GUTJXYIFPWLHCNDOMBRKVAQESZ\n1000087676467|IVMRLABECWTQYUXHPOFNJDSZGK"
 }</pre>
-        <p class="field__hint">Giữ <span class="mono">trans_id</span> để tra cứu đơn. Hệ thống không gửi lại tài khoản đã bán, nên hãy lưu phản hồi ngay khi nhận.</p>
+        <p class="field__hint">Giữ <span class="mono">order_id</span> để tra cứu đơn. Hệ thống không gửi lại tài khoản đã bán, nên hãy lưu phản hồi ngay khi nhận. Nếu nhà cung cấp chưa trả đơn trong thời hạn, đơn được hoàn tiền và phản hồi là <span class="mono">"code": 201</span>.</p>
       </div>
     </div>
   </div>

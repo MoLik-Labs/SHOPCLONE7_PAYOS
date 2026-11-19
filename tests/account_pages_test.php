@@ -721,8 +721,13 @@ check("api guide builds endpoints from the key",
     && strpos($page["html"], "api/products.php?api_key=") !== false);
 check("api guide offers a copy button per field, not a clipboard CDN",
     substr_count($page["html"], "data-copy=\"#") >= 5 && strpos($page["html"], "clipboard") === false);
-check("api guide documents the buy contract", strpos($page["html"], "buyProduct") !== false
-    && strpos($page["html"], "trans_id") !== false);
+check("api guide documents the buy contract that exists",
+    strpos($page["html"], "action=create-order") !== false
+    && strpos($page["html"], "service_id=3") !== false
+    && strpos($page["html"], "order_id") !== false);
+check("api guide does not document a route the shop does not have",
+    strpos($page["html"], "buy_product") === false && strpos($page["html"], "buyProduct") === false);
+check("api guide points get-order-detail at api/api.php", strpos($page["html"], "action=get-order-detail") !== false);
 check("api guide no longer prints the session token", strpos($page["html"], "tok-lan") === false);
 check("api guide has no inline style", strpos($page["html"], 'style="') === false);
 
