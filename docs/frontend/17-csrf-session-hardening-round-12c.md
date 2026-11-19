@@ -141,6 +141,9 @@ covered by two new checks in `tests/client_pages_test.php` (48 passed).
 - The admin panel has not been exercised end-to-end against MySQL (no database here): the guard is unit
   tested and every admin page that posts was statically confirmed to load `csrf.js`.
 - `dongtien.transid` still has a plain index, not a unique one; the payOS path is idempotent in SQL, the
-  legacy manual-credit path is not. Recommended as a staging DDL change, not a code change.
+  legacy manual-credit path is not. `tools/db-index-audit.php` now ends with an advisory block that lists
+  duplicated `transid` values and prints the `ALTER … ADD UNIQUE INDEX` only when the history is clean.
+  It is read-only and does not change the tool's exit code. To run on staging:
+  `php tools/db-index-audit.php`.
 - Still open from round 12b: legacy AJAX token-in-POST cleanup, `md5` password fallback (owner decision),
   LCP `fetchpriority` on the home hero.

@@ -100,6 +100,35 @@ foreach ($required as $table => $wanted) {
         }
     }
 }
+/* Exactly-once crediting, advisory only.
+   Every writer of `dongtien` supplies a keyed `transid` (`PAYOS_…`, `GTF_…`, `REFUND_ORDER_…`), but the
+   table has a plain index, so a retried request that slips past its in-transaction guard could still
+   add a second row. A unique index turns that into a failed insert instead of a second credit — but it
+   can only be added when the history has no duplicates, so this block reports them. Nothing is changed. */
+echo "\nLedger idempotency (advisory)\n";
+try {
+    $duplicates = $db->query("SELECT `transid`, COUNT(*) AS `n` FROM `dongtien`
+        WHERE `transid` IS NOT NULL GROUP BY `transid` HAVING `n` > 1 ORDER BY `n` DESC LIMIT 20");
+    if ($duplicates && $duplicates->num_rows > 0) {
+        $duplicateCount = 0;
+        while ($row = $duplicates->fetch_assoc()) {
+            ++$duplicateCount;
+            echo "  DUPLICATE transid " . $row["transid"] . " × " . $row["n"] . "\n";
+        }
+        echo "  " . $duplicateCount . " duplicated transid value(s). Resolve them before adding a unique index;\n";
+        echo "  do NOT add UNIQUE while duplicates exist.\n";
+    } else {
+        echo "  no duplicated transid — a unique index would hold.\n";
+        echo "  ALTER TABLE `dongtien` ADD UNIQUE INDEX `uniq_dongtien_transid` (`transid`);\n";
+        echo "  (run in a maintenance window; keep the plain index on `transid` if your MySQL version needs it)\n";
+    }
+    if ($duplicates) {
+        $duplicates->free();
+    }
+} catch (Throwable $error) {
+    echo "  SKIP  dongtien (table not present or not readable)\n";
+}
+
 $db->close();
 echo "\n" . $checked . " index requirements checked, " . $missing . " missing.\n";
 echo $missing === 0 ? "All hot-query indexes are present.\n" : "Review the ALTER statements above; nothing was changed.\n";
