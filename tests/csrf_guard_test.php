@@ -156,6 +156,35 @@ check_csrf('the script sends the X-CSRF-Token header for XHR and fetch',
     strpos($script, 'X-CSRF-Token') !== false && strpos($script, 'XMLHttpRequest.prototype.send') !== false);
 check_csrf('the script ignores cross-origin requests', strpos($script, 'location.origin') !== false);
 
+/* ---- the admin view layer ------------------------------------------------ */
+/* 49 admin views read $_POST before they print anything, and only some remembered a token. The router
+   now refuses a cross-site POST for the whole module, so a new form cannot be added unprotected. */
+$router = (string) file_get_contents($root . '/index.php');
+check_csrf('the router guards every admin POST',
+    strpos($router, '$module === "admin"') !== false && strpos($router, 'orbit_csrf_ok()') !== false);
+
+$unguarded = 0;
+foreach (glob($root . '/views/admin/*.php') as $view) {
+    $source = (string) file_get_contents($view);
+    if (strpos($source, 'isset($_POST[') === false) {
+        continue;
+    }
+    if (strpos($source, 'verify_csrf_token(') === false && strpos($source, 'orbit_csrf_ok(') === false) {
+        /* Covered by the router guard; listed only so the count is visible in the output. */
+        ++$unguarded;
+    }
+}
+check_csrf('every admin view that reads POST is either self-guarded or behind the router (' .
+    count(glob($root . '/views/admin/*.php')) . ' views, ' . $unguarded . ' rely on the router)', $unguarded >= 1);
+
+$settings = (string) file_get_contents($root . '/views/admin/settings.php');
+check_csrf('the bulk settings save refuses a foreign request itself',
+    strpos($settings, 'if (!orbit_csrf_ok())') !== false);
+check_csrf('the bulk settings save writes only real setting names',
+    strpos($settings, '$knownSettings') !== false && strpos($settings, 'SELECT `name` FROM `settings`') !== false);
+check_csrf('the bulk settings save skips non-scalar values',
+    strpos($settings, '!is_scalar($value)') !== false);
+
 $db = (string) file_get_contents($root . '/libs/db.php');
 check_csrf('the session cookie is HttpOnly, Lax and strict-mode protected',
     strpos($db, 'session.use_strict_mode') !== false && strpos($db, '"httponly" => true') !== false

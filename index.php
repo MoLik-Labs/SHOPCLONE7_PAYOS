@@ -49,6 +49,19 @@ if($action == "footer" || $action == "header" || $action == "sidebar" || $action
 }
 $path = "views/" . $module . "/" . $action . ".php";
 if(file_exists($path)) {
+    /* Every admin view that saves something reads $_POST before it prints a line (settings.php,
+       product-edit.php, coupons.php …). Guarding here covers all of them at once, so a new admin form
+       cannot be added without the check — the alternative was 49 copies of the same two lines, and it
+       was the form nobody remembered that got hit. The same-origin branch is what passes for an
+       ordinary form submit; the token branch is for anything that posts with a header. */
+    if($module === "admin" && isset($_SERVER["REQUEST_METHOD"]) && $_SERVER["REQUEST_METHOD"] === "POST" && !orbit_csrf_ok()) {
+        http_response_code(403);
+        header("Content-Type: text/html; charset=utf-8");
+        echo "<!doctype html><meta charset=\"utf-8\"><title>403</title>";
+        echo "<p>Phiên làm việc đã hết hoặc yêu cầu không hợp lệ. Vui lòng mở lại trang quản trị và thử lại.</p>";
+        echo "<p><a href=\"" . BASE_URL("admin/home") . "\">Về trang quản trị</a></p>";
+        exit;
+    }
     require_once __DIR__ . "/" . $path;
     exit;
 }

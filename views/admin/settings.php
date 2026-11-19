@@ -92,10 +92,28 @@ if(isset($_POST["SaveSettings"])) {
     if($CMSNT->site("status_demo") != 0) {
         exit("<script type=\"text/javascript\">if(!alert(\"" . __("This function cannot be used because this is a demo site") . "\")){window.history.back().location.reload();}</script>");
     }
+    /* index.php already refused a cross-site POST, but this handler is the one place that writes an
+       arbitrary posted key into `settings`, so it re-checks: a token here, an origin there. */
+    if (!orbit_csrf_ok()) {
+        admin_msg_error("Phiên làm việc đã hết hạn. Vui lòng mở lại trang Cài đặt và thử lại.",
+            base_url_admin("settings"), 1500);
+    }
     $Mobile_Detect = new Mobile_Detect();
     $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thay đổi thông tin trong trang cài đặt")]);
+    /* Only keys that are actually settings, only scalar values.
+       Before: `foreach ($_POST as $key => $value)` — so the field name reached the WHERE clause raw
+       (injection through a field name), `csrf_token` and the submit button were written as settings
+       rows, and a posted array (`x[]=1`) reached mysqli_real_escape_string() as an array, which is a
+       TypeError in PHP 8 and a 500 on save. */
+    $knownSettings = array();
+    foreach ($CMSNT->get_list("SELECT `name` FROM `settings`") as $settingRow) {
+        $knownSettings[(string) $settingRow["name"]] = true;
+    }
     foreach ($_POST as $key => $value) {
-        $CMSNT->update("settings", ["value" => $value], " `name` = '" . $key . "' ");
+        if (!is_string($key) || !isset($knownSettings[$key]) || !is_scalar($value)) {
+            continue;
+        }
+        $CMSNT->update("settings", ["value" => (string) $value], " `name` = '" . addslashes($key) . "' ");
     }
     $my_text = $CMSNT->site("noti_action");
     $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
