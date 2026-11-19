@@ -197,6 +197,33 @@ function orbit_coupon_release_uncommitted()
     }
 }
 /**
+ * Authorise a cron/worker endpoint that used to be callable by anyone.
+ *
+ * CLI is always allowed. Over HTTP the request must present CRON_TOKEN — as an X-Cron-Token header
+ * or `?token=`, at least 16 characters. With no token configured, HTTP is refused: a public cron
+ * URL lets a stranger make the server poll supplier APIs, run warehouse automations or send the
+ * e-mail queue, and those calls cost money and rate limits.
+ */
+function orbit_cron_allowed($sapi = null)
+{
+    $sapi = $sapi === null ? PHP_SAPI : (string) $sapi;
+    if ($sapi === "cli") {
+        return true;
+    }
+    $token = getenv("CRON_TOKEN");
+    if (!is_string($token) || $token === "") {
+        $token = isset($_ENV["CRON_TOKEN"]) ? (string) $_ENV["CRON_TOKEN"] : "";
+    }
+    if (strlen($token) < 16) {
+        return false;
+    }
+    $provided = isset($_SERVER["HTTP_X_CRON_TOKEN"]) ? (string) $_SERVER["HTTP_X_CRON_TOKEN"] : "";
+    if ($provided === "" && isset($_GET["token"])) {
+        $provided = (string) $_GET["token"];
+    }
+    return $provided !== "" && hash_equals($token, $provided);
+}
+/**
  * Verify a login password against the stored hash, accepting the legacy pre-sanitised form.
  *
  * Login used to run the password through check_string() before verifying: addslashes() and

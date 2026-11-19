@@ -9,6 +9,10 @@ require_once __DIR__ . "/../libs/lang.php";
 require_once __DIR__ . "/../libs/helper.php";
 require_once __DIR__ . "/../libs/database/users.php";
 $CMSNT = new DB();
+if (!orbit_cron_allowed()) {
+    http_response_code(403);
+    exit("cron_forbidden");
+}
 $user = new users();
 curl_get2(base_url("cron/cron.php"));
 if($CMSNT->site("check_time_cron_momo") < time() && time() - $CMSNT->site("check_time_cron_momo") < 5) {

@@ -6,6 +6,10 @@ require_once __DIR__ . "/../config.php";
 require_once __DIR__ . "/../libs/lang.php";
 require_once __DIR__ . "/../libs/helper.php";
 $CMSNT = new DB();
+if (!orbit_cron_allowed()) {
+    http_response_code(403);
+    exit("cron_forbidden");
+}
 if($CMSNT->site("check_time_cron_cron") < time() && time() - $CMSNT->site("check_time_cron_cron") < 3) {
     exit("Thao tác quá nhanh, vui lòng thử lại sau!");
 }

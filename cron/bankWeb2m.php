@@ -9,6 +9,10 @@ require_once __DIR__ . "/../libs/lang.php";
 require_once __DIR__ . "/../libs/helper.php";
 require_once __DIR__ . "/../libs/database/users.php";
 $CMSNT = new DB();
+if (!orbit_cron_allowed()) {
+    http_response_code(403);
+    exit("cron_forbidden");
+}
 $user = new users();
 if($CMSNT->site("check_time_cron_bank") < time() && time() - $CMSNT->site("check_time_cron_bank") < 5) {
     exit("[ÉT O ÉT ]Thao tác quá nhanh, vui lòng đợi");

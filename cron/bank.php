@@ -8,6 +8,10 @@ require_once __DIR__ . "/../libs/lang.php";
 require_once __DIR__ . "/../libs/helper.php";
 require_once __DIR__ . "/../libs/database/users.php";
 $CMSNT = new DB();
+if (!orbit_cron_allowed()) {
+    http_response_code(403);
+    exit("cron_forbidden");
+}
 $user = new users();
 
 $CMSNT->update("settings", ["value" => time()], " `name` = 'check_time_cron_bank' ");

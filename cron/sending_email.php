@@ -7,6 +7,10 @@ require_once __DIR__ . "/../libs/helper.php";
 require_once __DIR__ . "/../libs/lang.php";
 require_once __DIR__ . "/../libs/sendEmail.php";
 $CMSNT = new DB();
+if (!orbit_cron_allowed()) {
+    http_response_code(403);
+    exit("cron_forbidden");
+}
 if($CMSNT->site("check_time_cron_sending_email") < time() && time() - $CMSNT->site("check_time_cron_sending_email") < 3) {
     exit("Thao tác quá nhanh, vui lòng đợi");
 }
