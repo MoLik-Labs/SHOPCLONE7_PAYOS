@@ -44,6 +44,7 @@ class DB
             "affiliate_chat_id_telegram" => "",
             "affiliate_note" => "<p>Hoa hồng được cộng sau khi đơn của khách hoàn tất.</p>",
             "status_menu_tools" => "1",
+            "invoice_life_time" => "900",
             "card_status" => "0",
             "crypto_status" => "0",
             "paypal_status" => "0",
@@ -128,6 +129,12 @@ class DB
         }
         if (strpos($sql, "FROM `payment_manual`") !== false) {
             return $f["payment_manual"];
+        }
+        if (strpos($sql, "FROM `invoices`") !== false) {
+            return $f["invoice"];
+        }
+        if (strpos($sql, "FROM `wallets`") !== false) {
+            return array("qrcode" => "");
         }
         if (strpos($sql, "`token_2fa`") !== false && strpos($sql, "`token` =") === false) {
             return array("id" => 1, "banned" => 0, "status_2fa" => 1);
@@ -558,6 +565,11 @@ if (!function_exists("preview_fixtures")) {
                 array("product_code" => "WN1", "c" => 11), array("product_code" => "TC1", "c" => 100),
             ),
             "store_total" => 8,
+            "invoice" => array("trans_id" => "INV7Q2M9X", "name" => "Nạp 500.000đ",
+                "description" => "Chuyển USDT tương đương", "received" => 19.84, "address" => "TXk9PreviewAddress000000000000000",
+                "network" => "TRC20", "status" => "pending", "return_url" => "",
+                "wallet_id" => 1, "create_gettime" => date("Y-m-d H:i:s", time() - 120),
+                "user_id" => 7),
             /* Affiliate programme: three referred customers, a commission ledger and two withdrawals. */
             "aff_referrals" => array(
                 array("id" => 21, "username" => "minhanh", "create_date" => "2026-11-14 10:12:00", "ref_amount" => 96000),

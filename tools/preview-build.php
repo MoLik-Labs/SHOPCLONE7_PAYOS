@@ -138,6 +138,21 @@ if (!function_exists("format_cash")) {
         return number_format((float) $number, 0, ",", ".") . (string) $suffix;
     }
 }
+if (!function_exists("getRowRealtime")) {
+    /* libs/helper.php reads one column from one row. The preview has no helper.php (it opens a
+       database), so answer from the fixture map: only `users.ref_ck` and `wallets.qrcode` are used. */
+    function getRowRealtime($table, $id, $row)
+    {
+        if ($table === "wallets") {
+            return "";
+        }
+        if ($table === "users") {
+            $user = isset(DB::$fixtures["user"]) ? DB::$fixtures["user"] : array();
+            return isset($user[$row]) ? $user[$row] : 0;
+        }
+        return 0;
+    }
+}
 if (!function_exists("active_sidebar")) {
     function active_sidebar($action)
     {
@@ -433,6 +448,13 @@ $pages["tool-random-face.html"] = array(
     "title" => "Ảnh khuôn mặt ngẫu nhiên — bản xem trước",
     "html" => preview_render($root, "views/client/tool-random-face.php", array(),
         array("module" => "client", "action" => "tool-random-face"), $fixtures),
+);
+
+/* 6j. the legacy USDT invoice page an old e-mail link points at */
+$pages["payment.html"] = array(
+    "title" => "Hoá đơn USDT (kênh cũ) — bản xem trước",
+    "html" => preview_render($root, "views/client/payment.php", array(),
+        array("module" => "client", "action" => "payment", "trans_id" => "INV7Q2M9X"), $fixtures),
 );
 
 /* 7. the styleguide (design system reference) */

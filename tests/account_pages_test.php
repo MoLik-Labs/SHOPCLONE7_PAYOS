@@ -119,6 +119,9 @@ class AccountStubDB
     public $logs;
     public $sites;
     public $referrals = array();
+    public $invoice = array("trans_id" => "INV7Q2M9X", "name" => "Nạp 500.000đ", "received" => 19.84,
+        "address" => "TXk9PreviewAddress000000000000000", "network" => "TRC20", "status" => "pending",
+        "return_url" => "", "wallet_id" => 1, "create_gettime" => "2026-11-16 09:58:00");
     public $affLog = array();
     public $withdrawals = array();
     public $sql = array();
@@ -260,6 +263,9 @@ class AccountStubDB
         if (strpos($sql, "FROM `users`") !== false && strpos($sql, "`ref_id`") !== false
             && strpos($sql, "COUNT(") === false) {
             return count($this->referrals);
+        }
+        if (strpos($sql, "FROM `invoices`") !== false) {
+            return strpos($sql, "'INV7Q2M9X'") !== false ? $this->invoice : false;
         }
         if (strpos($sql, "FROM `favorites`") !== false && strpos($sql, "COUNT(") !== false) {
             return array("total" => count($this->favorites));
@@ -681,6 +687,27 @@ $GLOBALS["CMSNT"]->sites["status_menu_tools"] = "0";
 $page = render_view("views/client/tools.php", array("action" => "tools"), array(), array());
 check("the tools area is closed when the owner turns it off", $page["redirect"] === BASE_URL(""));
 $GLOBALS["CMSNT"]->sites["status_menu_tools"] = "1";
+
+echo "\nlegacy USDT invoice\n";
+$page = render_view("views/client/payment.php",
+    array("action" => "payment", "trans_id" => "INV7Q2M9X"), array(), array());
+assert_clean("invoice", $page["html"]);
+check("invoice does not redirect a real id", $page["redirect"] === null);
+check("invoice shows the amount", strpos($page["html"], "19.84") !== false);
+check("invoice shows the receiving address", strpos($page["html"], "TXk9PreviewAddress") !== false);
+check("invoice offers the address copy button", strpos($page["html"], 'data-copy="#invoice-address"') !== false);
+/* The warning depends on PAYOS_ENABLED, which is part of the deployment's environment, not the code:
+   assert the branch exists and that the page never invites a transfer to a retired channel. */
+$invoiceView = (string) file_get_contents(__DIR__ . "/../views/client/payment.php");
+check("invoice warns when the USDT channel is retired", strpos($invoiceView, "Kênh USDT đã ngừng nhận") !== false
+    && strpos($invoiceView, 'payos_config()["enabled"]') !== false);
+check("a pending invoice never claims to be paid", strpos($page["html"], "Chờ chuyển khoản") !== false);
+$page = render_view("views/client/payment.php",
+    array("action" => "payment", "trans_id" => "<script>alert(1)</script>"), array(), array());
+check("a malformed invoice id is rejected", $page["redirect"] === BASE_URL(""));
+$page = render_view("views/client/payment.php",
+    array("action" => "payment", "trans_id" => "NOSUCHINVOICE"), array(), array());
+check("an unknown invoice id goes home", $page["redirect"] === BASE_URL(""));
 
 echo "\nguest access\n";
 /* is_user.php runs once per process, so this is a source-level check: a request without a session is
