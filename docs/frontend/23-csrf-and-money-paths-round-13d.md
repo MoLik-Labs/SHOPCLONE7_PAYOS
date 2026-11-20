@@ -327,8 +327,10 @@ unrecognised Host headers and use a trusted canonical origin for security-sensit
 `tests/js/checkout_retry_test.mjs` exercises the panel with a mocked DOM and fetch failures; the full
 gate also runs the existing JavaScript contract test. These are not real-browser or database race tests.
 The full gate on this revision: 321 PHP files linted, 239 files scanned, 38 static pages rendered,
-54 suites, one not run (`payos_service`, no disposable database), zero failures. No live provider
-or licence call was made.
+54 suites, three not run (`gtf_credit_path`, `gtf_service`, `payos_service`, no disposable database),
+zero partial suites and zero failures. The harness now counts successful whole-suite skips as NOT RUN
+and does not hide a nonzero failure just because output also contains a skip. No live provider or licence
+call was made.
 
 ## 7. Commission and debit bookkeeping
 

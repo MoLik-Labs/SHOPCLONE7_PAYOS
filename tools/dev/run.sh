@@ -15,7 +15,7 @@ cd "$ROOT"
 MODE=all
 if [ "${1:-}" = "--lint-only" ]; then MODE=lint; shift; fi
 if [ "${1:-}" = "--tests-only" ]; then MODE=tests; shift; fi
-fails=0; runs=0; notrun=0
+fails=0; runs=0; notrun=0; partial=0
 
 # node_modules is excluded from the workspace snapshot, so a fresh checkout has the PHP harness but
 # not its runtime. Install it once instead of failing every suite with ERR_MODULE_NOT_FOUND.
@@ -92,12 +92,19 @@ if [ "$MODE" != "lint" ]; then
     echo "=== $label"
     out=$(node tools/dev/phpcl.mjs "$suite" 2>&1); status=$?
     echo "$out"
+    # Whole-suite skips in GTF return 0; do not count them as passing. A skip embedded in a
+    # successful suite is partial coverage, while any failing suite stays failed even if it also
+    # printed a SKIP line. payos_service has its own explicit missing-database preflight.
     if [ "$status" -ne 0 ]; then
-      if grep -qE 'SKIP: |Set PAYOS_TEST_DB' <<<"$out"; then
+      if [ "$label" = "payos_service" ] && [ "$out" = 'Set PAYOS_TEST_DB to a disposable payos_test_* database.' ]; then
         notrun=$((notrun+1)); echo "NOT RUN (no disposable database): $label"
       else
         fails=$((fails+1)); echo "FAILED: $label"
       fi
+    elif [[ "$out" == SKIP:* ]] && [[ "$out" != *$'\n'* ]]; then
+      notrun=$((notrun+1)); echo "NOT RUN (suite skipped): $label"
+    elif grep -q '^SKIP:' <<<"$out"; then
+      partial=$((partial+1)); echo "PARTIAL (some checks skipped): $label"
     fi
   done
   if [ "$#" -eq 0 ]; then
@@ -114,5 +121,5 @@ if [ "$MODE" != "lint" ]; then
   fi
 fi
 
-echo "=== SUMMARY: $runs suites, $notrun not run, $fails failures"
+echo "=== SUMMARY: $runs suites, $notrun not run, $partial partial, $fails failures"
 [ "$fails" -eq 0 ]
