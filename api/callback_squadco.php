@@ -20,22 +20,53 @@ if(!hash_equals(strtoupper(hash_hmac("sha512", $input, $CMSNT->site("squadco_Sec
     exit("Xác minh webhook thất bại");
 }
 $body = json_decode($input, true);
+/* The HMAC covers the raw body, so a well-formed signature from Squad still has to carry the shape
+   this handler reads; anything else is refused instead of reaching an undefined index. */
+if(!is_array($body) || !isset($body["Body"]) || !is_array($body["Body"])) {
+    exit("Dữ liệu không hợp lệ");
+}
 $body = $body["Body"];
-$amount = floor(check_string($body["amount"]) / 100);
+/* Squad sends the minor unit (kobo). Parse it as an amount: 0, "", "abc" and negatives are not a
+   payment, and the invoice lookup below must never run with a value 0 would match. */
+$rawAmount = orbit_gateway_amount(isset($body["amount"]) ? $body["amount"] : null);
+if($rawAmount === false || $rawAmount <= 0) {
+    exit("số tiền không hợp lệ");
+}
+$amount = floor($rawAmount / 100);
+if($amount <= 0) {
+    exit("số tiền không hợp lệ");
+}
 if(isset($body["currency"]) && $body["currency"] != $CMSNT->site("squadco_currency_code")) {
     exit("Currency không hợp lệ");
 }
-if($CMSNT->get_row(" SELECT * FROM `payment_squadco` WHERE `transaction_ref` = '" . check_string($body["transaction_ref"]) . "' AND `amount` = '" . $amount . "' ")) {
+$transactionRef = isset($body["transaction_ref"]) ? check_string($body["transaction_ref"]) : "";
+if($transactionRef === "") {
+    exit("transaction_ref empty");
+}
+if($CMSNT->get_row(" SELECT * FROM `payment_squadco` WHERE `transaction_ref` = '" . $transactionRef . "' AND `amount` = '" . $amount . "' ")) {
     exit("Đơn này xử lý rồi");
 }
-if(!($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `email` = '" . check_string($body["email"]) . "' "))) {
+$email = isset($body["email"]) ? check_string($body["email"]) : "";
+if($email === "") {
     exit("Email user không tồn tại trong hệ thống");
 }
-$price = $amount * $CMSNT->site("squadco_rate");
-$isInsert = $CMSNT->insert("payment_squadco", ["user_id" => $getUser["id"], "transaction_ref" => check_string($body["transaction_ref"]), "amount" => $amount, "price" => $price, "create_gettime" => gettime()]);
-if($isInsert) {
-    $user = new users();
-    $user->AddCredits($getUser["id"], $price, __("Recharge Squadco") . " #" . check_string($body["transaction_ref"]), "TOPUP_Squadco_" . check_string($body["transaction_ref"]));
+if(!($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `email` = '" . $email . "' "))) {
+    exit("Email user không tồn tại trong hệ thống");
+}
+$rate = (float) $CMSNT->site("squadco_rate");
+$price = round($amount * $rate, 2);
+if($amount <= 0 || $price <= 0) {
+    exit("số tiền không hợp lệ");
+}
+/* Credit first: the ledger key `TOPUP_Squadco_<ref>` is the real dedupe, and a credit that fails
+   leaves no row behind, so the provider's retry is free to run instead of being rejected forever. */
+$user = new users();
+$credit = $user->AddCreditsChecked($getUser["id"], $price, __("Recharge Squadco") . " #" . $transactionRef, "TOPUP_Squadco_" . $transactionRef);
+if($credit === "failed") {
+    exit("credit_failed");
+}
+$isInsert = $CMSNT->insert("payment_squadco", ["user_id" => $getUser["id"], "transaction_ref" => $transactionRef, "amount" => $amount, "price" => $price, "create_gettime" => gettime()]);
+if($isInsert && $credit === "credited") {
     $CMSNT->insert("deposit_log", ["user_id" => $getUser["id"], "method" => "Squadco", "amount" => $price, "received" => $price, "create_time" => time(), "is_virtual" => 0]);
     $my_text = $CMSNT->site("noti_recharge");
     $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);

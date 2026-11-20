@@ -32,6 +32,10 @@ function getIfExistsResult($username) {
 
 
 $CMSNT = new DB();
+if (!orbit_cron_allowed()) {
+    http_response_code(403);
+    exit("cron_forbidden");
+}
 
 
 $lastCronTime = $CMSNT->site("time_cron_checklive_hotmail");

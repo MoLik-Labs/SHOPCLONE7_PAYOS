@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>[preview] Nạp tiền qua payOS | Orbit Shop</title>
+<meta name="description" content="Shop bán tài khoản &amp; licence">
+<meta name="keywords" content="shop, licence">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Nạp tiền qua payOS | Orbit Shop">
+<meta property="og:description" content="Shop bán tài khoản &amp; licence">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#fbf9f4">
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/latin-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/vietnamese-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/client/orbit/tokens.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/base.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/components.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/shell.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/store.css?v=preview">
+<link rel="stylesheet" href="assets/preview.css">
+</head>
+<body class="page-recharge">
+<div class="preview-banner"><strong>Bản xem trước tĩnh</strong> — trang thật chạy trong shop, ở đây dùng dữ liệu mẫu. Không có dữ liệu thật, không gọi mạng, không phát nhạc. Biểu đồ vẽ bằng SVG nội bộ; bảng vẫn đọc được khi tắt JavaScript.</div>
+
+<a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+<header class="topbar" data-topbar>
+  <div class="container topbar__inner">
+    <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+    <nav class="topbar__nav" aria-label="Điều hướng chính">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank" aria-current="page">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__actions">
+      <a class="topbar__balance" href="#preview-client-profile">
+        <span>Số dư</span>
+        <strong>250.000đ</strong>
+      </a>
+      <a class="btn btn--ghost topbar__account" href="#preview-client-profile">Tài khoản</a>
+      <a class="btn topbar__cta" href="#preview-action-recharge-bank">Nạp tiền</a>
+      <button class="topbar__toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-toggle>
+        <span class="sr-only">Mở menu</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+    </div>
+  </div>
+  <div class="topbar__sheet" id="site-menu" data-menu-sheet hidden>
+    <nav aria-label="Điều hướng trên điện thoại">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__sheet-actions">
+      <a class="btn btn--ghost btn--block" href="#preview-client-logout">Đăng xuất</a>
+      <a class="btn btn--primary btn--block" href="#preview-action-recharge-bank">Nạp tiền</a>
+    </div>
+  </div>
+</header>
+<main id="main" class="container section">
+<section class="section section--tight" aria-labelledby="recharge-title">
+  <div class="container">
+
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Ví của bạn</p>
+        <h1 id="recharge-title">Nạp tiền</h1>
+        <p class="muted m0">Chuyển khoản ngân hàng qua payOS; tiền vào số dư sau khi hệ thống xác nhận giao dịch.</p>
+      </div>
+      <p class="recharge-balance">
+        <span>Số dư hiện tại</span>
+        <strong>250.000đ</strong>
+      </p>
+    </div>
+
+        <div class="alert alert--warn" role="alert">
+      Nạp tiền qua payOS hiện chưa sẵn sàng. Vui lòng liên hệ quản trị viên hoặc quay lại sau.
+    </div>
+    
+    <div class="recharge-grid">
+      <div class="panel">
+        <div class="panel__head">
+          <h2 class="panel__title">Chuyển khoản ngân hàng</h2>
+          <span class="pill">payOS</span>
+        </div>
+        <div class="panel__body">
+          <p class="muted">Nhập số tiền cần nạp, mở trang thanh toán payOS và quét mã QR bằng ứng dụng ngân hàng của bạn.</p>
+          <form id="payos-form" class="recharge-form" method="post" action="#ajaxs/client/payos.php">
+            <input type="hidden" name="action" value="create">
+            <input type="hidden" name="csrf_token" value="0000000000000000000000000000000000000000000000000000000000000000">
+            <div class="field">
+              <label class="field__label" for="payos-amount">Số tiền nạp (VND)</label>
+              <input class="input" id="payos-amount" name="amount" type="number" inputmode="numeric"
+                min="10000" max="5000000"
+                step="1" required placeholder="Ví dụ: 100000" aria-describedby="payos-amount-help" disabled>
+              <p class="field__help" id="payos-amount-help">Từ 10.000 đ đến 5.000.000 đ mỗi giao dịch.</p>
+            </div>
+            <button class="btn btn--primary" id="payos-submit" type="submit" disabled>Tạo thanh toán payOS</button>
+          </form>
+          <div id="payos-form-message" class="alert recharge-message" role="status" aria-live="polite" hidden></div>
+          <p class="small faint m0">Tiền được cộng vào số dư sau khi hệ thống xác nhận giao dịch. Vui lòng chuyển đúng số tiền và nội dung trên trang payOS.</p>
+        </div>
+      </div>
+
+      <aside class="panel panel--muted recharge-steps">
+        <div class="panel__head">
+          <h2 class="panel__title">Ba bước</h2>
+        </div>
+        <div class="panel__body">
+          <ol class="steps">
+            <li><strong>Nhập số tiền</strong><span>Chọn số tiền trong giới hạn và bấm “Tạo thanh toán payOS”.</span></li>
+            <li><strong>Quét mã và chuyển khoản</strong><span>Mở trang payOS, quét QR bằng ứng dụng ngân hàng và hoàn tất.</span></li>
+            <li><strong>Quay lại kiểm tra</strong><span>Trạng thái tự cập nhật; số tiền đã cộng hiện trong lịch sử bên dưới.</span></li>
+          </ol>
+          <p class="small faint m0">Khi đã chuyển khoản, hãy kiểm tra trạng thái trước khi tạo giao dịch mới.</p>
+        </div>
+      </aside>
+    </div>
+
+    <div id="payos-payment-panel" class="panel recharge-status" hidden>
+      <div class="panel__head">
+        <h2 class="panel__title">Trạng thái giao dịch</h2>
+        <span class="pill pill--accent mono" id="payos-current-code"></span>
+      </div>
+      <div class="panel__body">
+        <div id="payos-payment-message" class="alert recharge-message" role="status" aria-live="polite">Đang kiểm tra trạng thái thanh toán…</div>
+        <div class="recharge-status__actions">
+          <button type="button" id="payos-check-status" class="btn btn--sm">Kiểm tra lại</button>
+          <a id="payos-resume-payment" class="btn btn--sm btn--primary" rel="noopener noreferrer" hidden>Mở thanh toán</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel recharge-history">
+      <div class="panel__head">
+        <h2 class="panel__title">Lịch sử nạp tiền</h2>
+        <span class="small faint">20 giao dịch gần nhất</span>
+      </div>
+      <div class="panel__body">
+                <div class="alert alert--warn" role="alert">Chưa thể tải lịch sử nạp tiền. Vui lòng thử lại sau.</div>
+                <div class="table-wrap">
+          <table class="table table--compact">
+            <thead>
+              <tr>
+                <th scope="col">Mã giao dịch</th>
+                <th scope="col" class="num">Số tiền</th>
+                <th scope="col" class="num">Đã cộng</th>
+                <th scope="col">Trạng thái</th>
+                <th scope="col">Thời gian tạo</th>
+                <th scope="col"><span class="sr-only">Thao tác</span></th>
+              </tr>
+            </thead>
+            <tbody>
+                                        </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+    'use strict';
+    var settings = {"endpoint":"https:\/\/shop.example\/ajaxs\/client\/payos.php","returnUrl":"https:\/\/shop.example\/?action=recharge-bank","orderCode":"","initialPayment":null,"minAmount":10000,"maxAmount":5000000};
+    var form = document.getElementById('payos-form');
+    var submit = document.getElementById('payos-submit');
+    var formMessage = document.getElementById('payos-form-message');
+    var paymentMessage = document.getElementById('payos-payment-message');
+    var checkButton = document.getElementById('payos-check-status');
+    var resumePayment = document.getElementById('payos-resume-payment');
+    var pollingTimer = null;
+    var deadline = 0;
+    var checking = false;
+    var knownCredited = Boolean(settings.initialPayment && settings.initialPayment.status === 'PAID' && settings.initialPayment.credited_at);
+
+    function showMessage(element, message, kind) {
+        element.textContent = message;
+        element.className = 'alert recharge-message' + (kind === 'success' ? ' alert--ok' : kind === 'warning' ? ' alert--warn' : kind === 'danger' ? ' alert--danger' : '');
+        element.hidden = false;
+    }
+    function money(amount) {
+        return Number(amount || 0).toLocaleString('vi-VN') + ' đ';
+    }
+    function checkoutUrl(value) {
+        try {
+            var url = new URL(value);
+            if (url.protocol !== 'https:' || url.username || url.password ||
+                !(url.hostname === 'payos.vn' || url.hostname.endsWith('.payos.vn'))) {
+                return null;
+            }
+            return url.href;
+        } catch (error) {
+            return null;
+        }
+    }
+    async function request(url, options, timeoutMs) {
+        var controller = new AbortController();
+        var timeout = setTimeout(function () { controller.abort(); }, timeoutMs || 40000);
+        try {
+            var response = await fetch(url, Object.assign({credentials: 'same-origin', cache: 'no-store', signal: controller.signal}, options || {}));
+            var result;
+            try { result = await response.json(); } catch (error) {
+                throw new Error('Phiên đăng nhập hoặc kết nối đã thay đổi. Hãy tải lại trang và thử lại.');
+            }
+            if (!response.ok || result.status !== 'success') {
+                throw new Error(result.msg || result.message || 'Không thể xử lý yêu cầu. Vui lòng thử lại.');
+            }
+            return result;
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (submit.disabled || !form.reportValidity()) { return; }
+        var amount = document.getElementById('payos-amount').value;
+        if (!/^\d+$/.test(amount) || Number(amount) < settings.minAmount || Number(amount) > settings.maxAmount) {
+            showMessage(formMessage, 'Vui lòng nhập số tiền nguyên trong giới hạn cho phép.', 'warning');
+            return;
+        }
+        submit.disabled = true;
+        submit.textContent = 'Đang tạo thanh toán…';
+        showMessage(formMessage, 'Đang kết nối với payOS…', 'info');
+        try {
+            var result = await request(settings.endpoint, {method: 'POST', body: new URLSearchParams(new FormData(form))});
+            var url = checkoutUrl(result.checkoutUrl);
+            if (!url) { throw new Error('Chưa nhận được liên kết thanh toán hợp lệ. Hãy kiểm tra lịch sử trước khi thử lại.'); }
+            window.location.assign(url);
+        } catch (error) {
+            showMessage(formMessage, error.name === 'AbortError'
+                ? 'Kết nối đang chậm. Hãy tải lại lịch sử để kiểm tra giao dịch trước khi tạo lại.'
+                : error.message, 'danger');
+            submit.disabled = false;
+            submit.textContent = 'Tạo thanh toán payOS';
+        }
+    });
+
+    function renderPayment(payment) {
+        var status = String(payment.status || '').toUpperCase();
+        var resumeUrl = checkoutUrl(payment.checkout_url);
+        resumePayment.hidden = !resumeUrl || (status !== 'PENDING' && status !== 'UNDERPAID');
+        if (!resumePayment.hidden) { resumePayment.href = resumeUrl; }
+        if (status === 'PAID' && payment.credited_at) {
+            showMessage(paymentMessage, 'Thanh toán thành công. Đã cộng ' + money(payment.credited_amount) + ' vào số dư của bạn.', 'success');
+            if (!knownCredited) {
+                knownCredited = true;
+                window.location.replace(settings.returnUrl + '&orderCode=' + encodeURIComponent(settings.orderCode));
+            }
+            return true;
+        }
+        if (status === 'CANCELLED' || status === 'EXPIRED' || status === 'FAILED') {
+            var messages = {
+                CANCELLED: 'Giao dịch đã hủy. Bạn có thể tạo một thanh toán mới.',
+                EXPIRED: 'Giao dịch đã hết hạn. Nếu đã chuyển khoản, vui lòng liên hệ quản trị viên kèm mã giao dịch.',
+                FAILED: 'Giao dịch chưa hoàn tất. Nếu đã chuyển khoản, vui lòng liên hệ quản trị viên kèm mã giao dịch.'
+            };
+            showMessage(paymentMessage, messages[status], 'warning');
+            return true;
+        }
+        if (status === 'CREATE_FAILED') {
+            showMessage(paymentMessage, 'Chưa nhận được kết quả tạo thanh toán. Hệ thống đang kiểm tra lại. Hãy kiểm tra hoặc liên hệ quản trị viên với mã giao dịch trước khi tạo mới.', 'warning');
+            return false;
+        }
+        showMessage(paymentMessage, status === 'UNDERPAID'
+            ? 'Giao dịch chưa nhận đủ tiền. Hãy mở lại trang thanh toán để kiểm tra hướng dẫn.'
+            : 'Đang chờ xác nhận thanh toán. Trạng thái tự cập nhật mỗi 5 giây.', 'info');
+        return false;
+    }
+    async function checkStatus() {
+        if (checking || !settings.orderCode) { return; }
+        clearTimeout(pollingTimer);
+        if (Date.now() >= deadline) {
+            showMessage(paymentMessage, 'Đã dừng kiểm tra tự động sau 5 phút. Bấm “Kiểm tra lại” để cập nhật; giao dịch vẫn được ghi nhận khi có xác nhận thanh toán.', 'info');
+            return;
+        }
+        checking = true;
+        checkButton.disabled = true;
+        var terminal = false;
+        try {
+            var result = await request(settings.endpoint + '?action=status&orderCode=' + encodeURIComponent(settings.orderCode), undefined, Math.min(40000, deadline - Date.now()));
+            if (!result.payment || String(result.payment.order_code) !== settings.orderCode) {
+                throw new Error('Chưa tìm thấy giao dịch thuộc tài khoản của bạn.');
+            }
+            terminal = renderPayment(result.payment);
+        } catch (error) {
+            showMessage(paymentMessage, error.name === 'AbortError'
+                ? 'Kết nối đang chậm. Hệ thống sẽ thử kiểm tra lại.' : error.message, 'warning');
+        } finally {
+            checking = false;
+            checkButton.disabled = false;
+        }
+        if (!terminal && Date.now() < deadline) {
+            pollingTimer = setTimeout(checkStatus, Math.min(5000, deadline - Date.now()));
+        } else if (!terminal) {
+            showMessage(paymentMessage, 'Đã dừng kiểm tra tự động sau 5 phút. Bấm “Kiểm tra lại” để cập nhật; giao dịch vẫn được ghi nhận khi có xác nhận thanh toán.', 'info');
+        }
+    }
+    checkButton.addEventListener('click', function () {
+        deadline = Date.now() + 300000;
+        checkStatus();
+    });
+    if (settings.orderCode) {
+        if (knownCredited) {
+            renderPayment(settings.initialPayment);
+        } else {
+            deadline = Date.now() + 300000;
+            checkStatus();
+        }
+    }
+    window.addEventListener('pagehide', function () { clearTimeout(pollingTimer); });
+})();
+</script>
+
+</main>
+<footer class="footer">
+  <div class="container">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+        <p class="footer__note">Shop bán tài khoản &amp; licence</p>
+        <ul class="footer__contact">
+<li><span class="footer__label">Hotline</span> <a href="tel:0909123456">0909 123 456</a></li>
+<li><span class="footer__label">Email</span> <a href="mailto:support@orbit.example">support@orbit.example</a></li>
+<li><span class="footer__label">Địa chỉ</span> Quận 1, TP. Hồ Chí Minh</li>        </ul>
+      </div>
+      <div class="footer__cols">
+        <nav class="footer__col" aria-label="Mua hàng">
+          <h2 class="footer__heading">Mua hàng</h2>
+          <ul>
+            <li><a href="#preview-client-home#san-pham">Tất cả sản phẩm</a></li>
+            <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+            <li><a href="#preview-product-orders">Lịch sử đơn hàng</a></li>
+            <li><a href="#preview-client-favorites">Sản phẩm yêu thích</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Hỗ trợ">
+          <h2 class="footer__heading">Hỗ trợ</h2>
+          <ul>
+            <li><a href="#preview-client-faq">Câu hỏi thường gặp</a></li>
+            <li><a href="#preview-client-contact">Liên hệ</a></li>
+            <li><a href="#preview-client-policy">Chính sách</a></li>
+            <li><a href="#preview-client-document-api">Tài liệu API</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Tài khoản">
+          <h2 class="footer__heading">Tài khoản</h2>
+          <ul>
+            <li><a href="#preview-client-login">Đăng nhập</a></li>
+            <li><a href="#preview-client-register">Đăng ký</a></li>
+            <li><a href="#preview-client-login">Nạp tiền</a></li>
+            <li><a href="#preview-client-profile">Trang cá nhân</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+    <div class="footer__legal">
+      <p>© 2026 Orbit Shop</p>
+      <p class="footer__credit">Thiết kế &amp; vận hành: <strong>Orbit Office</strong></p>
+      <ul class="footer__legal-links">
+        <li><a href="#preview-client-policy">Chính sách</a></li>
+        <li><a href="#preview-client-faq">FAQ</a></li>
+        <li><a href="#preview-client-contact">Liên hệ</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+<script defer src="assets/client/orbit/store.js?v=preview"></script>
+<script defer src="assets/common/csrf.js?v=preview"></script>
+</body>
+</html>

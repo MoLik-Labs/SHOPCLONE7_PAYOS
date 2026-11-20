@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>[preview] Lịch sử hoa hồng | Orbit Shop</title>
+<meta name="description" content="Từng lần cộng hoa hồng và số dư sau mỗi lần.">
+<meta name="keywords" content="shop, licence">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Lịch sử hoa hồng | Orbit Shop">
+<meta property="og:description" content="Từng lần cộng hoa hồng và số dư sau mỗi lần.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#fbf9f4">
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/latin-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/vietnamese-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/client/orbit/tokens.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/base.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/components.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/shell.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/store.css?v=preview">
+<link rel="stylesheet" href="assets/preview.css">
+</head>
+<body class="page-content">
+<div class="preview-banner"><strong>Bản xem trước tĩnh</strong> — trang thật chạy trong shop, ở đây dùng dữ liệu mẫu. Không có dữ liệu thật, không gọi mạng, không phát nhạc. Biểu đồ vẽ bằng SVG nội bộ; bảng vẫn đọc được khi tắt JavaScript.</div>
+
+<a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+<header class="topbar" data-topbar>
+  <div class="container topbar__inner">
+    <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+    <nav class="topbar__nav" aria-label="Điều hướng chính">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__actions">
+      <a class="topbar__balance" href="#preview-client-profile">
+        <span>Số dư</span>
+        <strong>250.000đ</strong>
+      </a>
+      <a class="btn btn--ghost topbar__account" href="#preview-client-profile">Tài khoản</a>
+      <a class="btn topbar__cta" href="#preview-action-recharge-bank">Nạp tiền</a>
+      <button class="topbar__toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-toggle>
+        <span class="sr-only">Mở menu</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+    </div>
+  </div>
+  <div class="topbar__sheet" id="site-menu" data-menu-sheet hidden>
+    <nav aria-label="Điều hướng trên điện thoại">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__sheet-actions">
+      <a class="btn btn--ghost btn--block" href="#preview-client-logout">Đăng xuất</a>
+      <a class="btn btn--primary btn--block" href="#preview-action-recharge-bank">Nạp tiền</a>
+    </div>
+  </div>
+</header>
+<main id="main" class="container section">
+<section class="section section--tight" aria-labelledby="aff-history-title">
+  <div class="container">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Cộng tác viên</p>
+        <h1 id="aff-history-title">Lịch sử hoa hồng</h1>
+        <p class="muted m0">Mỗi dòng là một lần cộng hoa hồng, kèm số dư trước và sau để bạn đối chiếu.</p>
+      </div>
+      <div class="page-head__aside">
+        <span class="stat__label">Hoa hồng khả dụng</span>
+        <strong class="stat__value">480.000đ</strong>
+      </div>
+    </div>
+
+    <nav class="account-nav account-nav--sub" aria-label="Khu vực cộng tác viên"><a href="#preview-client-affiliates">Chương trình</a><a href="#preview-client-affiliate-history" aria-current="page">Lịch sử hoa hồng</a><a href="#preview-client-affiliate-withdraw">Rút hoa hồng</a></nav>
+    <div class="panel">
+      <div class="panel__head">
+        <h2 class="panel__title">Biến động hoa hồng</h2>
+        <span class="pill">3 dòng</span>
+      </div>
+
+      <form class="toolbar" method="get" action="#preview-client-affiliate-history">
+        <div class="toolbar__field">
+          <label class="toolbar__label" for="affh-reason">Lý do</label>
+          <input class="input" id="affh-reason" name="reason" type="search" maxlength="64"
+            value="" placeholder="Ví dụ: hoa hồng">
+        </div>
+        <div class="toolbar__field">
+          <label class="toolbar__label" for="affh-time">Khoảng ngày</label>
+          <input class="input" id="affh-time" name="time" type="text" inputmode="numeric"
+            placeholder="2026-01-01 to 2026-01-31" value="">
+        </div>
+        <div class="toolbar__field">
+          <label class="toolbar__label" for="affh-short">Thời gian</label>
+          <select class="select" id="affh-short" name="shortByDate">
+            <option value="">Tất cả</option>
+            <option value="1">Hôm nay</option>
+            <option value="2">Tuần này</option>
+            <option value="3">Tháng này</option>
+          </select>
+        </div>
+        <div class="toolbar__field">
+          <label class="toolbar__label" for="affh-limit">Số dòng</label>
+          <select class="select" id="affh-limit" name="limit">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                      </select>
+        </div>
+        <div class="toolbar__spacer"></div>
+        <button class="btn btn--primary" type="submit">Lọc</button>
+        <a class="btn btn--ghost" href="#preview-client-affiliate-history">Bỏ lọc</a>
+      </form>
+
+            <div class="table-wrap">
+        <table class="table table--zebra table--responsive">
+          <thead>
+            <tr>
+              <th scope="col">Thời gian</th>
+              <th scope="col">Lý do</th>
+              <th scope="col" class="num">Trước</th>
+              <th scope="col" class="num">Thay đổi</th>
+              <th scope="col" class="num">Sau</th>
+            </tr>
+          </thead>
+          <tbody>
+                        <tr>
+              <td data-label="Thời gian" class="mono small">2026-11-16 09:20:00</td>
+              <td data-label="Lý do">Hoa hồng đơn #ORB00118</td>
+              <td data-label="Trước" class="num">384.000đ</td>
+              <td data-label="Thay đổi" class="num"><span class="pill pill--ok">+96.000đ</span></td>
+              <td data-label="Sau" class="num">480.000đ</td>
+            </tr>
+                        <tr>
+              <td data-label="Thời gian" class="mono small">2026-11-08 21:02:00</td>
+              <td data-label="Lý do">Hoa hồng đơn #ORB00097</td>
+              <td data-label="Trước" class="num">336.000đ</td>
+              <td data-label="Thay đổi" class="num"><span class="pill pill--ok">+48.000đ</span></td>
+              <td data-label="Sau" class="num">384.000đ</td>
+            </tr>
+                        <tr>
+              <td data-label="Thời gian" class="mono small">2026-10-28 09:30:00</td>
+              <td data-label="Lý do">Hoa hồng đơn #ORB00081</td>
+              <td data-label="Trước" class="num">192.000đ</td>
+              <td data-label="Thay đổi" class="num"><span class="pill pill--ok">+144.000đ</span></td>
+              <td data-label="Sau" class="num">336.000đ</td>
+            </tr>
+                      </tbody>
+        </table>
+      </div>
+      
+          </div>
+  </div>
+</section>
+</main>
+<footer class="footer">
+  <div class="container">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+        <p class="footer__note">Shop bán tài khoản &amp; licence</p>
+        <ul class="footer__contact">
+<li><span class="footer__label">Hotline</span> <a href="tel:0909123456">0909 123 456</a></li>
+<li><span class="footer__label">Email</span> <a href="mailto:support@orbit.example">support@orbit.example</a></li>
+<li><span class="footer__label">Địa chỉ</span> Quận 1, TP. Hồ Chí Minh</li>        </ul>
+      </div>
+      <div class="footer__cols">
+        <nav class="footer__col" aria-label="Mua hàng">
+          <h2 class="footer__heading">Mua hàng</h2>
+          <ul>
+            <li><a href="#preview-client-home#san-pham">Tất cả sản phẩm</a></li>
+            <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+            <li><a href="#preview-product-orders">Lịch sử đơn hàng</a></li>
+            <li><a href="#preview-client-favorites">Sản phẩm yêu thích</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Hỗ trợ">
+          <h2 class="footer__heading">Hỗ trợ</h2>
+          <ul>
+            <li><a href="#preview-client-faq">Câu hỏi thường gặp</a></li>
+            <li><a href="#preview-client-contact">Liên hệ</a></li>
+            <li><a href="#preview-client-policy">Chính sách</a></li>
+            <li><a href="#preview-client-document-api">Tài liệu API</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Tài khoản">
+          <h2 class="footer__heading">Tài khoản</h2>
+          <ul>
+            <li><a href="#preview-client-login">Đăng nhập</a></li>
+            <li><a href="#preview-client-register">Đăng ký</a></li>
+            <li><a href="#preview-client-login">Nạp tiền</a></li>
+            <li><a href="#preview-client-profile">Trang cá nhân</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+    <div class="footer__legal">
+      <p>© 2026 Orbit Shop</p>
+      <p class="footer__credit">Thiết kế &amp; vận hành: <strong>Orbit Office</strong></p>
+      <ul class="footer__legal-links">
+        <li><a href="#preview-client-policy">Chính sách</a></li>
+        <li><a href="#preview-client-faq">FAQ</a></li>
+        <li><a href="#preview-client-contact">Liên hệ</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+<script defer src="assets/client/orbit/store.js?v=preview"></script>
+<script defer src="assets/common/csrf.js?v=preview"></script>
+</body>
+</html>

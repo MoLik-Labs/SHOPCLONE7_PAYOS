@@ -5,7 +5,11 @@ if(!defined("IN_SITE")) {
 }
 $body = ["title" => "Edit Role", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
 $body["header"] = "\n\n";
-$body["footer"] = "\n<!-- bs-custom-file-input -->\n<script src=\"" . BASE_URL("public/AdminLTE3/") . "plugins/bs-custom-file-input/bs-custom-file-input.min.js\"></script>\n<!-- Page specific script -->\n<script>\n\$(function () {\n  bsCustomFileInput.init();\n});\n</script> \n";
+/* This page pulled AdminLTE's bs-custom-file-input from public/AdminLTE3, which is not
+   part of this checkout: the script 404'd and bsCustomFileInput.init() threw before the
+   rest of the inline JS ran. The markup uses plain <input type="file"> and needs none
+   of it. */
+$body["footer"] = "";
 require_once __DIR__ . "/../../models/is_admin.php";
 if(isset($_GET["id"])) {
     $id = check_string($_GET["id"]);
@@ -32,7 +36,13 @@ if(isset($_POST["Save"])) {
     if(empty($_POST["role"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng chọn quyền cho role\")){window.history.back().location.reload();}</script>");
     }
-    $role = json_encode($_POST["role"]);
+    $roleKeys = array();
+    foreach ($admin_roles as $roleCategory) {
+        foreach ($roleCategory as $roleKey => $roleLabel) {
+            $roleKeys[] = (string) $roleKey;
+        }
+    }
+    $role = json_encode(array_values(array_intersect($roleKeys, array_map("strval", (array) $_POST["role"]))));
     $isInsert = $CMSNT->update("admin_role", ["name" => $name, "role" => $role, "update_gettime" => gettime()], " `id` = '" . $row["id"] . "' ");
     if($isInsert) {
         $Mobile_Detect = new Mobile_Detect();

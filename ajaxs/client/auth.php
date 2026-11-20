@@ -12,26 +12,23 @@ if(isset($_POST["action"])) {
     if($CMSNT->site("status") != 1 && !isset($_SESSION["admin_login"])) {
         exit(json_encode(["status" => "error", "msg" => __("The system is under maintenance, please come back later!")]));
     }
+    /* Login, registration, the e-mail OTP and both password-reset links run before — or instead of —
+       a signed-in session, so they cannot carry its token. Every other action here changes the account
+       and must prove it came from a page we served. */
+    orbit_require_csrf(array("Login", "Register", "ForgotPassword", "Verify2FA", "VerifyOTP", "ChangePassword"));
     if($_POST["action"] == "Login") {
         $username = check_string($_POST["username"]);
-        $password = check_string($_POST["password"]);
+        /* Credentials are bytes, not HTML: a password containing ', &, < or leading spaces must not
+           be rewritten before hashing. The legacy sanitised form is still accepted below. */
+        $password = isset($_POST["password"]) && is_string($_POST["password"]) ? $_POST["password"] : "";
         if(!($username = check_string($_POST["username"]))) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập username")]));
         }
         if(empty($_POST["password"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập mật khẩu")]));
         }
-        if($CMSNT->site("reCAPTCHA_status") == 1) {
-            if(empty($_POST["recaptcha"])) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
-            $recaptcha = check_string($_POST["recaptcha"]);
-            $url = "https://www.google.com/recaptcha/api/siteverify?secret=" . $CMSNT->site("reCAPTCHA_secret_key") . "&response=" . $recaptcha;
-            $verify = file_get_contents($url);
-            $captcha_success = json_decode($verify);
-            if(!$captcha_success->success) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
+        if(!orbit_recaptcha_ok(isset($_POST["recaptcha"]) ? $_POST["recaptcha"] : "")) {
+            exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
         }
         $getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `username` = '" . $username . "' ");
         if(!$getUser) {
@@ -39,7 +36,7 @@ if(isset($_POST["action"])) {
             $max_attempts = $CMSNT->site("limit_block_ip_login");
             $lockout_time = 900;
             $attempt = $CMSNT->get_row("SELECT * FROM `failed_attempts` WHERE `ip_address` = '" . $ip_address . "' AND `type` = 'Login' ");
-            if($attempt && $max_attempts <= $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
+            if($attempt && 0 < (int) $max_attempts && (int) $max_attempts <= (int) $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
                 $CMSNT->insert("block_ip", ["ip" => $ip_address, "attempts" => $attempt["attempts"], "create_gettime" => gettime(), "banned" => 1, "reason" => __("Đăng nhập thất bại nhiều lần")]);
                 $CMSNT->remove("failed_attempts", " `ip_address` = '" . $ip_address . "' ");
                 exit(json_encode(["status" => "error", "msg" => __("IP của bạn đã bị khóa. Vui lòng thử lại sau.")]));
@@ -55,12 +52,12 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "error", "msg" => __("Bạn đang thao tác quá nhanh, vui lòng đợi")]));
         }
         if($CMSNT->site("type_password") == "bcrypt") {
-            if(!password_verify($password, $getUser["password"])) {
+            if(!orbit_password_matches($password, $getUser["password"])) {
                 $ip_address = myip();
                 $max_attempts = $CMSNT->site("limit_block_ip_login");
                 $lockout_time = 900;
                 $attempt = $CMSNT->get_row("SELECT * FROM `failed_attempts` WHERE `ip_address` = '" . $ip_address . "' AND `type` = 'Login' ");
-                if($attempt && $max_attempts <= $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
+                if($attempt && 0 < (int) $max_attempts && (int) $max_attempts <= (int) $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
                     $CMSNT->insert("block_ip", ["ip" => $ip_address, "attempts" => $attempt["attempts"], "create_gettime" => gettime(), "banned" => 1, "reason" => __("Đăng nhập thất bại nhiều lần")]);
                     $CMSNT->remove("failed_attempts", " `ip_address` = '" . $ip_address . "' ");
                     exit(json_encode(["status" => "error", "msg" => __("IP của bạn đã bị khóa. Vui lòng thử lại sau.")]));
@@ -70,7 +67,9 @@ if(isset($_POST["action"])) {
                 } else {
                     $CMSNT->insert("failed_attempts", ["ip_address" => $ip_address, "attempts" => 1, "type" => "Login", "create_gettime" => gettime()]);
                 }
-                if($CMSNT->site("limit_block_client_login") <= $getUser["login_attempts"]) {
+                /* 0 means "no limit": the old comparison banned an account on its first wrong password. */
+                $maxClientAttempts = (int) $CMSNT->site("limit_block_client_login");
+                if($maxClientAttempts > 0 && $maxClientAttempts <= (int) $getUser["login_attempts"]) {
                     $User = new users();
                     $User->Banned($getUser["id"], __("Đăng nhập thất bại nhiều lần"));
                     exit(json_encode(["status" => "error", "msg" => __("Tài khoản của bạn đã bị tạm khoá do đang nhập sai nhiều lần")]));
@@ -78,12 +77,12 @@ if(isset($_POST["action"])) {
                 $CMSNT->cong("users", "login_attempts", 1, " `id` = '" . $getUser["id"] . "' ");
                 exit(json_encode(["status" => "error", "msg" => __("Thông tin đăng nhập không chính xác")]));
             }
-        } elseif($getUser["password"] != TypePassword($password)) {
+        } elseif(!orbit_password_matches($password, $getUser["password"])) {
             $ip_address = myip();
             $max_attempts = $CMSNT->site("limit_block_ip_login");
             $lockout_time = 900;
             $attempt = $CMSNT->get_row("SELECT * FROM `failed_attempts` WHERE `ip_address` = '" . $ip_address . "' AND `type` = 'Login' ");
-            if($attempt && $max_attempts <= $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
+            if($attempt && 0 < (int) $max_attempts && (int) $max_attempts <= (int) $attempt["attempts"] && time() - strtotime($attempt["create_gettime"]) < $lockout_time) {
                 $CMSNT->insert("block_ip", ["ip" => $ip_address, "attempts" => $attempt["attempts"], "create_gettime" => gettime(), "banned" => 1, "reason" => __("Đăng nhập thất bại nhiều lần")]);
                 $CMSNT->remove("failed_attempts", " `ip_address` = '" . $ip_address . "' ");
                 exit(json_encode(["status" => "error", "msg" => __("IP của bạn đã bị khóa. Vui lòng thử lại sau.")]));
@@ -93,7 +92,9 @@ if(isset($_POST["action"])) {
             } else {
                 $CMSNT->insert("failed_attempts", ["ip_address" => $ip_address, "attempts" => 1, "type" => "Login", "create_gettime" => gettime()]);
             }
-            if($CMSNT->site("limit_block_client_login") <= $getUser["login_attempts"]) {
+            /* 0 means "no limit": the old comparison banned an account on its first wrong password. */
+                $maxClientAttempts = (int) $CMSNT->site("limit_block_client_login");
+                if($maxClientAttempts > 0 && $maxClientAttempts <= (int) $getUser["login_attempts"]) {
                 $User = new users();
                 $User->Banned($getUser["id"], __("Đăng nhập thất bại nhiều lần"));
                 exit(json_encode(["status" => "error", "msg" => __("Tài khoản của bạn đã bị tạm khoá do đang nhập sai nhiều lần")]));
@@ -138,7 +139,7 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "verify", "url" => base_url("?action=verify_2fa&token=" . $token_2fa), "msg" => __("Vui lòng xác minh 2FA để hoàn tất quá trình đăng nhập")]));
         }
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Warning] " . __("Thực hiện đăng nhập vào website")]);
-        $CMSNT->update("users", ["token_2fa" => NULL, "limit_2fa" => 0, "token_otp_mail" => NULL, "limit_otp_mail" => 0, "otp_mail" => NULL, "ip" => myip(), "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
+        $CMSNT->update("users", ["token_2fa" => NULL, "limit_2fa" => 0, "token_otp_mail" => NULL, "limit_otp_mail" => 0, "otp_mail" => NULL, "ip" => myip(), "login_attempts" => 0, "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
         if($getUser["status_noti_login_to_mail"] == 1 && $CMSNT->site("email_temp_subject_warning_login") != "") {
             $content = $CMSNT->site("email_temp_content_warning_login");
             $content = str_replace("{domain}", $_SERVER["SERVER_NAME"], $content);
@@ -157,6 +158,7 @@ if(isset($_POST["action"])) {
             $bcc = $CMSNT->site("title");
             sendCSM($getUser["email"], $getUser["username"], $subject, $content, $bcc);
         }
+        orbit_password_upgrade($getUser["id"], $password);
         set_auth_cookie($getUser["token"], time() + $CMSNT->site("session_login"));
         $_SESSION["login"] = $getUser["token"];
         exit(json_encode(["status" => "success", "msg" => __("Đăng nhập thành công!")]));
@@ -170,17 +172,8 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập mã xác minh")]));
         }
         $code = check_string($_POST["code"]);
-        if($CMSNT->site("reCAPTCHA_status") == 1) {
-            if(empty($_POST["recaptcha"])) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
-            $recaptcha = check_string($_POST["recaptcha"]);
-            $url = "https://www.google.com/recaptcha/api/siteverify?secret=" . $CMSNT->site("reCAPTCHA_secret_key") . "&response=" . $recaptcha;
-            $verify = file_get_contents($url);
-            $captcha_success = json_decode($verify);
-            if(!$captcha_success->success) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
+        if(!orbit_recaptcha_ok(isset($_POST["recaptcha"]) ? $_POST["recaptcha"] : "")) {
+            exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
         }
         $getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token_2fa` = '" . $token_2fa . "' AND `token_2fa` IS NOT NULL ");
         if(!$getUser) {
@@ -204,7 +197,7 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "error", "msg" => __("Mã xác minh không chính xác")]));
         }
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Warning] " . __("Xác thực 2FA thành công - đã đăng nhập vào website")]);
-        $CMSNT->update("users", ["token_2fa" => NULL, "limit_2fa" => 0, "ip" => myip(), "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
+        $CMSNT->update("users", ["token_2fa" => NULL, "limit_2fa" => 0, "ip" => myip(), "login_attempts" => 0, "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
         if($getUser["status_noti_login_to_mail"] == 1 && $CMSNT->site("email_temp_subject_warning_login") != "") {
             $content = $CMSNT->site("email_temp_content_warning_login");
             $content = str_replace("{domain}", $_SERVER["SERVER_NAME"], $content);
@@ -236,17 +229,8 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập OTP")]));
         }
         $code = check_string($_POST["code"]);
-        if($CMSNT->site("reCAPTCHA_status") == 1) {
-            if(empty($_POST["recaptcha"])) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
-            $recaptcha = check_string($_POST["recaptcha"]);
-            $url = "https://www.google.com/recaptcha/api/siteverify?secret=" . $CMSNT->site("reCAPTCHA_secret_key") . "&response=" . $recaptcha;
-            $verify = file_get_contents($url);
-            $captcha_success = json_decode($verify);
-            if(!$captcha_success->success) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
+        if(!orbit_recaptcha_ok(isset($_POST["recaptcha"]) ? $_POST["recaptcha"] : "")) {
+            exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
         }
         if(!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token_otp_mail` = '" . $token_otp_mail . "' AND `token_otp_mail` IS NOT NULL "))) {
             exit(json_encode(["status" => "error", "msg" => __("Thông tin đăng nhập không chính xác")]));
@@ -268,7 +252,7 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "error", "msg" => __("OTP không chính xác")]));
         }
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Warning] " . __("Xác thực OTP thành công - đã đăng nhập vào website")]);
-        $CMSNT->update("users", ["token_otp_mail" => NULL, "limit_otp_mail" => 0, "otp_mail" => NULL, "ip" => myip(), "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
+        $CMSNT->update("users", ["token_otp_mail" => NULL, "limit_otp_mail" => 0, "otp_mail" => NULL, "ip" => myip(), "login_attempts" => 0, "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
         if($getUser["status_noti_login_to_mail"] == 1 && $CMSNT->site("email_temp_subject_warning_login") != "") {
             $content = $CMSNT->site("email_temp_content_warning_login");
             $content = str_replace("{domain}", $_SERVER["SERVER_NAME"], $content);
@@ -312,22 +296,19 @@ if(isset($_POST["action"])) {
         if(empty($_POST["repassword"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập lại mật khẩu")]));
         }
-        $password = check_string($_POST["password"]);
-        $repassword = check_string($_POST["repassword"]);
-        if($password != $repassword) {
+        /* Hash the bytes the user typed; see orbit_password_matches() for why. */
+        $password = isset($_POST["password"]) && is_string($_POST["password"]) ? $_POST["password"] : "";
+        $repassword = isset($_POST["repassword"]) && is_string($_POST["repassword"]) ? $_POST["repassword"] : "";
+        /* The storefront already enforces six characters in its form handler. Enforce it here too:
+           a direct POST must not be able to create a password the UI itself rejects. */
+        if(strlen($password) < 6) {
+            exit(json_encode(["status" => "error", "msg" => __("Mật khẩu cần ít nhất 6 ký tự")]));
+        }
+        if($password !== $repassword) {
             exit(json_encode(["status" => "error", "msg" => __("Xác minh mật khẩu không chính xác")]));
         }
-        if($CMSNT->site("reCAPTCHA_status") == 1) {
-            if(empty($_POST["recaptcha"])) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
-            $recaptcha = check_string($_POST["recaptcha"]);
-            $url = "https://www.google.com/recaptcha/api/siteverify?secret=" . $CMSNT->site("reCAPTCHA_secret_key") . "&response=" . $recaptcha;
-            $verify = file_get_contents($url);
-            $captcha_success = json_decode($verify);
-            if(!$captcha_success->success) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
+        if(!orbit_recaptcha_ok(isset($_POST["recaptcha"]) ? $_POST["recaptcha"] : "")) {
+            exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
         }
         if(0 < $CMSNT->num_rows("SELECT * FROM `users` WHERE `username` = '" . $username . "' ")) {
             exit(json_encode(["status" => "error", "msg" => __("Tên đăng nhập đã tồn tại trong hệ thống")]));
@@ -340,7 +321,7 @@ if(isset($_POST["action"])) {
         }
         $google2fa = new PragmaRX\Google2FAQRCode\Google2FA();
         $token = random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 64) . time() . md5(random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 32));
-        $isCreate = $CMSNT->insert("users", ["ref_id" => isset($_COOKIE["aff"]) ? check_string($_COOKIE["aff"]) : 0, "utm_source" => isset($_COOKIE["utm_source"]) ? check_string($_COOKIE["utm_source"]) : "web", "token" => $token, "username" => $username, "email" => $email, "password" => TypePassword($password), "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "create_date" => gettime(), "update_date" => gettime(), "time_session" => time(), "api_key" => md5($username . time() . random("QWERTYUIOPASDFGHJKL", 6)), "SecretKey_2fa" => $google2fa->generateSecretKey()]);
+        $isCreate = $CMSNT->insert("users", ["ref_id" => isset($_COOKIE["aff"]) ? check_string($_COOKIE["aff"]) : 0, "utm_source" => isset($_COOKIE["utm_source"]) ? check_string($_COOKIE["utm_source"]) : "web", "token" => $token, "username" => $username, "email" => $email, "password" => TypePassword($password), "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "create_date" => gettime(), "update_date" => gettime(), "time_session" => time(), "api_key" => bin2hex(random_bytes(16)), "SecretKey_2fa" => $google2fa->generateSecretKey()]);
         if($isCreate) {
             $CMSNT->insert("logs", ["user_id" => $CMSNT->get_row("SELECT * FROM `users` WHERE `token` = '" . $token . "' ")["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Create an account")]);
             set_auth_cookie($token, time() + $CMSNT->site("session_login"));
@@ -391,16 +372,13 @@ if(isset($_POST["action"])) {
         if($_POST["renewpassword"] != $_POST["newpassword"]) {
             exit(json_encode(["status" => "error", "msg" => __("Xác nhận mật khẩu không chính xác")]));
         }
-        $password = check_string($_POST["password"]);
-        if($CMSNT->site("type_password") == "bcrypt") {
-            if(!password_verify($password, $getUser["password"])) {
-                exit(json_encode(["status" => "error", "msg" => __("Mật khẩu hiện tại không đúng")]));
-            }
-        } elseif($getUser["password"] != TypePassword($password)) {
+        $password = isset($_POST["password"]) && is_string($_POST["password"]) ? $_POST["password"] : "";
+        if(!orbit_password_matches($password, $getUser["password"])) {
             exit(json_encode(["status" => "error", "msg" => __("Mật khẩu hiện tại không đúng")]));
         }
         $token = random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 64) . time() . md5(random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 32));
-        $isUpdate = $CMSNT->update("users", ["password" => TypePassword(check_string($_POST["newpassword"])), "token" => $token], " `token` = '" . check_string($_POST["token"]) . "' ");
+        $newPassword = isset($_POST["newpassword"]) && is_string($_POST["newpassword"]) ? $_POST["newpassword"] : "";
+        $isUpdate = $CMSNT->update("users", ["password" => TypePassword($newPassword), "token" => $token], " `token` = '" . check_string($_POST["token"]) . "' ");
         if($isUpdate) {
             $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Change Password")]);
             exit(json_encode(["status" => "success", "msg" => __("Change password successfully!")]));
@@ -411,20 +389,24 @@ if(isset($_POST["action"])) {
         if($CMSNT->site("status_demo") != 0) {
             exit(json_encode(["status" => "error", "msg" => __("Chức năng này không thể sử dụng trên website demo")]));
         }
-        if($CMSNT->site("status_demo") != 0) {
-            exit(json_encode(["status" => "error", "msg" => __("Chức năng này không thể sử dụng trên website demo")]));
-        }
         if(!$CMSNT->site("smtp_password")) {
             exit(json_encode(["status" => "error", "msg" => __("Website chưa được cấu hình SMTP, vui lòng liên hệ Admin")]));
         }
         if(empty($_POST["email"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập địa chỉ Email")]));
         }
-        if(!($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `email` = '" . check_string($_POST["email"]) . "' "))) {
-            exit(json_encode(["status" => "error", "msg" => __("Địa chỉ Email này không tồn tại trong hệ thống")]));
+        /*
+         * Do not reveal whether an address is registered: that answer let anyone turn the form into
+         * an account-enumeration oracle. The response is the same either way; a registered address
+         * gets the mail, an unregistered one simply gets nothing.
+         */
+        $forgotUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `email` = '" . check_string($_POST["email"]) . "' ");
+        if(!$forgotUser) {
+            exit(json_encode(["status" => "success", "msg" => __("Nếu địa chỉ Email tồn tại trong hệ thống, bạn sẽ nhận được thư đặt lại mật khẩu trong ít phút.")]));
         }
-        if(time() - $getUser["time_forgot_password"] < 60) {
-            exit(json_encode(["status" => "error", "msg" => __("Vui lòng thử lại trong ít phút")]));
+        $getUser = $forgotUser;
+        if(time() - (int) $getUser["time_forgot_password"] < 60) {
+            exit(json_encode(["status" => "success", "msg" => __("Nếu địa chỉ Email tồn tại trong hệ thống, bạn sẽ nhận được thư đặt lại mật khẩu trong ít phút.")]));
         }
         $token = md5(random("QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 6) . time()) . md5(random("QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 55));
         if($CMSNT->site("email_temp_subject_forgot_password") != "") {
@@ -482,7 +464,7 @@ if(isset($_POST["action"])) {
         if($_POST["renewpassword"] != $_POST["newpassword"]) {
             exit(json_encode(["status" => "error", "msg" => __("Xác nhận mật khẩu không chính xác")]));
         }
-        $password = check_string($_POST["newpassword"]);
+        $password = isset($_POST["newpassword"]) && is_string($_POST["newpassword"]) ? $_POST["newpassword"] : "";
         $token = random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 64) . time() . md5(random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 32));
         $isUpdate = $CMSNT->update("users", ["token_forgot_password" => NULL, "password" => TypePassword($password), "token" => $token], " `id` = '" . $getUser["id"] . "' ");
         if($isUpdate) {
@@ -499,13 +481,18 @@ if(isset($_POST["action"])) {
         exit(json_encode(["status" => "error", "msg" => __("Thay đổi mật khẩu thất bại")]));
     }
     if($_POST["action"] == "changeAPIKey") {
-        if(empty($_POST["token"])) {
+        /* The session already knows who is signed in; the posted token is only a fallback for an older
+           cached page. A new key is 32 lower-case hex (32 random bytes → 16 bytes hex), the same shape
+           the API endpoints already index, but from the CSPRNG instead of md5(username . time). */
+        $apiToken = !empty($_POST["token"]) ? check_string($_POST["token"])
+            : (isset($_SESSION["login"]) ? check_string($_SESSION["login"]) : "");
+        if($apiToken === "") {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng đăng nhập để sử dụng tính năng này")]));
         }
-        if(!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token` = '" . check_string($_POST["token"]) . "' AND `banned` = 0 "))) {
+        if(!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token` = '" . $apiToken . "' AND `banned` = 0 "))) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng đăng nhập để sử dụng tính năng này")]));
         }
-        $api_key = md5($getUser["username"] . time() . random("QWERTYUIOPASDFGHJKL", 6));
+        $api_key = bin2hex(random_bytes(16));
         $isUpdate = $CMSNT->update("users", ["api_key" => $api_key], " `id` = '" . $getUser["id"] . "' ");
         if($isUpdate) {
             $Mobile_Detect = new Mobile_Detect();

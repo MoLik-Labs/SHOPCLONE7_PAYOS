@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => __("Đơn hàng") . " | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n";
+$body["header"] = "\n<script src=\"" . BASE_URL("public/common/clipboard.js") . "\"></script>\n";
 $body["footer"] = "\n \n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
@@ -53,7 +53,7 @@ if(!empty($_GET["api_transid"])) {
     $where .= " AND `api_transid` LIKE \"%" . $api_transid . "%\" ";
 }
 if(!empty($_GET["supplier_id"])) {
-    $supplier_id = check_string($_GET["supplier_id"]);
+    $supplier_id = (int) check_string($_GET["supplier_id"]); /* it is an id; keep the filter numeric */
     $where .= " AND `supplier_id` = \"" . $supplier_id . "\" ";
 }
 if(!empty($_GET["username"])) {
@@ -198,6 +198,8 @@ echo __("Sản phẩm");
 echo "</th>\n                                        <th class=\"text-center\">";
 echo __("Thời gian");
 echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
+$orbitUserNames = orbit_user_names($listDatatable, "buyer");
+$orbitSupplierNames = orbit_lookup_names("suppliers", $listDatatable, "supplier_id", "domain");
 foreach ($listDatatable as $order) {
     echo "                                    <tr>\n                                        <td class=\"text-center\">\n                                            <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                <input type=\"checkbox\" class=\"form-check-input checkbox_product\"\n                                                    data-id=\"";
     echo $order["id"];
@@ -220,7 +222,7 @@ foreach ($listDatatable as $order) {
     echo "`)\" type=\"button\"><i\n                                                    class=\"fa-solid fa-rotate-left\"></i> Hoàn tiền</button>\n                                        </td>\n                                        <td class=\"text-center\">\n                                            <a class=\"text-primary\"\n                                                href=\"";
     echo base_url_admin("user-edit&id=" . $order["buyer"]);
     echo "\">";
-    echo getRowRealtime("users", $order["buyer"], "username");
+    echo orbit_user_name($orbitUserNames, $order["buyer"]);
     echo "                                                [ID ";
     echo $order["buyer"];
     echo "]</a>\n                                        </td>\n                                        <td>\n                                            Mã đơn hàng: #<strong>";
@@ -232,7 +234,7 @@ foreach ($listDatatable as $order) {
         echo "                                            Server API (nếu có):\n                                            <a\n                                                href=\"";
         echo base_url_admin("product-api-manager&id=" . $order["supplier_id"]);
         echo "\">";
-        echo $order["supplier_id"] != 0 ? getRowRealtime("suppliers", $order["supplier_id"], "domain") : "";
+        echo $order["supplier_id"] != 0 ? orbit_lookup_name($orbitSupplierNames, $order["supplier_id"]) : "";
         echo "</a><br>\n                                            ";
     }
     echo "                                        </td>\n                                        <td>\n                                            Số lượng: <strong>";

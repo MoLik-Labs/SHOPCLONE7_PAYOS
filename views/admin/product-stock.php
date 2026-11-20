@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => "Kho hàng sản phẩm | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n";
+$body["header"] = "\n<script src=\"" . BASE_URL("public/common/clipboard.js") . "\"></script>\n";
 $body["footer"] = "\n\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 if(isset($_GET["code"])) {
@@ -137,20 +137,47 @@ if(isset($_POST["RemoveAccounts"])) {
         });
     }
     if($_POST["type"] == "txt") {
-        $file_name = $_FILES["files_txt"]["name"];
-        $file_tmp = $_FILES["files_txt"]["tmp_name"];
-        $file_extension = pathinfo($file_name, PATHINFO_EXTENSION);
-        if(strtolower($file_extension) == "txt") {
-            $fileContent = file_get_contents($file_tmp);
-            $list = explode(PHP_EOL, check_string($fileContent));
-        } else {
+        /*
+         * Read the uploaded temp file, not whatever path happens to be in the request, and cap the
+         * size: file_get_contents() on an unvalidated 2 GB "txt" would exhaust the worker's memory.
+         */
+        $file = isset($_FILES["files_txt"]) && is_array($_FILES["files_txt"]) ? $_FILES["files_txt"] : null;
+        $fileError = $file === null ? UPLOAD_ERR_NO_FILE : (isset($file["error"]) ? $file["error"] : UPLOAD_ERR_NO_FILE);
+        if($file === null || $fileError !== UPLOAD_ERR_OK
+            || !isset($file["tmp_name"], $file["name"])
+            || !is_uploaded_file($file["tmp_name"])
+            || filesize($file["tmp_name"]) > 10 * 1024 * 1024
+            || strtolower(pathinfo((string) $file["name"], PATHINFO_EXTENSION)) != "txt") {
             exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng chọn file có định dạng .txt\")){window.history.back().location.reload();}</script>");
+        }
+        $fileContent = file_get_contents($file["tmp_name"]);
+        $list = explode(PHP_EOL, check_string((string) $fileContent));
+    }
+    /* Pre-load the uids already in stock for the whole import, so the per-row SELECT disappears.
+       A file of 5 000 accounts used to make 5 000–10 000 round trips. */
+    $existingUids = [];
+    if(isset($_POST["loc_trung_uid"]) && $_POST["loc_trung_uid"] == 1) {
+        $importUids = [];
+        foreach ($list as $importLine) {
+            $importUid = (string) explode("|", $importLine)[0];
+            if($importUid !== "") {
+                $importUids[$importUid] = true;
+            }
+        }
+        foreach (array_chunk(array_keys($importUids), 500) as $uidChunk) {
+            $quoted = [];
+            foreach ($uidChunk as $uidValue) {
+                $quoted[] = "'" . addslashes($uidValue) . "'";
+            }
+            foreach ($CMSNT->get_list("SELECT `uid` FROM `product_stock` WHERE `uid` IN (" . implode(",", $quoted) . ")") as $existingRow) {
+                $existingUids[(string) $existingRow["uid"]] = true;
+            }
         }
     }
     foreach ($list as $account) {
         list($uid) = explode("|", $account);
         if(isset($_POST["loc_trung_uid"]) && $_POST["loc_trung_uid"] == 1) {
-            if($CMSNT->get_row(" SELECT * FROM `product_stock` WHERE `uid` = '" . $uid . "' ")) {
+            if(isset($existingUids[(string) $uid])) {
                 $isUpdate = $CMSNT->update("product_stock", ["product_code" => $code, "seller" => $getUser["id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()], " `uid` = '" . $uid . "' ");
                 if($isUpdate) {
                     $value_update++;
@@ -158,6 +185,7 @@ if(isset($_POST["RemoveAccounts"])) {
             } else {
                 $isAdd = $CMSNT->insert("product_stock", ["product_code" => $code, "seller" => $getUser["id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
                 if($isAdd) {
+                    $existingUids[(string) $uid] = true;
                     $value_add++;
                 }
             }
@@ -194,7 +222,9 @@ if(isset($_POST["RemoveAccounts"])) {
     echo "</th>\n                                        <th class=\"text-center\">";
     echo __("Giá bán");
     echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
-    foreach ($CMSNT->get_list(" SELECT * FROM `products` WHERE `code` = '" . $code . "' ") as $product) {
+    $orbitStockProducts = $CMSNT->get_list(" SELECT * FROM `products` WHERE `code` = '" . $code . "' ");
+    $orbitStockCategoryNames = orbit_lookup_names("categories", $orbitStockProducts, "category_id");
+    foreach ($orbitStockProducts as $product) {
         echo "                                    <tr onchange=\"updateFormProduct(`";
         echo $product["id"];
         echo "`)\">\n                                        <td>\n                                            <a type=\"button\"\n                                                href=\"";
@@ -212,7 +242,7 @@ if(isset($_POST["RemoveAccounts"])) {
         echo ">\n                                            </div>\n                                        </td>\n                                        <td>\n                                            ";
         echo $product["name"];
         echo "                                        </td>\n                                        <td class=\"text-center\"><span\n                                                class=\"badge bg-primary\">";
-        echo getRowRealtime("categories", $product["category_id"], "name");
+        echo orbit_lookup_name($orbitStockCategoryNames, $product["category_id"]);
         echo "</span>\n                                        </td>\n                                        <td class=\"text-right\"><span\n                                                class=\"badge bg-danger\">";
         echo format_currency($product["price"]);
         echo "</span>\n                                        </td>\n                                    </tr>\n                                    ";
@@ -290,6 +320,7 @@ if(isset($_POST["RemoveAccounts"])) {
     echo " value=\"3\">\n                                            ";
     echo __("Tháng này");
     echo "                                        </option>\n                                    </select>\n                                </div>\n                            </div>\n                        </form>\n                        <div class=\"table-responsive table-wrapper mb-3\">\n                            <table class=\"table text-nowrap table-striped table-hover table-bordered\">\n                                <thead>\n                                    <tr>\n                                        <th class=\"text-center\">\n                                            <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                <input type=\"checkbox\" class=\"form-check-input\" name=\"check_all\"\n                                                    id=\"check_all_checkbox_product_stock\" value=\"option1\">\n                                            </div>\n                                        </th>\n                                        <th class=\"text-center\">UID</th>\n                                        <th class=\"text-center\">Tài khoản</th>\n                                        <th class=\"text-center\">Seller</th>\n                                        <th class=\"text-center\">Thời gian</th>\n                                        <th class=\"text-center\">Check live gần nhất</th>\n                                        <th class=\"text-center\">Type</th>\n                                        <th class=\"text-center\">Thao tác</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
+    $orbitUserNames = orbit_user_names($listDatatable, "seller");
     foreach ($listDatatable as $row) {
         echo "                                    <tr>\n                                        <td class=\"text-center\">\n                                            <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                <input type=\"checkbox\" class=\"form-check-input checkbox_product_stock\"\n                                                    data-id=\"";
         echo $row["id"];
@@ -304,7 +335,7 @@ if(isset($_POST["RemoveAccounts"])) {
         echo "</textarea>\n                                        </td>\n                                        <td class=\"text-center\"><a class=\"text-primary\"\n                                                href=\"";
         echo base_url_admin("user-edit&id=" . $row["seller"]);
         echo "\">";
-        echo getRowRealtime("users", $row["seller"], "username");
+        echo orbit_user_name($orbitUserNames, $row["seller"]);
         echo "                                                [ID ";
         echo $row["seller"];
         echo "]</a>\n                                        </td>\n                                        <td class=\"text-center\">\n                                            <small data-toggle=\"tooltip\" data-placement=\"bottom\"\n                                                title=\"";

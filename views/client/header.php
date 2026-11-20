@@ -3,6 +3,10 @@
 if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
+/* Baseline hardening headers; harmless for every rendered page. */
+if(function_exists("orbit_security_headers")) {
+    orbit_security_headers();
+}
 echo "<!doctype html>\n<html class=\"h-100\">\n\n<head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">\n    <meta http-equiv=\"Content-Security-Policy\" content=\"upgrade-insecure-requests\">\n    <link rel=\"canonical\" href=\"";
 echo url();
 echo "\" />\n    <title>";
@@ -67,9 +71,9 @@ echo "sweetalert2/sweetalert2.js\"></script>\n    <!-- Cute Alert -->\n    <link
 echo BASE_URL("public/");
 echo "cute-alert/style.css\" rel=\"stylesheet\" type=\"text/css\">\n    <script src=\"";
 echo BASE_URL("public/");
-echo "cute-alert/cute-alert.js\"></script>\n    <!-- Simple Notify CSS -->\n    <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/simple-notify@1.0.4/dist/simple-notify.css\" />\n    <!-- Simple Notify JS -->\n    <script src=\"https://cdn.jsdelivr.net/npm/simple-notify@1.0.4/dist/simple-notify.min.js\"></script>\n\n    <!-- jQuery -->\n    <script src=\"";
+echo "cute-alert/cute-alert.js\"></script>\n    <!-- Simple Notify CSS -->\n    <link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/simple-notify/simple-notify.css") . "\" />\n    <!-- Simple Notify JS -->\n    <script src=\"" . BASE_URL("public/common/vendor/simple-notify/simple-notify.min.js") . "\"></script>\n\n    <!-- jQuery -->\n    <script src=\"";
 echo base_url("public/js/jquery-3.6.0.js");
-echo "\"></script>\n\n    <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css\">\n    <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css\">\n\n    <script src=\"";
+echo "\"></script>\n\n    <link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/flatpickr/flatpickr.min.css") . "\">\n    \n    <script src=\"";
 echo base_url("public/js/main.js");
 echo "\"></script>\n    ";
 if($CMSNT->site("google_analytics_status") == 1) {

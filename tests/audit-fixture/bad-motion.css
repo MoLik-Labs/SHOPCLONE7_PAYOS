@@ -1,0 +1,4 @@
+/* wrong: animates without offering a reduced-motion path */
+.bad-motion {
+  transition: opacity 200ms ease;
+}

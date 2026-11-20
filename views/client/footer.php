@@ -103,9 +103,12 @@ echo "js/venobox.js\"></script>\n<script src=\"";
 echo BASE_URL("public/client/");
 echo "js/slick.js\"></script>\n<script src=\"";
 echo BASE_URL("public/client/");
-echo "js/main.js\"></script>\n<script src=\"https://cdn.jsdelivr.net/npm/flatpickr\"></script>\n<script>\nflatpickr(\"#example-flatpickr-range\");\n</script>\n<script src=\"https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js\"></script>\n\n";
+echo "js/main.js\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/flatpickr/flatpickr.min.js") . "\"></script>\n<script>\nflatpickr(\"#example-flatpickr-range\");\n</script>\n\n";
 echo $body["footer"];
 echo $CMSNT->site("javascript_footer");
+/* Orbit music player: renders nothing at all while public/music/playlist.json is empty. */
+require_once __DIR__ . "/../common/music_player.php";
+echo "<script src=\"" . BASE_URL("public/common/csrf.js") . "\"></script>\n";
 echo "</body>\n\n</html>";
 
 ?>

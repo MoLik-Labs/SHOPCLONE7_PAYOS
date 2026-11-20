@@ -1,53 +1,165 @@
 <?php
+/*
+ * Facebook UID live-check — Orbit v3.
+ *
+ * The check itself is unchanged: the browser asks Facebook for a profile picture and reads the size in
+ * the redirect. That is a heuristic, not proof of an active account, and the page says so. Rebuilt on
+ * the shared shell; it no longer pulls clipboard.js from a CDN (the copy buttons use the Clipboard API).
+ */
 
-if(!defined("IN_SITE")) {
+if (!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
-$body = ["title" => __("Công cụ Check Live UID Facebook") . " | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n \n";
-$body["footer"] = "\n\n";
-if(isset($_COOKIE["token"])) {
-    $getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `token` = '" . check_string($_COOKIE["token"]) . "' ");
-    if(!$getUser) {
-        header("location: " . BASE_URL("client/logout"));
-        exit;
-    }
-    $_SESSION["login"] = $getUser["token"];
-}
-if(isset($_SESSION["login"])) {
-    require_once __DIR__ . "/../../models/is_user.php";
-}
-if($CMSNT->site("status_menu_tools") != 1) {
-    redirect(base_url("client/home"));
-}
-require_once __DIR__ . "/header.php";
-require_once __DIR__ . "/nav.php";
-echo "\n\n<section class=\"py-5 inner-section profile-part\">\n    <div class=\"container\">\n        <div class=\"row\">\n            <div class=\"col-12\">\n                <div class=\"posterd home mb-3\" style=\"background-image: url(";
-echo base_url("mod/img/bg-intro.png");
-echo ")\">\n                    <div class=\"welcomto\">\n                        <div class=\"box-intro\">\n                            <img src=\"";
-echo base_url("mod/img/icon-facebook.png");
-echo "\" alt=\"Accnice\" width=\"70\" height=\"70\">\n                        </div>\n                        <div class=\"\">\n                            <div\n                                style=\"font-size: 15px; text-shadow: rgba(0, 0, 0, 0.25) 0px 3px 5px;font-family: Robot,Roboto,sans-serif;\">\n                                ";
-echo __("Bạn đang xem");
-echo "</div>\n                            <h1\n                                style=\"color: #fff; font-size: 25px; font-weight:500; margin-top: 10px; text-shadow: rgba(0, 0, 0, 0.25) 0px 3px 5px;font-family: Robot,Roboto,sans-serif;\">\n                                ";
-echo __("Tool Check live UID Facebook");
-echo "</h1>\n                        </div>\n                    </div>\n                </div>\n            </div>\n            ";
-require_once __DIR__ . "/widget_tools.php";
-echo "            <div class=\"mb-5\"></div>\n            <div class=\"col-12 d-flex justify-content-center mb-3\">\n                <div class=\"d-flex\">\n                    <span class=\"mx-1 px-4 py-3 border rounded bg-success text-white fw-bold\">\n                        Live: <span id=\"liveCount\">0</span>\n                    </span>\n                    <span class=\"mx-1 px-4 py-3 border rounded bg-danger text-white fw-bold\">\n                        Dead: <span id=\"dieCount\">0</span>\n                    </span>\n                    <span class=\"mx-1 px-4 py-3 border rounded bg-warning text-white fw-bold\">\n                        Checked: <span id=\"totalCount\">0</span> account\n                    </span>\n                </div>\n            </div>\n\n            <div class=\"col-md-12\">\n                <div class=\"account-card pt-3\">\n                    <div class=\"row mt-4\">\n                        <div class=\"col-12\">\n                            <div class=\"mb-3\">\n                                <div class=\"d-flex justify-content-between mb-2\">\n                                    <label for\n                                        class=\"form-label fw-bold text-success\">";
-echo __("Nhập danh sách UID");
-echo "</label>\n                                </div>\n                                <div class=\"form-group\">\n                                    <textarea class=\"form-control\" name id=\"listId\"\n                                        placeholder=\"";
-echo __("Mỗi dòng 1 UID");
-echo "\" rows=\"10\" autofocus></textarea>\n                                </div>\n                            </div>\n                            <center>\n                                <button class=\"btn btn-primary fw-bold mb-5\" id=\"btnStart\">\n                                    <i class=\"fa-solid fa-play\"></i> Start </button>\n                            </center>\n                        </div>\n                        <div class=\"col-12\">\n                            <div class=\"row\">\n                                <div class=\"col-md-6\">\n                                    <div class=\"mb-3\">\n                                        <div class=\"d-flex justify-content-between mb-2\">\n                                            <label for\n                                                class=\"form-label fw-bold text-success\">";
-echo __("Tài khoản Live");
-echo "</label>\n                                            <button class=\"btn btn-secondary btn-sm\"\n                                                id=\"btnCopyLive\"><b>Copy</b></button>\n                                        </div>\n                                        <div class=\"form-group\">\n                                            <textarea class=\"form-control\" readonly name id=\"listLive\"\n                                                rows=\"10\"></textarea>\n                                        </div>\n                                    </div>\n                                </div>\n                                <div class=\"col-md-6\">\n                                    <div class=\"mb-3\">\n                                        <div class=\"d-flex justify-content-between mb-2\">\n                                            <label for\n                                                class=\"form-label fw-bold text-danger\">";
-echo __("Tài khoản Die");
-echo "</label>\n                                            <button class=\"btn btn-secondary btn-sm\"\n                                                id=\"btnCopyDie\"><b>Copy</b></button>\n                                        </div>\n                                        <div class=\"form-group\">\n                                            <textarea class=\"form-control\" readonly name id=\"listDie\"\n                                                rows=\"10\"></textarea>\n                                        </div>\n                                    </div>\n                                </div>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</section>\n\n\n\n";
-require_once __DIR__ . "/footer.php";
-echo "\n<script>\n\$(document).ready(() => {\n\n    \$(\"#btnCopyLive\").click(function() {\n        \$(\"#listLive\").select();\n        document.execCommand('copy');\n        showMessage(\"";
-echo __("Đã sao chép vào bộ nhớ tạm");
-echo "\", 'success');\n    });\n    \$(\"#btnCopyDie\").click(function() {\n        \$(\"#listDie\").select();\n        document.execCommand('copy');\n        showMessage(\"";
-echo __("Đã sao chép vào bộ nhớ tạm");
-echo "\", 'success');\n    });\n\n    let live = 0\n    let dies = 0\n    let c = 0;\n    var n;\n    var arrclone;\n\n    \$('#btnStart').click(() => {\n        //get data\n\n        if (!\$('#listId').val().trim()) {\n            get = false;\n            return;\n        }\n\n        \$(\"#listLive\").empty()\n        \$(\"#listDie\").empty()\n\n        die = 0\n        live = 0\n\n        n = 0\n        let data = \$('#listId').val().split(/\\r?\\n/);\n        //post len server\n\n        data = [...new Set(data)];\n\n\n        data = data.filter(nx => nx)\n        arrclone = data\n        c = arrclone.length;\n\n        \$(\"#totalCount\").html(c)\n\n        \$('#btnStart').html('<i class=\"fa fa-spinner fa-spin\"></i> Processing...').prop('disabled',\n            true);\n\n        for (var i = 0; i < 20; i++) {\n            check_live_uid_progress();\n        }\n\n        \$(\"#listId\").val(data.join(\"\\n\"))\n\n\n    })\n\n    function check_live_uid_progress() {\n\n\n        \$(\"#dieCount\").html(dies.length)\n\n        n = n + 1;\n        var m = n - 1;\n\n        if (!arrclone[m])\n            return;\n\n        var uid = get_uid(arrclone[m]);\n        var url = 'https://graph.facebook.com/' + uid + '/picture?type=normal';\n        fetch(url).then((response) => {\n            if (/100x100/.test(response.url)) {\n                \$('#liveCount').show();\n                live++;\n                \$('#liveCount').html(live);\n                \$('#listLive').append(arrclone[m] + \"\\n\");\n            } else {\n                \$('#dieCount').show();\n                die++;\n                \$('#dieCount').html(die);\n                \$('#listDie').append(arrclone[m] + \"\\n\");\n            }\n            // var r = \$(\".progress-bar\");\n            // var t = Math.floor(n * 100 / c);\n            // r.css(\"width\", t + \"%\"), jQuery(\"span\", r).html(t + \"%\");\n            if (n < c) {\n                check_live_uid_progress();\n            } else {\n                \$('#btnStart').html('<i class=\"fa-solid fa-play\"></i> Start ').prop('disabled', false);\n                return false;\n            }\n        });\n\n\n    }\n\n    function get_uid(data) {\n        if (data && data.includes(\"|\")) {\n            var clone = data.split(\"|\");\n            return clone[0];\n        }\n        return data;\n\n    }\n\n\n})\n</script>\n\n<script type=\"text/javascript\">\nnew ClipboardJS(\".copy\");\n\nfunction copy() {\n    showMessage(\"";
-echo __("Đã sao chép vào bộ nhớ tạm");
-echo "\", 'success');\n}\n</script>";
 
+if ((string) $CMSNT->site("status_menu_tools") !== "1") {
+    redirect(BASE_URL(""));
+}
+
+require_once __DIR__ . "/../common/store-shell.php";
+
+$storeShell = array(
+    "title" => __("Check live UID Facebook") . " | " . $CMSNT->site("title"),
+    "desc" => __("Kiểm tra nhanh một danh sách UID Facebook còn ảnh đại diện hay không."),
+    "nav" => store_nav_default($CMSNT),
+    "body_class" => "page-content",
+);
+store_shell_open($storeShell);
 ?>
+<section class="section section--tight" aria-labelledby="live-title">
+  <div class="container">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Công cụ</p>
+        <h1 id="live-title">Check live UID Facebook</h1>
+        <p class="muted m0">Dán mỗi UID một dòng. Kết quả là ước lượng từ ảnh đại diện công khai, không phải xác nhận tài khoản còn hoạt động.</p>
+      </div>
+    </div>
+
+    <div class="grid grid--2">
+      <div class="panel">
+        <div class="panel__head">
+          <h2 class="panel__title">Danh sách UID</h2>
+          <button class="btn btn--ghost" type="button" data-live-clear>Xoá</button>
+        </div>
+        <div class="panel__body">
+          <label class="field__label" for="live-input">Mỗi dòng một UID (hoặc chuỗi <code>uid|mật khẩu</code>)</label>
+          <textarea class="textarea" id="live-input" rows="10" spellcheck="false"
+            placeholder="100001234567890"></textarea>
+          <div class="hero__actions mt-4">
+            <button class="btn btn--primary" type="button" data-live-run>Bắt đầu</button>
+            <span class="small muted" data-live-progress role="status" aria-live="polite"></span>
+          </div>
+          <p class="small muted mt-4">
+            Mỗi lần kiểm tra, trình duyệt của bạn gọi thẳng tới Facebook. Shop không thấy và không lưu UID.
+          </p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__head">
+          <h2 class="panel__title">Kết quả</h2>
+          <span class="pill" data-live-total>0</span>
+        </div>
+        <div class="panel__body">
+          <div class="stats">
+            <div class="stat">
+              <span class="stat__label">Live</span>
+              <strong class="stat__value" data-live-ok>0</strong>
+            </div>
+            <div class="stat">
+              <span class="stat__label">Dead</span>
+              <strong class="stat__value" data-live-dead>0</strong>
+            </div>
+          </div>
+          <div class="copy-row mt-4">
+            <label class="sr-only" for="live-out">Kết quả</label>
+            <textarea class="textarea" id="live-out" rows="10" readonly></textarea>
+            <button class="btn btn--ghost" type="button" data-copy="#live-out">Sao chép</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+(function () {
+  "use strict";
+  var input = document.getElementById("live-input");
+  var output = document.getElementById("live-out");
+  var progress = document.querySelector("[data-live-progress]");
+  var okEl = document.querySelector("[data-live-ok]");
+  var deadEl = document.querySelector("[data-live-dead]");
+  var totalEl = document.querySelector("[data-live-total]");
+  var run = document.querySelector("[data-live-run]");
+  var clear = document.querySelector("[data-live-clear]");
+  var running = false;
+
+  function uidOf(line) {
+    return line.split("|")[0].trim();
+  }
+
+  function checkOne(uid) {
+    var url = "https://graph.facebook.com/" + encodeURIComponent(uid) + "/picture?type=normal";
+    return fetch(url, { mode: "no-cors" }).then(function (response) {
+      return { uid: uid, alive: /100x100/.test(response.url || "") };
+    }).catch(function () {
+      return { uid: uid, alive: false };
+    });
+  }
+
+  run.addEventListener("click", function () {
+    if (running) {
+      return;
+    }
+    var lines = Array.from(new Set(input.value.split(/\r?\n/).map(function (line) {
+      return line.trim();
+    }).filter(Boolean)));
+    if (!lines.length) {
+      progress.textContent = "Chưa có UID nào.";
+      return;
+    }
+    running = true;
+    run.disabled = true;
+    var live = [];
+    var dead = [];
+    var done = 0;
+    progress.textContent = "Đang kiểm tra…";
+    totalEl.textContent = String(lines.length);
+
+    function step() {
+      if (done >= lines.length) {
+        output.value = live.concat(dead).join("\n");
+        progress.textContent = "Xong " + done + " UID.";
+        running = false;
+        run.disabled = false;
+        return;
+      }
+      var line = lines[done];
+      done++;
+      checkOne(uidOf(line)).then(function (result) {
+        if (result.alive) {
+          live.push(line);
+          okEl.textContent = String(live.length);
+        } else {
+          dead.push(line);
+          deadEl.textContent = String(dead.length);
+        }
+        progress.textContent = done + "/" + lines.length;
+        step();
+      });
+    }
+    step();
+  });
+
+  clear.addEventListener("click", function () {
+    input.value = "";
+    output.value = "";
+    okEl.textContent = "0";
+    deadEl.textContent = "0";
+    totalEl.textContent = "0";
+    progress.textContent = "";
+  });
+})();
+</script>
+<?php
+store_shell_close();

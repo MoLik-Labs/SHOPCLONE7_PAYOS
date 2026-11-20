@@ -14,6 +14,7 @@ if(!isset($_POST["action"])) {
 if($CMSNT->site("status_demo") != 0) {
     exit(json_encode(["status" => "error", "msg" => __("Chức năng này không thể sử dụng trên website demo")]));
 }
+orbit_require_csrf();
 if($_POST["action"] == "cap_nhat_san_pham_nhanh") {
     if(!checkPermission($getUser["admin"], "edit_product")) {
         exit(json_encode(["status" => "error", "msg" => "Bạn không có quyền sử dụng tính năng này"]));
@@ -102,20 +103,40 @@ if($_POST["action"] == "refundOrder") {
         exit(json_encode(["status" => "error", "msg" => __("Đơn hàng này đã được hoàn tiền rồi")]));
     }
     $User = new users();
-    $isRefund = $User->RefundCredits($product_order["buyer"], $product_order["pay"], __("Hoàn tiền đơn hàng") . " #" . $product_order["trans_id"], "REFUND_ORDER_" . $product_order["trans_id"]);
-    if($isRefund) {
-        $CMSNT->update("product_order", ["refund" => 1, "trash" => 1, "pay" => 0, "cost" => 0, "money" => 0], " `id` = '" . $id . "' ");
+    $refundState = $User->RefundCreditsChecked($product_order["buyer"], $product_order["pay"], __("Hoàn tiền đơn hàng") . " #" . $product_order["trans_id"], "REFUND_ORDER_" . $product_order["trans_id"]);
+    /*
+     * "duplicate" means this order's refund was already moved (a second click, or a retry after the
+     * response was lost) — the buyer has the money, so the order still has to be closed. Only
+     * "failed" stops here. The historical amounts stay on the row: every report filters
+     * `refund = 0`, so zeroing them only destroyed the record of what the customer actually paid.
+     */
+    if($refundState !== "failed") {
+        $CMSNT->update("product_order", ["refund" => 1, "trash" => 1], " `id` = '" . $id . "' ");
         if($CMSNT->site("cong_tien_nguoi_ban") == 1) {
-            $User->RemoveCredits($product_order["seller"], $product_order["pay"], __("Thu hồi hoàn tiền đơn hàng") . " #" . $product_order["trans_id"], "TAKE_REFUND_ORDER_" . $product_order["trans_id"]);
+            $isSellerTaken = $User->RemoveCredits($product_order["seller"], $product_order["pay"], __("Thu hồi hoàn tiền đơn hàng") . " #" . $product_order["trans_id"], "TAKE_REFUND_ORDER_" . $product_order["trans_id"]);
+            if(!$isSellerTaken) {
+                /* The seller keeps money the shop refunded; leave it visible instead of silent. */
+                $CMSNT->insert("logs", ["user_id" => $product_order["seller"], "ip" => myip(), "device" => (new Mobile_Detect())->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Chưa thu hồi được doanh thu của đơn hoàn tiền") . " #" . $product_order["trans_id"] . " (" . format_currency($product_order["pay"]) . ")"]);
+            }
         }
         $user = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $product_order["buyer"] . "' ");
         if($user["ref_id"] != 0) {
+            /* The refunded money must not still pay a commission. The purchase wrote the exact
+               amount into aff_log with the order trans_id; legacy rows without the tag are skipped
+               rather than recomputed at today's rate. */
+            $commission = $CMSNT->get_row("SELECT `sotienthaydoi` FROM `aff_log` WHERE `user_id` = " . (int) $user["ref_id"]
+                . " AND `reason` LIKE '%#" . addslashes($product_order["trans_id"]) . "' ORDER BY `id` DESC LIMIT 1");
+            if($commission && 0 < (float) $commission["sotienthaydoi"]) {
+                $User->ClawbackCommission($user["ref_id"], $product_order["buyer"], $commission["sotienthaydoi"], __("Thu hồi hoa hồng đơn hoàn tiền") . " #" . $product_order["trans_id"]);
+            }
         }
         $Mobile_Detect = new Mobile_Detect();
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Hoàn tiền đơn hàng") . " (" . $product_order["trans_id"] . ")"]);
-        exit(json_encode(["status" => "success", "msg" => __("Hoàn tiền đơn hàng thành công!")]));
+        exit(json_encode(["status" => "success", "msg" => $refundState === "duplicate"
+            ? __("Đơn hàng này đã được hoàn tiền trước đó; đã đóng đơn.")
+            : __("Hoàn tiền đơn hàng thành công!")]));
     }
-    exit(json_encode(["status" => "error", "msg" => __("Đơn hàng này đã được hoàn tiền rồi")]));
+    exit(json_encode(["status" => "error", "msg" => __("Chưa hoàn được tiền, vui lòng thử lại.")]));
 }
 if($_POST["action"] == "update_stt_table_product") {
     if(!checkPermission($getUser["admin"], "edit_product")) {
@@ -268,7 +289,9 @@ if($_POST["action"] == "logoutALL") {
         exit(json_encode(["status" => "error", "msg" => "Bạn không có quyền sử dụng tính năng này"]));
     }
     foreach ($CMSNT->get_list(" SELECT * FROM `users` WHERE `admin` = 0 ") as $row) {
-        $CMSNT->update("users", ["token" => md5(random("QWERTYUIOPASDFGHJKLZXCVBNM", 6) . time())], " `id` = '" . $row["id"] . "' ");
+        /* A session token must not be derivable: six characters plus the current second is a
+           dictionary an attacker can walk. The CSPRNG costs nothing here. */
+        $CMSNT->update("users", ["token" => bin2hex(random_bytes(32))], " `id` = '" . $row["id"] . "' ");
     }
     $Mobile_Detect = new Mobile_Detect();
     $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Log out all members on the system")]);

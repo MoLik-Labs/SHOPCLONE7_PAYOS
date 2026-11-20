@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => __("Users"), "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n";
+$body["header"] = "\n\n";
 $body["footer"] = "\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
@@ -34,8 +34,18 @@ if(isset($_POST["AddUser"])) {
     if(0 < $CMSNT->num_rows("SELECT * FROM `users` WHERE `email` = '" . $email . "' ")) {
         exit("<script type=\"text/javascript\">if(!alert(\"Địa chỉ email đã tồn tại trong hệ thống\")){window.history.back().location.reload();}</script>");
     }
+    if(empty($_POST["password"])) {
+        exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập mật khẩu\")){window.history.back().location.reload();}</script>");
+    }
+    /* The form posts a password but this handler used to ignore it and hash the *username* instead,
+       so every admin-created account could be opened by typing its own name. Hash what was typed,
+       and mint the session token / API key from the CSPRNG rather than md5(time). */
+    $newUserPassword = isset($_POST["password"]) && is_string($_POST["password"]) ? $_POST["password"] : "";
+    if(strlen($newUserPassword) < 5) {
+        exit("<script type=\"text/javascript\">if(!alert(\"Mật khẩu quá ngắn\")){window.history.back().location.reload();}</script>");
+    }
     $google2fa = new PragmaRX\Google2FAQRCode\Google2FA();
-    $isInsert = $CMSNT->insert("users", ["username" => check_string($_POST["username"]), "password" => TypePassword(check_string($_POST["username"])), "email" => check_string($_POST["email"]), "create_date" => gettime(), "update_date" => gettime(), "token" => md5(random("qwertyuiopasddfghjklzxcvbnm1234567890", 6) . time()), "money" => 0, "api_key" => md5(time() . random("QWERTYUIOPASDFGHJKL", 6)), "SecretKey_2fa" => $google2fa->generateSecretKey()]);
+    $isInsert = $CMSNT->insert("users", ["username" => check_string($_POST["username"]), "password" => TypePassword($newUserPassword), "email" => check_string($_POST["email"]), "create_date" => gettime(), "update_date" => gettime(), "token" => bin2hex(random_bytes(32)), "money" => 0, "api_key" => bin2hex(random_bytes(16)), "SecretKey_2fa" => $google2fa->generateSecretKey()]);
     if($isInsert) {
         admin_msg_success("Thêm user thành công!", "", 1000);
     }

@@ -29,32 +29,42 @@ if(isset($_POST["AddCoupon"])) {
     if(empty($_POST["amount"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Số lượng không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
-    $amount = check_string($_POST["amount"]);
-    if($amount <= 0) {
+    /*
+     * These four numbers become the coupon's limits and the discount applied at checkout. Raw string
+     * comparisons let "abc" through (a non-number is never "less than" 0 in PHP 8), and an uncapped
+     * discount would make the coupon free. Validate each one as a number first.
+     */
+    $amountValue = orbit_positive_amount($_POST["amount"]);
+    if($amountValue === false || $amountValue != (int) $amountValue || $amountValue > 1000000) {
         exit("<script type=\"text/javascript\">if(!alert(\"Số lượng không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
+    $amount = (int) $amountValue;
     if(empty($_POST["discount"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập chiết khấu giảm giá\")){window.history.back().location.reload();}</script>");
     }
-    $discount = check_string($_POST["discount"]);
-    $product_id = json_encode($_POST["product_id"]);
-    if(empty($_POST["product_id"])) {
-        $product_id = NULL;
+    $discountValue = orbit_positive_amount($_POST["discount"]);
+    if($discountValue === false || $discountValue > 100) {
+        exit("<script type=\"text/javascript\">if(!alert(\"Chiết khấu phải nằm trong khoảng 0.01 - 100%\")){window.history.back().location.reload();}</script>");
     }
+    $discount = orbit_amount_string($discountValue);
+    $productIds = orbit_post_id_list(isset($_POST["product_id"]) ? $_POST["product_id"] : array());
+    $product_id = $productIds ? json_encode($productIds) : NULL;
     if(empty($_POST["min"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập giá trị đơn hàng tối thiểu\")){window.history.back().location.reload();}</script>");
     }
-    $min = check_string($_POST["min"]);
-    if($min <= 0) {
+    $minValue = orbit_positive_amount($_POST["min"]);
+    if($minValue === false) {
         exit("<script type=\"text/javascript\">if(!alert(\"Giá trị đơn hàng tối thiểu không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
     if(empty($_POST["max"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập giá trị đơn hàng tối đa\")){window.history.back().location.reload();}</script>");
     }
-    $max = check_string($_POST["max"]);
-    if($max <= 0) {
+    $maxValue = orbit_positive_amount($_POST["max"]);
+    if($maxValue === false || $maxValue < $minValue) {
         exit("<script type=\"text/javascript\">if(!alert(\"Giá trị đơn hàng tối đa không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
+    $min = orbit_amount_string($minValue);
+    $max = orbit_amount_string($maxValue);
     $isInsert = $CMSNT->insert("coupons", ["code" => $code, "product_id" => $product_id, "amount" => $amount, "used" => 0, "discount" => $discount, "create_gettime" => gettime(), "update_gettime" => gettime(), "min" => $min, "max" => $max]);
     if($isInsert) {
         $Mobile_Detect = new Mobile_Detect();
@@ -160,6 +170,16 @@ echo $shortByDate == 3 ? "selected" : "";
 echo " value=\"3\">\n                                            ";
 echo __("Tháng này");
 echo "                                        </option>\n                                    </select>\n                                </div>\n                            </div>\n                        </form>\n                        <div class=\"table-responsive mb-3\">\n                            <table class=\"table text-nowrap table-striped table-hover table-bordered\">\n                                <thead>\n                                    <tr>\n                                        <th>Mã giảm giá</th>\n                                        <th>Sản phẩm áp dụng</th>\n                                        <th class=\"text-center\">Số lượng</th>\n                                        <th class=\"text-center\">Đã sử dụng</th>\n                                        <th>Giảm</th>\n                                        <th>Thời gian</th>\n                                        <th class=\"text-center\">Thao tác</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
+/* Coupon rows carry a JSON list of product ids; resolve every name in one query. */
+$orbitCouponProductRows = array();
+foreach ($listDatatable as $orbitCouponRow) {
+    foreach ((array) json_decode($orbitCouponRow["product_id"]) as $orbitCouponProductId) {
+        $orbitCouponProductRows[] = array("id" => $orbitCouponProductId);
+    }
+}
+$orbitCouponProductNames = orbit_lookup_names("products", $orbitCouponProductRows, "id");
+/* Redemption counts for every row, one grouped query. */
+$orbitCouponUsageCounts = orbit_coupon_usage_counts();
 foreach ($listDatatable as $row) {
     echo "                                    <tr>\n                                        <td><b>";
     echo $row["code"];
@@ -169,14 +189,14 @@ foreach ($listDatatable as $row) {
     if(empty($row["product_id"])) {
         echo "<span class=\"badge bg-info-transparent\">Áp dụng cho toàn bộ sản phẩm</span>";
     } else {
-        foreach (json_decode($row["product_id"]) as $product_id) {
-            echo "<span class=\"badge bg-primary-transparent\">" . getRowRealtime("products", $product_id, "name") . "</span><br>";
+        foreach ((array) json_decode($row["product_id"]) as $product_id) {
+            echo "<span class=\"badge bg-primary-transparent\">" . orbit_lookup_name($orbitCouponProductNames, $product_id) . "</span><br>";
         }
     }
     echo "                                        </td>\n                                        <td class=\"text-center\"><span style=\"font-size: 15px;\"\n                                                class=\"badge bg-info\">";
     echo format_cash($row["amount"]);
     echo "</span>\n                                        </td>\n                                        <td class=\"text-center\"><span style=\"font-size: 15px;\"\n                                                class=\"badge bg-danger\">";
-    echo format_cash($CMSNT->num_rows(" SELECT * FROM coupon_used WHERE `coupon_id` = '" . $row["id"] . "' "));
+    echo format_cash(isset($orbitCouponUsageCounts[(int) $row["id"]]) ? $orbitCouponUsageCounts[(int) $row["id"]] : 0);
     echo "</span>\n                                        </td>\n                                        <td><span style=\"font-size: 15px;\"\n                                                class=\"badge bg-primary\">";
     echo $row["discount"];
     echo "%</span></td>\n                                        <td>";
@@ -202,11 +222,13 @@ echo format_cash($totalDatatable);
 echo "                                    Results</p>\n                            </div>\n                            <div class=\"col-sm-12 col-md-7 mb-3\">\n                                ";
 echo $limit < $totalDatatable ? $urlDatatable : "";
 echo "                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n\n\n\n\n\n<div class=\"modal fade\" id=\"exampleModalScrollable2\" tabindex=\"-1\" aria-labelledby=\"exampleModalScrollable2\"\n    data-bs-keyboard=\"false\" aria-hidden=\"true\">\n    <!-- Scrollable modal -->\n    <div class=\"modal-dialog modal-dialog-centered modal-lg dialog-scrollable\">\n        <div class=\"modal-content\">\n            <div class=\"modal-header\">\n                <h6 class=\"modal-title\" id=\"staticBackdropLabel2\"><i class=\"fa-solid fa-plus\"></i> Tạo mã giảm giá mới\n                </h6>\n                <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\" aria-label=\"Close\"></button>\n            </div>\n            <form action=\"\" method=\"POST\" enctype=\"multipart/form-data\">\n                <div class=\"modal-body\">\n                    <div class=\"row mb-4\">\n                        <label class=\"col-sm-4 col-form-label\" for=\"example-hf-email\">Mã giảm giá (<span\n                                class=\"text-danger\">*</span>)</label>\n                        <div class=\"col-sm-8\">\n                            <div class=\"input-group mb-3\">\n                                <input type=\"text\" class=\"form-control\" id=\"code\" name=\"code\"\n                                    placeholder=\"Nhập mã giảm giá cần tạo\" required>\n                                <button class=\"btn btn-danger\" type=\"button\" onclick=\"randomCode()\"><i\n                                        class=\"fa-solid fa-shuffle\"></i> Tạo mã ngẫu\n                                    nhiên</button>\n                            </div>\n\n                        </div>\n                    </div>\n                    <div class=\"row mb-4\">\n                        <label class=\"col-sm-4 col-form-label\" for=\"example-hf-email\">Số lượng mã giảm giá (<span\n                                class=\"text-danger\">*</span>)</label>\n                        <div class=\"col-sm-8\">\n                            <div class=\"input-group mb-3\">\n                                <button class=\"btn btn-primary shadow-primary\" type=\"button\" id=\"button-minus-amount\"><i\n                                        class=\"fa-solid fa-minus\"></i></button>\n                                <input type=\"number\" class=\"form-control text-center\" placeholder=\"\" value=\"1\"\n                                    name=\"amount\" required>\n                                <button class=\"btn btn-primary shadow-primary\" type=\"button\" id=\"button-plus-amount\"><i\n                                        class=\"fa-solid fa-plus\"></i></button>\n                            </div>\n                            <script>\n                            document.getElementById('button-plus-amount').addEventListener('click', function() {\n                                incrementValue();\n                            });\n                            document.getElementById('button-minus-amount').addEventListener('click', function() {\n                                decrementValue();\n                            });\n\n                            function incrementValue() {\n                                var inputElement = document.getElementsByName('amount')[0];\n                                var currentValue = parseInt(inputElement.value, 10);\n                                inputElement.value = currentValue + 1;\n                            }\n\n                            function decrementValue() {\n                                var inputElement = document.getElementsByName('amount')[0];\n                                var currentValue = parseInt(inputElement.value, 10);\n                                if (currentValue > 1) {\n                                    inputElement.value = currentValue - 1;\n                                }\n                            }\n                            </script>\n                            <small>Nếu bạn chọn 10, sẽ có 10 lượt sử dụng mã giảm giá cho 10 user khác nhau.</small>\n                        </div>\n                    </div>\n                    <div class=\"row mb-4\">\n                        <label class=\"col-sm-4 col-form-label\" for=\"example-hf-email\">Chiết khấu giảm (<span\n                                class=\"text-danger\">*</span>)</label>\n                        <div class=\"col-sm-8\">\n                            <div class=\"input-group\">\n                                <input type=\"text\" class=\"form-control\" name=\"discount\" required>\n                                <span class=\"input-group-text\">\n                                    <i class=\"fa-solid fa-percent\"></i>\n                                </span>\n                            </div>\n                            <small>Nhập 10 tức giảm 10% cho đơn hàng áp dụng mã giảm giá này.</small>\n                        </div>\n                    </div>\n                    <div class=\"row mb-4\">\n                        <label class=\"col-sm-4 col-form-label\" for=\"example-hf-email\">Sản phẩm áp dụng (<span\n                                class=\"text-danger\">*</span>)</label>\n                        <div class=\"col-sm-8\">\n                            <select class=\"form-control\" name=\"product_id[]\" id=\"listProduct\" multiple>\n                                <option value=\"\">Mặc định sẽ áp dụng cho toàn bộ sản phẩm nếu không chọn</option>\n                                ";
+/* One grouped products read for the whole select, not one per category. */
+$orbitProductGroups = orbit_products_by_category();
 foreach ($CMSNT->get_list(" SELECT * FROM `categories` ") as $category) {
     echo "                                <optgroup label=\"__";
     echo $category["name"];
     echo "__\">\n                                    ";
-    foreach ($CMSNT->get_list(" SELECT * FROM `products` WHERE `category_id` = '" . $category["id"] . "' ") as $product) {
+    foreach (isset($orbitProductGroups[(int) $category["id"]]) ? $orbitProductGroups[(int) $category["id"]] : [] as $product) {
         echo "                                    <option value=\"";
         echo $product["id"];
         echo "\">";

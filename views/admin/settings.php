@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => "Settings", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<!-- ckeditor -->\n<script src=\"" . BASE_URL("public/ckeditor/ckeditor.js") . "\"></script>\n<!-- Thêm CSS của CodeMirror -->\n<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css\">\n\n<!-- Thêm JavaScript của CodeMirror -->\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js\"></script>\n<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/monokai.min.css\">\n<!-- Mode HTML mixed (hỗ trợ HTML, CSS và JS) -->\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/htmlmixed/htmlmixed.min.js\"></script>\n<!-- Mode cho CSS -->\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/css/css.min.js\"></script>\n<!-- Mode cho JavaScript -->\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js\"></script>\n<!-- Mode cho XML (cần cho HTML) -->\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/xml/xml.min.js\"></script>\n\n";
+$body["header"] = "\n<!-- ckeditor -->\n<script src=\"" . BASE_URL("public/ckeditor/ckeditor.js") . "\"></script>\n<!-- Thêm CSS của CodeMirror -->\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/codemirror/lib/codemirror.min.css") . "\">\n\n<!-- Thêm JavaScript của CodeMirror -->\n<script src=\"" . BASE_URL("public/common/vendor/codemirror/lib/codemirror.min.js") . "\"></script>\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/codemirror/theme/monokai.min.css") . "\">\n<!-- Mode HTML mixed (hỗ trợ HTML, CSS và JS) -->\n<script src=\"" . BASE_URL("public/common/vendor/codemirror/mode/htmlmixed/htmlmixed.min.js") . "\"></script>\n<!-- Mode cho CSS -->\n<script src=\"" . BASE_URL("public/common/vendor/codemirror/mode/css/css.min.js") . "\"></script>\n<!-- Mode cho JavaScript -->\n<script src=\"" . BASE_URL("public/common/vendor/codemirror/mode/javascript/javascript.min.js") . "\"></script>\n<!-- Mode cho XML (cần cho HTML) -->\n<script src=\"" . BASE_URL("public/common/vendor/codemirror/mode/xml/xml.min.js") . "\"></script>\n\n";
 $body["footer"] = "\n \n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
@@ -14,14 +14,106 @@ require_once __DIR__ . "/../../models/is_license.php";
 if(!checkPermission($getUser["admin"], "edit_setting")) {
     exit("<script type=\"text/javascript\">if(!alert(\"Bạn không có quyền sử dụng tính năng này\")){window.history.back();}</script>");
 }
+/* ---------------------------------------------------------------- social login */
+require_once __DIR__ . "/../../libs/oauth.php";
+$oauthRaw = oauth_raw_settings($CMSNT);
+$oauthConfig = oauth_config($CMSNT, $oauthRaw);
+$oauthTableOk = oauth_table_exists($CMSNT);
+$oauthCallbackUrl = oauth_callback_url($oauthConfig);
+$oauthTest = isset($_SESSION["oauth_test_result"]) ? $_SESSION["oauth_test_result"] : null;
+unset($_SESSION["oauth_test_result"]);
+$oauthSettingsRedirect = base_url_admin("settings") . "#dang-nhap-mang-xa-hoi";
+if (isset($_POST["SaveSocialSettings"]) || isset($_POST["TestSocialSettings"])) {
+    if (!verify_csrf_token(isset($_POST["csrf_token"]) ? $_POST["csrf_token"] : "")) {
+        admin_msg_error("Phiên làm việc đã hết hạn. Vui lòng mở lại trang Cài đặt và thử lại.",
+            base_url_admin("settings"), 1500);
+    }
+    if ($CMSNT->site("status_demo") != 0) {
+        exit('<script type="text/javascript">if(!alert("Không được dùng chức năng này vì đây là trang web demo.")){window.history.back().location.reload();}</script>');
+    }
+    $oauthValidated = oauth_settings_validate($_POST, array(
+        "url" => $oauthConfig["url"],
+        "anon_key" => $oauthConfig["anon_key"],
+    ));
+    if (!empty($oauthValidated["errors"])) {
+        $oauthErrorKeys = array_keys($oauthValidated["errors"]);
+        $oauthErrorMessages = array(
+            "invalid_url" => "Project URL phải có dạng https://ten-du-an.supabase.co (không kèm đường dẫn).",
+            "invalid_key" => "Anon/publishable key không hợp lệ (chỉ gồm chữ, số, dấu chấm, gạch ngang/gạch dưới).",
+            "missing_config" => "Cần nhập Project URL và anon key trước khi bật đăng nhập mạng xã hội.",
+            "provider_without_master" => "Hãy bật công tắc tổng trước khi bật Google/GitHub.",
+            "no_provider" => "Hãy chọn ít nhất một nhà cung cấp (Google hoặc GitHub).",
+        );
+        $oauthFirstError = $oauthErrorKeys[0];
+        admin_msg_error(
+            isset($oauthErrorMessages[$oauthFirstError]) ? $oauthErrorMessages[$oauthFirstError] : "Cấu hình không hợp lệ.",
+            $oauthSettingsRedirect,
+            1500
+        );
+    }
+    if (isset($_POST["TestSocialSettings"])) {
+        $oauthProbe = oauth_provider_status(array(
+            "url" => $oauthValidated["values"]["oauth_supabase_url"],
+            "anon_key" => $oauthValidated["values"]["oauth_supabase_anon_key"],
+        ));
+        $_SESSION["oauth_test_result"] = array(
+            "ok" => !empty($oauthProbe["ok"]),
+            "providers" => $oauthProbe["providers"],
+            "message" => $oauthProbe["message"],
+        );
+        admin_msg_success(
+            $oauthProbe["ok"] ? "Đã kiểm tra kết nối Supabase." : "Không kiểm tra được kết nối Supabase.",
+            $oauthSettingsRedirect,
+            700
+        );
+    }
+    /* Only the seven documented rows are written: $_POST is validated field by field, never looped. */
+    $Mobile_Detect = new Mobile_Detect();
+    $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(),
+        "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(),
+        "action" => "Cập nhật cấu hình đăng nhập mạng xã hội"]);
+    foreach (oauth_settings_rows($oauthValidated["values"]) as $oauthName => $oauthValue) {
+        if ($CMSNT->get_row("SELECT `name` FROM `settings` WHERE `name` = '" . $oauthName . "' LIMIT 1")) {
+            $CMSNT->update("settings", ["value" => $oauthValue], " `name` = '" . $oauthName . "' ");
+        } else {
+            $CMSNT->insert("settings", ["name" => $oauthName, "value" => $oauthValue]);
+        }
+    }
+    $my_text = $CMSNT->site("noti_action");
+    $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
+    $my_text = str_replace("{username}", $getUser["username"], $my_text);
+    $my_text = str_replace("{action}", "Cập nhật cấu hình đăng nhập mạng xã hội", $my_text);
+    $my_text = str_replace("{ip}", myip(), $my_text);
+    $my_text = str_replace("{time}", gettime(), $my_text);
+    sendMessAdmin($my_text);
+    admin_msg_success("Đã lưu cấu hình đăng nhập mạng xã hội!", $oauthSettingsRedirect, 700);
+}
 if(isset($_POST["SaveSettings"])) {
     if($CMSNT->site("status_demo") != 0) {
         exit("<script type=\"text/javascript\">if(!alert(\"" . __("This function cannot be used because this is a demo site") . "\")){window.history.back().location.reload();}</script>");
     }
+    /* index.php already refused a cross-site POST, but this handler is the one place that writes an
+       arbitrary posted key into `settings`, so it re-checks: a token here, an origin there. */
+    if (!orbit_csrf_ok()) {
+        admin_msg_error("Phiên làm việc đã hết hạn. Vui lòng mở lại trang Cài đặt và thử lại.",
+            base_url_admin("settings"), 1500);
+    }
     $Mobile_Detect = new Mobile_Detect();
     $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thay đổi thông tin trong trang cài đặt")]);
+    /* Only keys that are actually settings, only scalar values.
+       Before: `foreach ($_POST as $key => $value)` — so the field name reached the WHERE clause raw
+       (injection through a field name), `csrf_token` and the submit button were written as settings
+       rows, and a posted array (`x[]=1`) reached mysqli_real_escape_string() as an array, which is a
+       TypeError in PHP 8 and a 500 on save. */
+    $knownSettings = array();
+    foreach ($CMSNT->get_list("SELECT `name` FROM `settings`") as $settingRow) {
+        $knownSettings[(string) $settingRow["name"]] = true;
+    }
     foreach ($_POST as $key => $value) {
-        $CMSNT->update("settings", ["value" => $value], " `name` = '" . $key . "' ");
+        if (!is_string($key) || !isset($knownSettings[$key]) || !is_scalar($value)) {
+            continue;
+        }
+        $CMSNT->update("settings", ["value" => (string) $value], " `name` = '" . addslashes($key) . "' ");
     }
     $my_text = $CMSNT->site("noti_action");
     $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
@@ -32,7 +124,7 @@ if(isset($_POST["SaveSettings"])) {
     sendMessAdmin($my_text);
     admin_msg_success("Lưu thành công!", "", 1000);
 }
-echo "\n\n<div class=\"main-content app-content\">\n    <div class=\"container-fluid\">\n        <div class=\"d-md-flex d-block align-items-center justify-content-between my-4 page-header-breadcrumb\">\n            <h1 class=\"page-title fw-semibold fs-18 mb-0\"><i class=\"fa-solid fa-gear\"></i> Cài đặt</h1>\n        </div>\n        <div class=\"row\">\n            <div class=\"col-xl-12\">\n                <div class=\"card custom-card\">\n                    <div class=\"card-body\">\n                        <div class=\"row\">\n                            <div class=\"col-xl-2\">\n                                <nav class=\"nav nav-tabs flex-column nav-style-5 mb-3\" role=\"tablist\">\n                                    <a class=\"nav-link active\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#cai-dat-chung\" aria-selected=\"false\"><i\n                                            class=\"bx bx-cog me-2 align-middle d-inline-block\"></i>Cài đặt chung</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#ket-noi\" aria-selected=\"false\"><i\n                                            class=\"bx bx-plug me-2 align-middle d-inline-block\"></i>Kết nối</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#telegram-template\" aria-selected=\"true\"><i\n                                            class=\"fa-brands fa-telegram me-2 align-middle d-inline-block\"></i>Telegram\n                                        Template</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#mail-template\" aria-selected=\"true\"><i\n                                            class=\"fa-solid fa-envelope me-2 align-middle d-inline-block\"></i>Mail\n                                        Template</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#hien-thi-san-pham\" aria-selected=\"false\"><i\n                                            class=\"bx bx-desktop me-2 align-middle d-inline-block\"></i>Hiển thị sản\n                                        phẩm</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#giao-dich-gan-day\" aria-selected=\"false\"><i\n                                            class=\"fa-solid fa-clock-rotate-left me-2 align-middle d-inline-block\"></i>Giao\n                                        dịch gần đây</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#widget\" aria-selected=\"false\"><i\n                                            class=\"fa-brands fa-themeco me-2 align-middle d-inline-block\"></i>Widget</a>\n                                </nav>\n                            </div>\n                            <div class=\"col-xl-10\">\n                                <div class=\"tab-content\">\n                                    <div class=\"tab-pane text-muted show active\" id=\"cai-dat-chung\" role=\"tabpanel\">\n                                        <h4>";
+echo "\n\n<div class=\"main-content app-content\">\n    <div class=\"container-fluid\">\n        <div class=\"d-md-flex d-block align-items-center justify-content-between my-4 page-header-breadcrumb\">\n            <h1 class=\"page-title fw-semibold fs-18 mb-0\"><i class=\"fa-solid fa-gear\"></i> Cài đặt</h1>\n        </div>\n        <div class=\"row\">\n            <div class=\"col-xl-12\">\n                <div class=\"card custom-card\">\n                    <div class=\"card-body\">\n                        <div class=\"row\">\n                            <div class=\"col-xl-2\">\n                                <nav class=\"nav nav-tabs flex-column nav-style-5 mb-3\" role=\"tablist\">\n                                    <a class=\"nav-link active\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#cai-dat-chung\" aria-selected=\"false\"><i\n                                            class=\"bx bx-cog me-2 align-middle d-inline-block\"></i>Cài đặt chung</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#ket-noi\" aria-selected=\"false\"><i\n                                            class=\"bx bx-plug me-2 align-middle d-inline-block\"></i>Kết nối</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#telegram-template\" aria-selected=\"true\"><i\n                                            class=\"fa-brands fa-telegram me-2 align-middle d-inline-block\"></i>Telegram\n                                        Template</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#mail-template\" aria-selected=\"true\"><i\n                                            class=\"fa-solid fa-envelope me-2 align-middle d-inline-block\"></i>Mail\n                                        Template</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#hien-thi-san-pham\" aria-selected=\"false\"><i\n                                            class=\"bx bx-desktop me-2 align-middle d-inline-block\"></i>Hiển thị sản\n                                        phẩm</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#giao-dich-gan-day\" aria-selected=\"false\"><i\n                                            class=\"fa-solid fa-clock-rotate-left me-2 align-middle d-inline-block\"></i>Giao\n                                        dịch gần đây</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#widget\" aria-selected=\"false\"><i\n                                            class=\"fa-brands fa-themeco me-2 align-middle d-inline-block\"></i>Widget</a>\n                                    <a class=\"nav-link\" data-bs-toggle=\"tab\" role=\"tab\" aria-current=\"page\"\n                                        href=\"#dang-nhap-mang-xa-hoi\" aria-selected=\"false\"><i\n                                            class=\"fa-brands fa-google me-2 align-middle d-inline-block\"></i>Đăng nhập mạng xã hội</a>\n                                </nav>\n                            </div>\n                            <div class=\"col-xl-10\">\n                                <div class=\"tab-content\">\n                                    <div class=\"tab-pane text-muted show active\" id=\"cai-dat-chung\" role=\"tabpanel\">\n                                        <h4>";
 echo __("Cài đặt chung");
 echo "</h4>\n                                        <form action=\"\" method=\"POST\">\n                                            <div class=\"row push mb-3\">\n                                                <div class=\"col-md-6\">\n                                                    <table class=\"table table-bordered table-striped table-hover\">\n                                                        <tbody>\n                                                            <tr>\n                                                                <td>";
 echo __("Title");
@@ -474,7 +566,9 @@ echo "\"\n                                                                      
 echo $CMSNT->site("widget_phone1_sdt");
 echo "\"\n                                                                        name=\"widget_phone1_sdt\">\n                                                                </td>\n                                                            </tr>\n                                                        </tbody>\n                                                    </table>\n                                                </div>\n                                            </div>\n                                            <button type=\"submit\" name=\"SaveSettings\"\n                                                class=\"btn btn-primary w-100 mb-3\">\n                                                <i class=\"fa fa-fw fa-save me-1\"></i> ";
 echo __("Save");
-echo "                                            </button>\n                                        </form>\n                                    </div>\n                                </div>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n\n\n\n\n\n";
+echo "                                            </button>\n                                        </form>\n                                    </div>\n                                    ";
+require __DIR__ . "/partials/settings-social.php";
+echo "\n                                </div>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n\n\n\n\n\n\n";
 require_once __DIR__ . "/footer.php";
 echo "\n<script>\nCKEDITOR.replace(\"popup_noti\");\nCKEDITOR.replace(\"page_faq\");\nCKEDITOR.replace(\"page_policy\");\nCKEDITOR.replace(\"page_contact\");\nCKEDITOR.replace(\"notice_home\");\nCKEDITOR.replace(\"notice_orders\");\nCKEDITOR.replace(\"email_temp_content_warning_login\");\nCKEDITOR.replace(\"email_temp_content_forgot_password\");\nCKEDITOR.replace(\"email_temp_content_otp_mail\");\nCKEDITOR.replace(\"email_temp_content_buy_order\");\n</script>\n\n<script>\ndocument.addEventListener('DOMContentLoaded', function() {\n    // Get the active tab from Local Storage\n    var activeTab = localStorage.getItem('activeTab');\n    if (activeTab) {\n        // Show the saved tab\n        \$('.nav-tabs a[href=\"#' + activeTab + '\"]').tab('show');\n    }\n\n    // Save the selected tab to Local Storage\n    \$('.nav-tabs a').on('shown.bs.tab', function(e) {\n        var selectedTab = \$(e.target).attr('href').substr(1);\n        localStorage.setItem('activeTab', selectedTab);\n    });\n});\n</script>";
 

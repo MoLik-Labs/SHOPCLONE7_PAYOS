@@ -1,0 +1,14 @@
+Orbit — static UI preview (generated)
+=====================================
+
+Built by: php tools/preview-build.php
+Built from the current checkout (no timestamp, so a rebuild stays byte-identical).
+
+Contents: index.html, home.html (storefront home), sales.html (admin), purchase-history.html (buyer),
+styleguide.html, assets/, and the review screenshots (*.png).
+Every page is rendered from the same code the shop runs, with SAMPLE data — there is no real customer,
+order or balance in this folder, no database behind it, and no network call made by it. Route links are
+inert (#preview-…) on purpose. The music player is shown but never plays.
+
+Do not edit these files: they are overwritten by the next build. Regenerate with the command above;
+delete the folder with: php tools/preview-build.php --clean

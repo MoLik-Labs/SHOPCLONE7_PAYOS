@@ -262,11 +262,12 @@ if(isset($_POST["SaveSettings"])) {
     echo __("Nội dung chuyển khoản");
     echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
     $i = 0;
+    $orbitUserNames = orbit_user_names($listDatatable, "user_id");
     foreach ($listDatatable as $row) {
         echo "                                    <tr>\n                                        <td class=\"text-center\"><a class=\"text-primary\"\n                                                href=\"";
         echo base_url_admin("user-edit&id=" . $row["user_id"]);
         echo "\">";
-        echo getRowRealtime("users", $row["user_id"], "username");
+        echo orbit_user_name($orbitUserNames, $row["user_id"]);
         echo "                                                [ID ";
         echo $row["user_id"];
         echo "]</a>\n                                        </td>\n                                        <td>";

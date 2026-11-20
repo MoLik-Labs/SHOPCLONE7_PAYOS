@@ -5,6 +5,10 @@ if(!defined("IN_SITE")) {
 }
 require_once __DIR__ . '/../../libs/payos.php';
 $payosNavEnabled = (bool) payos_config()['enabled'];
+require_once __DIR__ . '/../../libs/gtf.php';
+$gtfNavConfig = gtf_config();
+$gtfNavCard = $gtfNavConfig['card_enabled'] && $gtfNavConfig['partner_key'] !== '' && $gtfNavConfig['api_base'] !== '' && $gtfNavConfig['card_request_format'] !== '';
+$gtfNavCardHtml = $gtfNavCard ? "                                    <li><a href=\"" . base_url("?action=recharge-gtf-card") . "\"><img width=\"20px\"\n                                                src=\"" . base_url("assets/img/icon-cards.png") . "\">Thẻ cào (GachtheFast)</a></li>\n" : '';
 echo "\n<body>\n    <div class=\"backdrop\"></div><a class=\"backtop\" href=\"#\"><i class=\"fa-sharp fa-solid fa-chevron-up\"></i></a>\n    <div class=\"header-top\">\n        <div class=\"container\">\n            <div class=\"row\">\n                <div class=\"col-md-12 col-lg-5\">\n                    <div class=\"header-top-welcome\">\n                        <p>";
 echo $CMSNT->site("notice_top_left");
 echo "</p>\n                    </div>\n                </div>\n                <div class=\"col-md-5 col-lg-3\">\n                    <div class=\"header-top-select\">\n                        <div class=\"header-select\"><i class=\"icofont-world\"></i>\n                            ";
@@ -98,11 +102,28 @@ echo __("Trang chủ");
 echo "</a>\n                            </li>\n                            <li class=\"navbar-item dropdown-megamenu\"><a class=\"navbar-link dropdown-arrow\"\n                                    href=\"#\">";
 echo __("Sản phẩm");
 echo "</a>\n                                <div class=\"megamenu\">\n                                    <div class=\"container\">\n                                        <div class=\"row row-cols-5\">\n                                            ";
-foreach ($CMSNT->get_list(" SELECT * FROM `categories` WHERE `status` = 1 AND `parent_id` = 0 ORDER BY `stt` DESC ") as $category) {
+/*
+ * Both menus below render the same tree. They used to reload it from the database twice, one query
+ * per parent plus one per parent in each menu; a shop with 8 top-level groups paid ~34 SELECTs on
+ * every page for markup it already had. Read the active tree once, group it in PHP, and render from
+ * the groups. Children keep the megamenu's `stt DESC` order, so both menus now agree.
+ */
+$navCategoryGroups = array(0 => array());
+foreach ($CMSNT->get_list(" SELECT * FROM `categories` WHERE `status` = 1 ") as $navCategoryRow) {
+    $navCategoryGroups[(int) $navCategoryRow["parent_id"]][] = $navCategoryRow;
+}
+foreach ($navCategoryGroups as $navParentId => $navChildren) {
+    usort($navCategoryGroups[$navParentId], function ($navA, $navB) {
+        return (int) $navB["stt"] <=> (int) $navA["stt"];
+    });
+}
+$navParents = isset($navCategoryGroups[0]) ? $navCategoryGroups[0] : array();
+
+foreach ($navParents as $category) {
     echo "                                            <div class=\"col-4\">\n                                                <div class=\"megamenu-wrap\">\n                                                    <h5 class=\"megamenu-title\">";
     echo __($category["name"]);
     echo "</h5>\n                                                    <ul class=\"megamenu-list\">\n                                                        ";
-    foreach ($CMSNT->get_list(" SELECT * FROM `categories` WHERE `status` = 1 AND `parent_id` = '" . $category["id"] . "' ORDER BY `stt` DESC ") as $category1) {
+    foreach (isset($navCategoryGroups[(int) $category["id"]]) ? $navCategoryGroups[(int) $category["id"]] : array() as $category1) {
         echo "                                                        <li><a href=\"";
         echo base_url("category/" . $category1["slug"]);
         echo "\"><img\n                                                                    width=\"25px\"\n                                                                    src=\"";
@@ -125,6 +146,7 @@ if($payosNavEnabled || $CMSNT->site("bank_status") == 1) {
     echo $payosNavEnabled ? "Ngân hàng (payOS)" : __("Ngân hàng");
     echo "</a></li>\n                                    ";
 }
+echo $gtfNavCardHtml;
 echo "                                    ";
 if(!$payosNavEnabled && $CMSNT->site("momo_status") == 1) {
     echo "                                    <li><a href=\"";
@@ -282,13 +304,13 @@ echo $CMSNT->site("email");
 echo "</span></p>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </nav>\n    <aside class=\"category-sidebar\">\n        <div class=\"category-header\">\n            <h4 class=\"category-title\"><i class=\"fas fa-align-left\"></i><span>";
 echo __("Sản phẩm");
 echo "</span></h4><button\n                class=\"category-close\"><i class=\"icofont-close\"></i></button>\n        </div>\n        <!--menu mobile-->\n        <ul class=\"category-list\">\n            ";
-foreach ($CMSNT->get_list(" SELECT * FROM `categories` WHERE `status` = 1 AND `parent_id` = 0 ") as $category) {
+foreach ($navParents as $category) {
     echo "            <li class=\"category-item\">\n                <a class=\"category-link dropdown-link\" href=\"#\">\n                    <img src=\"";
     echo base_url($category["icon"]);
     echo "\" style=\"margin-right: 10px;\" width=\"30px\">\n                    ";
     echo __($category["name"]);
     echo " </a>\n                <ul class=\"dropdown-list\">\n                    ";
-    foreach ($CMSNT->get_list(" SELECT * FROM `categories` WHERE `status` = 1 AND `parent_id` = '" . $category["id"] . "' ") as $category1) {
+    foreach (isset($navCategoryGroups[(int) $category["id"]]) ? $navCategoryGroups[(int) $category["id"]] : array() as $category1) {
         echo "                    <li><a href=\"";
         echo base_url("category/" . $category1["slug"]);
         echo "\">";

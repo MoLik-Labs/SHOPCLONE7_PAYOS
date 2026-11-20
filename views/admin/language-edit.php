@@ -5,7 +5,11 @@ if(!defined("IN_SITE")) {
 }
 $body = ["title" => __("Language editing"), "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
 $body["header"] = "\n\n";
-$body["footer"] = "\n<!-- bs-custom-file-input -->\n<script src=\"" . BASE_URL("public/AdminLTE3/") . "plugins/bs-custom-file-input/bs-custom-file-input.min.js\"></script>\n<!-- Page specific script -->\n<script>\n\$(function () {\n  bsCustomFileInput.init();\n});\n</script> \n";
+/* This page pulled AdminLTE's bs-custom-file-input from public/AdminLTE3, which is not
+   part of this checkout: the script 404'd and bsCustomFileInput.init() threw before the
+   rest of the inline JS ran. The markup uses plain <input type="file"> and needs none
+   of it. */
+$body["footer"] = "";
 require_once __DIR__ . "/../../models/is_admin.php";
 if(isset($_GET["id"])) {
     $id = check_string($_GET["id"]);
@@ -27,13 +31,11 @@ if(isset($_POST["SaveLang"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"" . __("This function cannot be used because this is a demo site") . "\")){window.history.back().location.reload();}</script>");
     }
     if(check_img("icon")) {
-        $rand = check_string($_POST["lang"]);
-        $uploads_dir = "assets/storage/flags/flag_" . $rand . ".png";
-        $tmp_name = $_FILES["icon"]["tmp_name"];
-        $addIcon = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addIcon) {
-            $icon = "assets/storage/flags/flag_" . $rand . ".png";
-            $CMSNT->update("languages", ["icon" => $icon], " `id` = '" . $row["id"] . "' ");
+        /* Prefix comes from the language code, sanitised by orbit_store_image(). */
+        $stored = orbit_store_image($_FILES["icon"], "flag_" . check_string($_POST["lang"]) . "_", "flags");
+        if($stored !== false) {
+            $CMSNT->update("languages", ["icon" => $stored], " `id` = '" . $row["id"] . "' ");
+            orbit_delete_upload($row["icon"]);
         }
     }
     $isInsert = $CMSNT->update("languages", ["lang" => check_string($_POST["lang"]), "status" => check_string($_POST["status"])], " `id` = '" . $row["id"] . "' ");

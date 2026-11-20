@@ -5,7 +5,11 @@ if(!defined("IN_SITE")) {
 }
 $body = ["title" => __("Chỉnh sửa chuyên mục bài viết"), "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
 $body["header"] = "\n\n";
-$body["footer"] = "\n<!-- bs-custom-file-input -->\n<script src=\"" . BASE_URL("public/AdminLTE3/") . "plugins/bs-custom-file-input/bs-custom-file-input.min.js\"></script>\n<!-- Page specific script -->\n<script>\n\$(function () {\n  bsCustomFileInput.init();\n});\n</script> \n";
+/* This page pulled AdminLTE's bs-custom-file-input from public/AdminLTE3, which is not
+   part of this checkout: the script 404'd and bsCustomFileInput.init() threw before the
+   rest of the inline JS ran. The markup uses plain <input type="file"> and needs none
+   of it. */
+$body["footer"] = "";
 require_once __DIR__ . "/../../models/is_admin.php";
 if(isset($_GET["id"])) {
     $id = check_string($_GET["id"]);
@@ -29,13 +33,11 @@ if(isset($_POST["SaveCategory"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Tên chuyên mục đã tồn tại trong hệ thống.\")){window.history.back().location.reload();}</script>");
     }
     if(check_img("icon")) {
-        unlink($row["icon"]);
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 4);
-        $uploads_dir = "assets/storage/images/category" . $rand . ".png";
-        $tmp_name = $_FILES["icon"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $CMSNT->update("post_category", ["icon" => $uploads_dir], " `id` = '" . $row["id"] . "' ");
+        $stored = orbit_store_image($_FILES["icon"], "category", "images");
+        if($stored !== false) {
+            $CMSNT->update("post_category", ["icon" => $stored], " `id` = '" . $row["id"] . "' ");
+            /* The row now points at the new file; only then is the previous one removed. */
+            orbit_delete_upload($row["icon"]);
         }
     }
     $isInsert = $CMSNT->update("post_category", ["name" => check_string($_POST["name"]), "slug" => create_slug(check_string($_POST["name"])), "content" => isset($_POST["content"]) ? base64_encode($_POST["content"]) : NULL, "status" => check_string($_POST["status"])], " `id` = '" . $row["id"] . "' ");

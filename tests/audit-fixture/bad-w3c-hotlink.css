@@ -1,0 +1,2 @@
+/* wrong: the namespace exemption is narrow — a real stylesheet hotlinked from www.w3.org is a request */
+@import url("http://www.w3.org/StyleSheets/Core/Overview");

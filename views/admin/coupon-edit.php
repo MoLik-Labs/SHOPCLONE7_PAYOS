@@ -5,7 +5,11 @@ if(!defined("IN_SITE")) {
 }
 $body = ["title" => "Chỉnh sửa mã giảm giá", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
 $body["header"] = "\n\n";
-$body["footer"] = "\n<!-- bs-custom-file-input -->\n<script src=\"" . BASE_URL("public/AdminLTE3/") . "plugins/bs-custom-file-input/bs-custom-file-input.min.js\"></script>\n<!-- Page specific script -->\n<script>\n\$(function () {\n  bsCustomFileInput.init();\n});\n</script> \n";
+/* This page pulled AdminLTE's bs-custom-file-input from public/AdminLTE3, which is not
+   part of this checkout: the script 404'd and bsCustomFileInput.init() threw before the
+   rest of the inline JS ran. The markup uses plain <input type="file"> and needs none
+   of it. */
+$body["footer"] = "";
 require_once __DIR__ . "/../../models/is_admin.php";
 if(isset($_GET["id"])) {
     $id = check_string($_GET["id"]);
@@ -29,32 +33,38 @@ if(isset($_POST["SaveCoupon"])) {
     if(empty($_POST["amount"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Số lượng không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
-    $amount = check_string($_POST["amount"]);
-    if($amount <= 0) {
+    /* Same validation as the create form; see the note there. */
+    $amountValue = orbit_positive_amount($_POST["amount"]);
+    if($amountValue === false || $amountValue != (int) $amountValue || $amountValue > 1000000) {
         exit("<script type=\"text/javascript\">if(!alert(\"Số lượng không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
+    $amount = (int) $amountValue;
     if(empty($_POST["discount"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập chiết khấu giảm giá\")){window.history.back().location.reload();}</script>");
     }
-    $discount = check_string($_POST["discount"]);
-    $product_id = json_encode($_POST["product_id"]);
-    if(empty($_POST["product_id"])) {
-        $product_id = NULL;
+    $discountValue = orbit_positive_amount($_POST["discount"]);
+    if($discountValue === false || $discountValue > 100) {
+        exit("<script type=\"text/javascript\">if(!alert(\"Chiết khấu phải nằm trong khoảng 0.01 - 100%\")){window.history.back().location.reload();}</script>");
     }
+    $discount = orbit_amount_string($discountValue);
+    $productIds = orbit_post_id_list(isset($_POST["product_id"]) ? $_POST["product_id"] : array());
+    $product_id = $productIds ? json_encode($productIds) : NULL;
     if(empty($_POST["min"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập giá trị đơn hàng tối thiểu\")){window.history.back().location.reload();}</script>");
     }
-    $min = check_string($_POST["min"]);
-    if($min <= 0) {
+    $minValue = orbit_positive_amount($_POST["min"]);
+    if($minValue === false) {
         exit("<script type=\"text/javascript\">if(!alert(\"Giá trị đơn hàng tối thiểu không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
     if(empty($_POST["max"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập giá trị đơn hàng tối đa\")){window.history.back().location.reload();}</script>");
     }
-    $max = check_string($_POST["max"]);
-    if($max <= 0) {
+    $maxValue = orbit_positive_amount($_POST["max"]);
+    if($maxValue === false || $maxValue < $minValue) {
         exit("<script type=\"text/javascript\">if(!alert(\"Giá trị đơn hàng tối đa không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
+    $min = orbit_amount_string($minValue);
+    $max = orbit_amount_string($maxValue);
     $isUpdate = $CMSNT->update("coupons", ["product_id" => $product_id, "amount" => $amount, "discount" => $discount, "update_gettime" => gettime(), "min" => $min, "max" => $max], " `id` = '" . $id . "' ");
     if($isUpdate) {
         $Mobile_Detect = new Mobile_Detect();
@@ -79,11 +89,13 @@ echo $row["amount"];
 echo "\" name=\"amount\" required>\n                                        <button class=\"btn btn-primary shadow-primary\" type=\"button\"\n                                            id=\"button-plus-amount\"><i class=\"fa-solid fa-plus\"></i></button>\n                                    </div>\n                                    <script>\n                                    document.getElementById('button-plus-amount').addEventListener('click', function() {\n                                        incrementValue();\n                                    });\n                                    document.getElementById('button-minus-amount').addEventListener('click',\n                                        function() {\n                                            decrementValue();\n                                        });\n\n                                    function incrementValue() {\n                                        var inputElement = document.getElementsByName('amount')[0];\n                                        var currentValue = parseInt(inputElement.value, 10);\n                                        inputElement.value = currentValue + 1;\n                                    }\n\n                                    function decrementValue() {\n                                        var inputElement = document.getElementsByName('amount')[0];\n                                        var currentValue = parseInt(inputElement.value, 10);\n                                        if (currentValue > 1) {\n                                            inputElement.value = currentValue - 1;\n                                        }\n                                    }\n                                    </script>\n                                    <small>Nếu bạn chọn 10, sẽ có 10 lượt sử dụng mã giảm giá cho 10 user khác\n                                        nhau.</small>\n                                </div>\n                            </div>\n                            <div class=\"row mb-4\">\n                                <label class=\"col-sm-4 col-form-label\" for=\"example-hf-email\">Chiết khấu giảm (<span\n                                        class=\"text-danger\">*</span>)</label>\n                                <div class=\"col-sm-8\">\n                                    <div class=\"input-group\">\n                                        <input type=\"text\" class=\"form-control\" name=\"discount\"\n                                            value=\"";
 echo $row["discount"];
 echo "\" required>\n                                        <span class=\"input-group-text\">\n                                            <i class=\"fa-solid fa-percent\"></i>\n                                        </span>\n                                    </div>\n                                    <small>Nhập 10 tức giảm 10% cho đơn hàng áp dụng mã giảm giá này.</small>\n                                </div>\n                            </div>\n                            <div class=\"row mb-4\">\n                                <label class=\"col-sm-4 col-form-label\" for=\"example-hf-email\">Sản phẩm áp dụng (<span\n                                        class=\"text-danger\">*</span>)</label>\n                                <div class=\"col-sm-8\">\n                                    <select class=\"form-control\" name=\"product_id[]\" id=\"listProduct\" multiple>\n                                        <option value=\"\">Mặc định sẽ áp dụng cho toàn bộ sản phẩm nếu không chọn\n                                        </option>\n                                        ";
+/* One grouped products read for the whole select, not one per category. */
+$orbitProductGroups = orbit_products_by_category();
 foreach ($CMSNT->get_list(" SELECT * FROM `categories` ") as $category) {
     echo "                                        <optgroup label=\"__";
     echo $category["name"];
     echo "__\">\n                                            ";
-    foreach ($CMSNT->get_list(" SELECT * FROM `products` WHERE `category_id` = '" . $category["id"] . "' ") as $product) {
+    foreach (isset($orbitProductGroups[(int) $category["id"]]) ? $orbitProductGroups[(int) $category["id"]] : [] as $product) {
         echo "                                            <option\n                                                ";
         echo in_array($product["id"], json_decode($row["product_id"] ?? "[]", true) ?? [], true) ? "selected" : "";
         echo "                                                value=\"";

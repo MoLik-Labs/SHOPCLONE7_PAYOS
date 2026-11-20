@@ -4,8 +4,8 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => __("List of currency"), "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/1.12.1/css/dataTables.bootstrap5.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/responsive/2.3.0/css/responsive.bootstrap.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/buttons/2.2.3/css/buttons.bootstrap5.min.css\">\n\n";
-$body["footer"] = "\n<script src=\"https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js\"></script>\n<script src=\"https://cdn.datatables.net/1.12.1/js/dataTables.bootstrap5.min.js\"></script>\n<script src=\"https://cdn.datatables.net/responsive/2.3.0/js/dataTables.responsive.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/buttons.print.min.js\"></script>\n";
+$body["header"] = "\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/dataTables.bootstrap5.min.css") . "\">\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/responsive.bootstrap5.min.css") . "\">\n\n\n";
+$body["footer"] = "\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/jquery.dataTables.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.bootstrap5.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.responsive.min.js") . "\"></script>\n\n\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
 require_once __DIR__ . "/sidebar.php";
@@ -23,11 +23,11 @@ if(isset($_POST["AddCurrency"])) {
     $isInsert = $CMSNT->insert("currencies", ["name" => check_string($_POST["name"]), "code" => check_string($_POST["code"]), "symbol_left" => !empty($_POST["symbol_left"]) ? check_string($_POST["symbol_left"]) : NULL, "symbol_right" => !empty($_POST["symbol_right"]) ? check_string($_POST["symbol_right"]) : NULL, "rate" => !empty($_POST["rate"]) ? check_string($_POST["rate"]) : 0, "decimal_currency" => !empty($_POST["decimal_currency"]) ? check_string($_POST["decimal_currency"]) : 0, "seperator" => !empty($_POST["seperator"]) ? check_string($_POST["seperator"]) : "dot", "display" => check_string($_POST["display"])]);
     if($isInsert) {
         $Mobile_Detect = new Mobile_Detect();
-        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thêm tiền tệ") . " (" . $_POST["name"] . ")."]);
+        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thêm tiền tệ") . " (" . check_string($_POST["name"]) . ")."]);
         $my_text = $CMSNT->site("noti_action");
         $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
         $my_text = str_replace("{username}", $getUser["username"], $my_text);
-        $my_text = str_replace("{action}", __("Thêm tiền tệ") . " (" . $_POST["name"] . ").", $my_text);
+        $my_text = str_replace("{action}", __("Thêm tiền tệ") . " (" . check_string($_POST["name"]) . ").", $my_text);
         $my_text = str_replace("{ip}", myip(), $my_text);
         $my_text = str_replace("{time}", gettime(), $my_text);
         sendMessAdmin($my_text);

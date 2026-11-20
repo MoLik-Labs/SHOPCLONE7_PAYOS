@@ -10,6 +10,7 @@ if(!isset($_POST["action"])) {
     $data = json_encode(["status" => "error", "msg" => __("The Request Not Found")]);
     exit($data);
 }
+orbit_require_csrf();
 if($_POST["action"] == "download_product_die") {
     if(empty($_POST["token"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng đăng nhập để sử dụng tính năng này")]));
@@ -22,13 +23,23 @@ if($_POST["action"] == "download_product_die") {
     }
     $accounts = "";
     $current_product_code = "";
+    /*
+     * `product_die` stores only the product code, so the export used to look the product up inside
+     * the loop — one query per distinct code (and a warning-free notice for codes with no product).
+     * The table is small; read the names once and the loop becomes a hash lookup.
+     */
+    $productNames = [];
+    foreach ($CMSNT->get_list(" SELECT `code`, `name` FROM `products` ") as $productRow) {
+        $productNames[$productRow["code"]] = $productRow["name"];
+    }
     foreach ($CMSNT->get_list(" SELECT * FROM `product_die` ORDER BY product_code ") as $row) {
         if($row["product_code"] != $current_product_code) {
             if($current_product_code != "") {
                 $accounts .= PHP_EOL;
             }
             $current_product_code = $row["product_code"];
-            $accounts .= PHP_EOL . PHP_EOL . PHP_EOL . "============== " . $CMSNT->get_row(" SELECT * FROM `products` WHERE `code` = '" . $current_product_code . "' ")["name"] . " | Kho Hàng: " . $current_product_code . " ==============" . PHP_EOL;
+            $productName = isset($productNames[$current_product_code]) ? $productNames[$current_product_code] : $current_product_code;
+            $accounts .= PHP_EOL . PHP_EOL . PHP_EOL . "============== " . $productName . " | Kho Hàng: " . $current_product_code . " ==============" . PHP_EOL;
         }
         $accounts .= $row["account"] . PHP_EOL;
     }
@@ -207,9 +218,11 @@ if($_POST["action"] == "download_product_die") {
             exit(json_encode(["status" => "error", "msg" => __("Bạn không có quyền sử dụng tính năng này")]));
         }
         $deposits = $CMSNT->get_list("SELECT * FROM `deposit_log` WHERE `is_virtual` = 0 ORDER BY id DESC limit 100");
+        /* One username query for the whole timeline instead of up to 100. */
+        $depositNames = orbit_user_names($deposits, "user_id");
         $html = "";
         foreach ($deposits as $deposit) {
-            $html .= "<li>\n        <div class=\"timeline-time text-end\">\n            <span class=\"date\">" . timeAgo($deposit["create_time"]) . "</span>\n        </div>\n        <div class=\"timeline-icon\">\n            <a href=\"javascript:void(0);\"></a>\n        </div>\n        <div class=\"timeline-body\">\n            <div class=\"d-flex align-items-top timeline-main-content flex-wrap mt-0\">\n                <div class=\"flex-fill\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"mt-sm-0 mt-2\">\n                            <p class=\"mb-0 text-muted\"><b style=\"color: green;\">" . getRowRealtime("users", $deposit["user_id"], "username") . "</b>\n                                thực hiện nạp <b style=\"color: blue;\">" . format_currency($deposit["amount"]) . "</b>\n                                bằng <b style=\"color:red\">" . $deposit["method"] . "</b> thực nhận <b style=\"color:blue;\">" . format_currency($deposit["received"]) . "</b>\n                            </p>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </li>";
+            $html .= "<li>\n        <div class=\"timeline-time text-end\">\n            <span class=\"date\">" . timeAgo($deposit["create_time"]) . "</span>\n        </div>\n        <div class=\"timeline-icon\">\n            <a href=\"javascript:void(0);\"></a>\n        </div>\n        <div class=\"timeline-body\">\n            <div class=\"d-flex align-items-top timeline-main-content flex-wrap mt-0\">\n                <div class=\"flex-fill\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"mt-sm-0 mt-2\">\n                            <p class=\"mb-0 text-muted\"><b style=\"color: green;\">" . orbit_user_name($depositNames, $deposit["user_id"]) . "</b>\n                                thực hiện nạp <b style=\"color: blue;\">" . format_currency($deposit["amount"]) . "</b>\n                                bằng <b style=\"color:red\">" . $deposit["method"] . "</b> thực nhận <b style=\"color:blue;\">" . format_currency($deposit["received"]) . "</b>\n                            </p>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </li>";
         }
         exit($html);
     } elseif($_POST["action"] == "view_don_hang_gan_day") {
@@ -223,9 +236,10 @@ if($_POST["action"] == "download_product_die") {
             exit(json_encode(["status" => "error", "msg" => __("Bạn không có quyền sử dụng tính năng này")]));
         }
         $orders = $CMSNT->get_list("SELECT * FROM `order_log` WHERE `is_virtual` = 0 ORDER BY id DESC limit 100");
+        $orderNames = orbit_user_names($orders, "buyer");
         $html = "";
         foreach ($orders as $order) {
-            $html .= "<li>\n            <div class=\"timeline-time text-end\">\n                <span class=\"date\">" . timeAgo($order["create_time"]) . "</span>\n            </div>\n            <div class=\"timeline-icon\">\n                <a href=\"javascript:void(0);\"></a>\n            </div>\n            <div class=\"timeline-body\">\n                <div class=\"d-flex align-items-top timeline-main-content flex-wrap mt-0\">\n                    <div class=\"flex-fill\">\n                        <div class=\"d-flex align-items-center\">\n                            <div class=\"mt-sm-0 mt-2\">\n                                <p class=\"mb-0 text-muted\"><b style=\"color: green;\">" . getRowRealtime("users", $order["buyer"], "username") . "</b>\n                                    mua <b style=\"color: red;\">" . format_cash($order["amount"]) . "</b>\n                                    <b>" . $order["product_name"] . "</b> với giá <b style=\"color:blue;\">" . format_currency($order["pay"]) . "</b>\n                                </p>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </li>";
+            $html .= "<li>\n            <div class=\"timeline-time text-end\">\n                <span class=\"date\">" . timeAgo($order["create_time"]) . "</span>\n            </div>\n            <div class=\"timeline-icon\">\n                <a href=\"javascript:void(0);\"></a>\n            </div>\n            <div class=\"timeline-body\">\n                <div class=\"d-flex align-items-top timeline-main-content flex-wrap mt-0\">\n                    <div class=\"flex-fill\">\n                        <div class=\"d-flex align-items-center\">\n                            <div class=\"mt-sm-0 mt-2\">\n                                <p class=\"mb-0 text-muted\"><b style=\"color: green;\">" . orbit_user_name($orderNames, $order["buyer"]) . "</b>\n                                    mua <b style=\"color: red;\">" . format_cash($order["amount"]) . "</b>\n                                    <b>" . $order["product_name"] . "</b> với giá <b style=\"color:blue;\">" . format_currency($order["pay"]) . "</b>\n                                </p>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        </li>";
         }
         exit($html);
     } elseif($_POST["action"] == "top_san_pham_ban_chay") {

@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => __("Recharge Flutterwave"), "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n\n";
+$body["header"] = "\n<script src=\"" . BASE_URL("public/common/clipboard.js") . "\"></script>\n\n";
 $body["footer"] = "\n<!-- ckeditor -->\n<script src=\"" . BASE_URL("public/ckeditor/ckeditor.js") . "\"></script>\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
@@ -68,9 +68,10 @@ if(isset($_POST["SaveSettings"])) {
         $tx_ref = check_string($_GET["tx_ref"]);
         $where .= " AND `tx_ref` LIKE \"%" . $tx_ref . "%\" ";
     }
-    if(!empty($_GET["amount"])) {
-        $amount = check_string($_GET["amount"]);
-        $where .= " AND `amount` = " . $amount . " ";
+    /* Parse, then interpolate: `check_string("1 OR 1=1")` is not numeric and used to reach the query verbatim. */
+    $orbitFilterAmount = isset($_GET["amount"]) ? orbit_positive_amount($_GET["amount"]) : false;
+    if($orbitFilterAmount !== false) {
+        $where .= " AND `amount` = " . orbit_amount_string($orbitFilterAmount) . " ";
     }
     if(!empty($_GET["create_gettime"])) {
         $create_gettime = check_string($_GET["create_gettime"]);
@@ -241,11 +242,12 @@ if(isset($_POST["SaveSettings"])) {
     echo "</th>\n                                        <th class=\"text-center\">";
     echo __("Update date");
     echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
+    $orbitUserNames = orbit_user_names($listDatatable, "user_id");
     foreach ($listDatatable as $row) {
         echo "                                    <tr>\n                                        <td class=\"text-center\"><a class=\"text-primary\"\n                                                href=\"";
         echo base_url_admin("user-edit&id=" . $row["user_id"]);
         echo "\">";
-        echo getRowRealtime("users", $row["user_id"], "username");
+        echo orbit_user_name($orbitUserNames, $row["user_id"]);
         echo "                                                [ID ";
         echo $row["user_id"];
         echo "]</a>\n                                        </td>\n                                        <td><b>";

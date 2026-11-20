@@ -5,7 +5,11 @@ if(!defined("IN_SITE")) {
 }
 $body = ["title" => __("Viết bài mới"), "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
 $body["header"] = "\n\n";
-$body["footer"] = "\n<!-- bs-custom-file-input -->\n<script src=\"" . BASE_URL("public/AdminLTE3/") . "plugins/bs-custom-file-input/bs-custom-file-input.min.js\"></script>\n<!-- Page specific script -->\n<script>\n\$(function () {\n  bsCustomFileInput.init();\n});\n</script> \n";
+/* This page pulled AdminLTE's bs-custom-file-input from public/AdminLTE3, which is not
+   part of this checkout: the script 404'd and bsCustomFileInput.init() threw before the
+   rest of the inline JS ran. The markup uses plain <input type="file"> and needs none
+   of it. */
+$body["footer"] = "";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
 require_once __DIR__ . "/sidebar.php";
@@ -22,12 +26,10 @@ if(isset($_POST["submit"])) {
     }
     $url_icon = NULL;
     if(check_img("image")) {
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 4);
-        $uploads_dir = "assets/storage/images/image" . $rand . ".png";
-        $tmp_name = $_FILES["image"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $url_icon = $uploads_dir;
+        /* The extension follows the bytes, not a hard-coded ".png". */
+        $stored = orbit_store_image($_FILES["image"], "image", "images");
+        if($stored !== false) {
+            $url_icon = $stored;
         }
     }
     $isInsert = $CMSNT->insert("posts", ["user_id" => $getUser["id"], "image" => $url_icon, "title" => check_string($_POST["title"]), "slug" => check_string($_POST["slug"]), "category_id" => check_string($_POST["category_id"]), "content" => isset($_POST["content"]) ? base64_encode($_POST["content"]) : NULL, "status" => check_string($_POST["status"]), "create_gettime" => gettime()]);

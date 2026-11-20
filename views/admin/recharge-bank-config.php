@@ -4,8 +4,8 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => __("Recharge Bank Config"), "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/1.12.1/css/dataTables.bootstrap5.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/responsive/2.3.0/css/responsive.bootstrap.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/buttons/2.2.3/css/buttons.bootstrap5.min.css\">\n\n";
-$body["footer"] = "\n<script src=\"https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js\"></script>\n<script src=\"https://cdn.datatables.net/1.12.1/js/dataTables.bootstrap5.min.js\"></script>\n<script src=\"https://cdn.datatables.net/responsive/2.3.0/js/dataTables.responsive.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/buttons.print.min.js\"></script>\n";
+$body["header"] = "\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/dataTables.bootstrap5.min.css") . "\">\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/responsive.bootstrap5.min.css") . "\">\n\n\n";
+$body["footer"] = "\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/jquery.dataTables.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.bootstrap5.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.responsive.min.js") . "\"></script>\n\n\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
 require_once __DIR__ . "/sidebar.php";
@@ -45,22 +45,19 @@ if(isset($_POST["SaveSettings"])) {
         }
         $url_image = "";
         if(check_img("image")) {
-            $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 3);
-            $uploads_dir = "assets/storage/images/bank/" . $rand . ".png";
-            $tmp_name = $_FILES["image"]["tmp_name"];
-            $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-            if($addlogo) {
-                $url_image = "assets/storage/images/bank/" . $rand . ".png";
+            $stored = orbit_store_image($_FILES["image"], "bank_", "images/bank");
+            if($stored !== false) {
+                $url_image = $stored;
             }
         }
         $isInsert = $CMSNT->insert("banks", ["image" => $url_image, "short_name" => check_string($_POST["short_name"]), "accountNumber" => check_string($_POST["accountNumber"]), "token" => check_string(removeSpaces($_POST["token"])), "password" => check_string($_POST["password"]), "accountName" => check_string($_POST["accountName"])]);
         if($isInsert) {
             $Mobile_Detect = new Mobile_Detect();
-            $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thêm ngân hàng") . " (" . $_POST["short_name"] . " - " . $_POST["accountNumber"] . ")."]);
+            $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thêm ngân hàng") . " (" . check_string($_POST["short_name"]) . " - " . check_string($_POST["accountNumber"]) . ")."]);
             $my_text = $CMSNT->site("noti_action");
             $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
             $my_text = str_replace("{username}", $getUser["username"], $my_text);
-            $my_text = str_replace("{action}", __("Thêm ngân hàng") . " (" . $_POST["short_name"] . " - " . $_POST["accountNumber"] . ").", $my_text);
+            $my_text = str_replace("{action}", __("Thêm ngân hàng") . " (" . check_string($_POST["short_name"]) . " - " . check_string($_POST["accountNumber"]) . ").", $my_text);
             $my_text = str_replace("{ip}", myip(), $my_text);
             $my_text = str_replace("{time}", gettime(), $my_text);
             sendMessAdmin($my_text);

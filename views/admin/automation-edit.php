@@ -5,7 +5,11 @@ if(!defined("IN_SITE")) {
 }
 $body = ["title" => "Chỉnh sửa Task", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
 $body["header"] = "\n\n";
-$body["footer"] = "\n<!-- bs-custom-file-input -->\n<script src=\"" . BASE_URL("public/AdminLTE3/") . "plugins/bs-custom-file-input/bs-custom-file-input.min.js\"></script>\n<!-- Page specific script -->\n<script>\n\$(function () {\n  bsCustomFileInput.init();\n});\n</script> \n";
+/* This page pulled AdminLTE's bs-custom-file-input from public/AdminLTE3, which is not
+   part of this checkout: the script 404'd and bsCustomFileInput.init() threw before the
+   rest of the inline JS ran. The markup uses plain <input type="file"> and needs none
+   of it. */
+$body["footer"] = "";
 require_once __DIR__ . "/../../models/is_admin.php";
 if(isset($_GET["id"])) {
     $id = check_string($_GET["id"]);
@@ -33,11 +37,8 @@ if(isset($_POST["SaveTask"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng chọn loại công việc\")){window.history.back().location.reload();}</script>");
     }
     $type = check_string($_POST["type"]);
-    if(empty($_POST["product_id"])) {
-        $product_id = NULL;
-    } else {
-        $product_id = json_encode($_POST["product_id"]);
-    }
+    $productIds = orbit_post_id_list(isset($_POST["product_id"]) ? $_POST["product_id"] : array());
+    $product_id = $productIds ? json_encode($productIds) : NULL;
     if(empty($_POST["schedule"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập thời gian\")){window.history.back().location.reload();}</script>");
     }
@@ -72,11 +73,13 @@ echo $row["type"] == "delete_order_revenue" ? "selected" : "";
 echo ">Xóa đơn hàng & tài khoản đã bán</option>\n                                            <option value=\"change_warehouse\" ";
 echo $row["type"] == "change_warehouse" ? "selected" : "";
 echo ">Thay đổi kho hàng</option>\n                                        </select>\n                                    </div>\n                                </div>\n                            </div>\n                            <div class=\"row mb-4\" id=\"product_id_input\" style=\"display: none;\">\n                                <label class=\"col-sm-4 col-form-label\" for=\"example-hf-email\">Sản phẩm áp dụng (<span\n                                        class=\"text-danger\">*</span>)</label>\n                                <div class=\"col-sm-8\">\n                                    <select class=\"form-control\" name=\"product_id[]\" id=\"listProduct\" multiple>\n                                        <option value=\"\">Mặc định sẽ áp dụng cho toàn bộ sản phẩm nếu không chọn\n                                        </option>\n                                        ";
+/* One grouped products read for the whole select, not one per category. */
+$orbitProductGroups = orbit_products_by_category();
 foreach ($CMSNT->get_list(" SELECT * FROM `categories` ") as $category) {
     echo "                                        <optgroup label=\"__";
     echo $category["name"];
     echo "__\">\n                                            ";
-    foreach ($CMSNT->get_list(" SELECT * FROM `products` WHERE `category_id` = '" . $category["id"] . "' ") as $product) {
+    foreach (isset($orbitProductGroups[(int) $category["id"]]) ? $orbitProductGroups[(int) $category["id"]] : [] as $product) {
         echo "                                            <option\n                                                ";
         echo in_array($product["id"], json_decode($row["product_id"] ?? "[]", true) ?? [], true) ? "selected" : "";
         echo "                                                value=\"";

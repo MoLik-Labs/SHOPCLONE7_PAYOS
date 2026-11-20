@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>[preview] Lịch sử đơn hàng | Orbit Shop</title>
+<meta name="description" content="Shop bán tài khoản &amp; licence">
+<meta name="keywords" content="shop, licence">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Lịch sử đơn hàng | Orbit Shop">
+<meta property="og:description" content="Shop bán tài khoản &amp; licence">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#fbf9f4">
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/latin-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/vietnamese-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/client/orbit/tokens.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/base.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/components.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/shell.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/store.css?v=preview">
+<link rel="stylesheet" href="assets/preview.css">
+</head>
+<body class="page-orders">
+<div class="preview-banner"><strong>Bản xem trước tĩnh</strong> — trang thật chạy trong shop, ở đây dùng dữ liệu mẫu. Không có dữ liệu thật, không gọi mạng, không phát nhạc. Biểu đồ vẽ bằng SVG nội bộ; bảng vẫn đọc được khi tắt JavaScript.</div>
+
+<a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+<header class="topbar" data-topbar>
+  <div class="container topbar__inner">
+    <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+    <nav class="topbar__nav" aria-label="Điều hướng chính">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders" aria-current="page">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__actions">
+      <a class="topbar__balance" href="#preview-client-profile">
+        <span>Số dư</span>
+        <strong>250.000đ</strong>
+      </a>
+      <a class="btn btn--ghost topbar__account" href="#preview-client-profile">Tài khoản</a>
+      <a class="btn topbar__cta" href="#preview-action-recharge-bank">Nạp tiền</a>
+      <button class="topbar__toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-toggle>
+        <span class="sr-only">Mở menu</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+    </div>
+  </div>
+  <div class="topbar__sheet" id="site-menu" data-menu-sheet hidden>
+    <nav aria-label="Điều hướng trên điện thoại">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__sheet-actions">
+      <a class="btn btn--ghost btn--block" href="#preview-client-logout">Đăng xuất</a>
+      <a class="btn btn--primary btn--block" href="#preview-action-recharge-bank">Nạp tiền</a>
+    </div>
+  </div>
+</header>
+<main id="main" class="container section">
+
+<section class="section section--tight" aria-labelledby="orders-title">
+  <div class="container">
+
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Tài khoản</p>
+        <h1 id="orders-title">Lịch sử đơn hàng</h1>
+        <p class="muted m0">Mọi đơn bạn đã mua, kèm ghi chú riêng và tệp tài khoản để tải lại.</p>
+      </div>
+      <a class="btn" href="#preview-client-purchase-history">Thống kê chi tiêu</a>
+    </div>
+
+    
+    <form class="toolbar orders-filter" method="get" action="#preview-product-orders">
+      <div class="field">
+        <label class="field__label" for="order-code">Mã đơn hàng</label>
+        <input class="input" id="order-code" type="text" name="trans_id" autocomplete="off"
+          value="" placeholder="VD: 8F3A21C9">
+      </div>
+      <div class="field">
+        <label class="field__label" for="order-from">Từ ngày</label>
+        <input class="input" id="order-from" type="date" name="from" value="">
+      </div>
+      <div class="field">
+        <label class="field__label" for="order-to">Đến ngày</label>
+        <input class="input" id="order-to" type="date" name="to" value="">
+      </div>
+      <div class="field">
+        <label class="field__label" for="order-short">Khoảng thời gian</label>
+        <select class="select" id="order-short" name="shortByDate">
+          <option value="">Tất cả</option>
+          <option value="1">Hôm nay</option>
+          <option value="2">Tuần này</option>
+          <option value="3">Tháng này</option>
+        </select>
+      </div>
+      <div class="field field--shrink">
+        <label class="field__label" for="order-limit">Mỗi trang</label>
+        <select class="select" id="order-limit" name="limit">
+                    <option value="5">
+            5          </option>
+                    <option value="10" selected>
+            10          </option>
+                    <option value="20">
+            20          </option>
+                    <option value="50">
+            50          </option>
+                    <option value="100">
+            100          </option>
+                    <option value="500">
+            500          </option>
+                    <option value="1000">
+            1.000          </option>
+                  </select>
+      </div>
+      <div class="toolbar__actions">
+        <button class="btn btn--primary" type="submit">Lọc đơn</button>
+              </div>
+    </form>
+
+    <div class="orders-head">
+      <p class="small muted m0">
+        Hiển thị 1–6 trong 6 đơn      </p>
+            <div class="orders-bulk">
+        <label class="check">
+          <input type="checkbox" data-orders-all>
+          <span>Chọn tất cả</span>
+        </label>
+        <button class="btn btn--sm btn--danger" type="button" data-orders-delete disabled>Xóa đơn đã chọn</button>
+      </div>
+          </div>
+
+        <div data-orders
+      data-update-endpoint="#preview-ajaxs-client-update-php"
+      data-remove-endpoint="#preview-ajaxs-client-remove-php"
+      data-view-endpoint="#preview-ajaxs-client-view-php"
+      data-token="tok">
+
+      <p class="small" role="status" aria-live="polite" data-orders-status></p>
+
+      <ul class="order-list">
+                <li class="order-item" data-order-row>
+          <div class="order-item__check">
+                        <label class="check">
+              <input type="checkbox" value="9001" data-order-check
+                data-trans="ORD9001">
+              <span class="sr-only">Chọn đơn ORD9001</span>
+            </label>
+                      </div>
+
+          <div class="order-item__main">
+            <a class="order-item__code" href="#preview-product-order-ORD9001">
+              ORD9001            </a>
+            <span class="order-item__product">Canva Pro 1 năm</span>
+            <span class="order-item__meta">
+              SL 1              · 2026-11-13 08:15:00                          </span>
+          </div>
+
+          <div class="order-item__money">
+            <span class="small faint">Thanh toán</span>
+            <strong>250.000đ</strong>
+          </div>
+
+          <div class="order-item__actions">
+                        <a class="btn btn--sm" href="#preview-product-order-ORD9001">Xem</a>
+            <button class="btn btn--sm btn--ghost" type="button"
+              data-order-download="ORD9001">Tải .txt</button>
+            <button class="btn btn--sm btn--ghost btn--danger" type="button"
+              data-order-remove="9001">Xóa</button>
+                      </div>
+
+          <div class="order-item__note">
+            <label class="small faint" for="note-9001">Ghi chú riêng</label>
+            <input class="input input--sm" id="note-9001" type="text"
+              value="" maxlength="200"
+              placeholder="VD: tài khoản dùng cho gia đình"
+              data-order-note="9001">
+          </div>
+        </li>
+                <li class="order-item order-item--deleted" data-order-row>
+          <div class="order-item__check">
+                      </div>
+
+          <div class="order-item__main">
+            <a class="order-item__code" href="#preview-product-order-ORD9007">
+              ORD9007            </a>
+            <span class="order-item__product">Canva Pro 1 năm</span>
+            <span class="order-item__meta">
+              SL 1              · 2026-11-14 10:15:00              <span class="pill pill--danger">Đã xóa khỏi lịch sử</span>            </span>
+          </div>
+
+          <div class="order-item__money">
+            <span class="small faint">Thanh toán</span>
+            <strong>250.000đ</strong>
+          </div>
+
+          <div class="order-item__actions">
+                        <span class="small faint">Không còn thao tác</span>
+                      </div>
+
+          <div class="order-item__note">
+            <label class="small faint" for="note-9007">Ghi chú riêng</label>
+            <input class="input input--sm" id="note-9007" type="text"
+              value="Tài khoản dùng cho gia đình" maxlength="200"
+              placeholder="VD: tài khoản dùng cho gia đình"
+              disabled>
+          </div>
+        </li>
+                <li class="order-item" data-order-row>
+          <div class="order-item__check">
+                        <label class="check">
+              <input type="checkbox" value="9014" data-order-check
+                data-trans="ORD9014">
+              <span class="sr-only">Chọn đơn ORD9014</span>
+            </label>
+                      </div>
+
+          <div class="order-item__main">
+            <a class="order-item__code" href="#preview-product-order-ORD9014">
+              ORD9014            </a>
+            <span class="order-item__product">Canva Pro 1 năm</span>
+            <span class="order-item__meta">
+              SL 1              · 2026-11-15 12:15:00                          </span>
+          </div>
+
+          <div class="order-item__money">
+            <span class="small faint">Thanh toán</span>
+            <strong>250.000đ</strong>
+          </div>
+
+          <div class="order-item__actions">
+                        <a class="btn btn--sm" href="#preview-product-order-ORD9014">Xem</a>
+            <button class="btn btn--sm btn--ghost" type="button"
+              data-order-download="ORD9014">Tải .txt</button>
+            <button class="btn btn--sm btn--ghost btn--danger" type="button"
+              data-order-remove="9014">Xóa</button>
+                      </div>
+
+          <div class="order-item__note">
+            <label class="small faint" for="note-9014">Ghi chú riêng</label>
+            <input class="input input--sm" id="note-9014" type="text"
+              value="" maxlength="200"
+              placeholder="VD: tài khoản dùng cho gia đình"
+              data-order-note="9014">
+          </div>
+        </li>
+                <li class="order-item" data-order-row>
+          <div class="order-item__check">
+                        <label class="check">
+              <input type="checkbox" value="9023" data-order-check
+                data-trans="ORD9023">
+              <span class="sr-only">Chọn đơn ORD9023</span>
+            </label>
+                      </div>
+
+          <div class="order-item__main">
+            <a class="order-item__code" href="#preview-product-order-ORD9023">
+              ORD9023            </a>
+            <span class="order-item__product">Canva Pro 1 năm</span>
+            <span class="order-item__meta">
+              SL 1              · 2026-11-16 14:15:00                          </span>
+          </div>
+
+          <div class="order-item__money">
+            <span class="small faint">Thanh toán</span>
+            <strong>250.000đ</strong>
+          </div>
+
+          <div class="order-item__actions">
+                        <a class="btn btn--sm" href="#preview-product-order-ORD9023">Xem</a>
+            <button class="btn btn--sm btn--ghost" type="button"
+              data-order-download="ORD9023">Tải .txt</button>
+            <button class="btn btn--sm btn--ghost btn--danger" type="button"
+              data-order-remove="9023">Xóa</button>
+                      </div>
+
+          <div class="order-item__note">
+            <label class="small faint" for="note-9023">Ghi chú riêng</label>
+            <input class="input input--sm" id="note-9023" type="text"
+              value="" maxlength="200"
+              placeholder="VD: tài khoản dùng cho gia đình"
+              data-order-note="9023">
+          </div>
+        </li>
+                <li class="order-item" data-order-row>
+          <div class="order-item__check">
+                        <label class="check">
+              <input type="checkbox" value="9029" data-order-check
+                data-trans="ORD9029">
+              <span class="sr-only">Chọn đơn ORD9029</span>
+            </label>
+                      </div>
+
+          <div class="order-item__main">
+            <a class="order-item__code" href="#preview-product-order-ORD9029">
+              ORD9029            </a>
+            <span class="order-item__product">Canva Pro 1 năm</span>
+            <span class="order-item__meta">
+              SL 1              · 2026-11-17 16:15:00                          </span>
+          </div>
+
+          <div class="order-item__money">
+            <span class="small faint">Thanh toán</span>
+            <strong>250.000đ</strong>
+          </div>
+
+          <div class="order-item__actions">
+                        <a class="btn btn--sm" href="#preview-product-order-ORD9029">Xem</a>
+            <button class="btn btn--sm btn--ghost" type="button"
+              data-order-download="ORD9029">Tải .txt</button>
+            <button class="btn btn--sm btn--ghost btn--danger" type="button"
+              data-order-remove="9029">Xóa</button>
+                      </div>
+
+          <div class="order-item__note">
+            <label class="small faint" for="note-9029">Ghi chú riêng</label>
+            <input class="input input--sm" id="note-9029" type="text"
+              value="" maxlength="200"
+              placeholder="VD: tài khoản dùng cho gia đình"
+              data-order-note="9029">
+          </div>
+        </li>
+                <li class="order-item" data-order-row>
+          <div class="order-item__check">
+                        <label class="check">
+              <input type="checkbox" value="9040" data-order-check
+                data-trans="ORD9040">
+              <span class="sr-only">Chọn đơn ORD9040</span>
+            </label>
+                      </div>
+
+          <div class="order-item__main">
+            <a class="order-item__code" href="#preview-product-order-ORD9040">
+              ORD9040            </a>
+            <span class="order-item__product">Netflix Premium 1 tháng</span>
+            <span class="order-item__meta">
+              SL 2              · 2026-11-20 08:15:00                          </span>
+          </div>
+
+          <div class="order-item__money">
+            <span class="small faint">Thanh toán</span>
+            <strong>240.000đ</strong>
+          </div>
+
+          <div class="order-item__actions">
+                        <a class="btn btn--sm" href="#preview-product-order-ORD9040">Xem</a>
+            <button class="btn btn--sm btn--ghost" type="button"
+              data-order-download="ORD9040">Tải .txt</button>
+            <button class="btn btn--sm btn--ghost btn--danger" type="button"
+              data-order-remove="9040">Xóa</button>
+                      </div>
+
+          <div class="order-item__note">
+            <label class="small faint" for="note-9040">Ghi chú riêng</label>
+            <input class="input input--sm" id="note-9040" type="text"
+              value="" maxlength="200"
+              placeholder="VD: tài khoản dùng cho gia đình"
+              data-order-note="9040">
+          </div>
+        </li>
+              </ul>
+    </div>
+
+    <div class="pagination-bar"><span class="pagination-bar__info">Trang 1/1 · 6 đơn</span></div>
+    
+    <p class="small faint orders-foot">
+      Đơn đã xóa vẫn hiện ở đây để bạn biết nó từng tồn tại; nội dung tài khoản không còn mở được.
+      Cần hỗ trợ? <a href="#preview-client-contact">Liên hệ shop</a>.
+    </p>
+  </div>
+</section>
+
+</main>
+<footer class="footer">
+  <div class="container">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+        <p class="footer__note">Shop bán tài khoản &amp; licence</p>
+        <ul class="footer__contact">
+<li><span class="footer__label">Hotline</span> <a href="tel:0909123456">0909 123 456</a></li>
+<li><span class="footer__label">Email</span> <a href="mailto:support@orbit.example">support@orbit.example</a></li>
+<li><span class="footer__label">Địa chỉ</span> Quận 1, TP. Hồ Chí Minh</li>        </ul>
+      </div>
+      <div class="footer__cols">
+        <nav class="footer__col" aria-label="Mua hàng">
+          <h2 class="footer__heading">Mua hàng</h2>
+          <ul>
+            <li><a href="#preview-client-home#san-pham">Tất cả sản phẩm</a></li>
+            <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+            <li><a href="#preview-product-orders">Lịch sử đơn hàng</a></li>
+            <li><a href="#preview-client-favorites">Sản phẩm yêu thích</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Hỗ trợ">
+          <h2 class="footer__heading">Hỗ trợ</h2>
+          <ul>
+            <li><a href="#preview-client-faq">Câu hỏi thường gặp</a></li>
+            <li><a href="#preview-client-contact">Liên hệ</a></li>
+            <li><a href="#preview-client-policy">Chính sách</a></li>
+            <li><a href="#preview-client-document-api">Tài liệu API</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Tài khoản">
+          <h2 class="footer__heading">Tài khoản</h2>
+          <ul>
+            <li><a href="#preview-client-login">Đăng nhập</a></li>
+            <li><a href="#preview-client-register">Đăng ký</a></li>
+            <li><a href="#preview-client-login">Nạp tiền</a></li>
+            <li><a href="#preview-client-profile">Trang cá nhân</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+    <div class="footer__legal">
+      <p>© 2026 Orbit Shop</p>
+      <p class="footer__credit">Thiết kế &amp; vận hành: <strong>Orbit Office</strong></p>
+      <ul class="footer__legal-links">
+        <li><a href="#preview-client-policy">Chính sách</a></li>
+        <li><a href="#preview-client-faq">FAQ</a></li>
+        <li><a href="#preview-client-contact">Liên hệ</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+<script defer src="assets/client/orbit/store.js?v=preview"></script>
+<script defer src="assets/common/csrf.js?v=preview"></script>
+</body>
+</html>

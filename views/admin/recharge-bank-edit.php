@@ -32,23 +32,21 @@ if(isset($_POST["LuuNganHang"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"" . $checkKey["msg"] . "\")){window.history.back().location.reload();}</script>");
     }
     if(check_img("image")) {
-        unlink($row["image"]);
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 3);
-        $uploads_dir = "assets/storage/images/bank/" . $rand . ".png";
-        $tmp_name = $_FILES["image"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $CMSNT->update("banks", ["image" => "assets/storage/images/bank/" . $rand . ".png"], " `id` = '" . $id . "' ");
+        $stored = orbit_store_image($_FILES["image"], "bank_", "images/bank");
+        if($stored !== false) {
+            $CMSNT->update("banks", ["image" => $stored], " `id` = '" . $id . "' ");
+            /* The row now points at the new file; only then is the previous one removed. */
+            orbit_delete_upload($row["image"]);
         }
     }
     $isUpdate = $CMSNT->update("banks", ["short_name" => check_string($_POST["short_name"]), "accountNumber" => check_string($_POST["accountNumber"]), "status" => check_string($_POST["status"]), "token" => check_string(removeSpaces($_POST["token"])), "password" => check_string($_POST["password"]), "accountName" => check_string($_POST["accountName"])], " `id` = '" . $id . "' ");
     if($isUpdate) {
         $Mobile_Detect = new Mobile_Detect();
-        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Cập nhật thông tin ngân hàng") . " (" . $_POST["short_name"] . " - " . $_POST["accountNumber"] . ")."]);
+        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Cập nhật thông tin ngân hàng") . " (" . check_string($_POST["short_name"]) . " - " . check_string($_POST["accountNumber"]) . ")."]);
         $my_text = $CMSNT->site("noti_action");
         $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
         $my_text = str_replace("{username}", $getUser["username"], $my_text);
-        $my_text = str_replace("{action}", __("Cập nhật thông tin ngân hàng") . " (" . $_POST["short_name"] . " - " . $_POST["accountNumber"] . ").", $my_text);
+        $my_text = str_replace("{action}", __("Cập nhật thông tin ngân hàng") . " (" . check_string($_POST["short_name"]) . " - " . check_string($_POST["accountNumber"]) . ").", $my_text);
         $my_text = str_replace("{ip}", myip(), $my_text);
         $my_text = str_replace("{time}", gettime(), $my_text);
         sendMessAdmin($my_text);

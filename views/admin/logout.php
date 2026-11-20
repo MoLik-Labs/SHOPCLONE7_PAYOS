@@ -4,8 +4,7 @@ if (!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $CMSNT = new DB();
-setcookie("token", NULL, -1, "/");
-session_destroy();
+orbit_logout();
 redirect(base_url("client/"));
 echo "\n";
 

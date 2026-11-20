@@ -1,0 +1,12 @@
+{
+  "name": "shopclone7-dev-tools",
+  "private": true,
+  "description": "Local harness: real PHP (wasm) for tests, Chromium for preview screenshots. Not shipped.",
+  "type": "module",
+  "dependencies": {
+    "@php-wasm/node": "2.0.22",
+    "@php-wasm/universal": "2.0.22",
+    "@sparticuz/chromium": "153.0.0",
+    "puppeteer-core": "24.9.0"
+  }
+}

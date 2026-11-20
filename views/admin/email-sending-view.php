@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => "View Sending Report", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n\n";
+$body["header"] = "\n\n\n";
 $body["footer"] = "\n \n";
 require_once __DIR__ . "/../../models/is_admin.php";
 if(isset($_GET["id"])) {
@@ -91,6 +91,17 @@ if(isset($_GET["shortByDate"])) {
 }
 $listDatatable = $CMSNT->get_list(" SELECT * FROM `email_sending` WHERE " . $where . " ORDER BY `id` ASC LIMIT " . $from . "," . $limit . " ");
 $totalDatatable = $CMSNT->num_rows(" SELECT * FROM `email_sending` WHERE " . $where . " ORDER BY id DESC ");
+/* Two user lookups per row (username, email) became one IN query for the page. */
+$sendingUsers = [];
+$sendingUserIds = [];
+foreach ($listDatatable as $sendingRow) {
+    $sendingUserIds[] = (int) $sendingRow["user_id"];
+}
+if ($sendingUserIds) {
+    foreach ($CMSNT->get_list("SELECT `id`,`username`,`email` FROM `users` WHERE `id` IN (" . implode(",", array_unique($sendingUserIds)) . ")") as $sendingUser) {
+        $sendingUsers[(int) $sendingUser["id"]] = $sendingUser;
+    }
+}
 $urlDatatable = pagination(base_url_admin("email-sending-view&id=" . $id . "&limit=" . $limit . "&shortByDate=" . $shortByDate . "&update_gettime=" . $update_gettime . "&status=" . $status . "&email=" . $email . "&username=" . $username . "&"), $from, $totalDatatable, $limit);
 echo "\n\n\n<div class=\"main-content app-content\">\n    <div class=\"container-fluid\">\n        <div class=\"d-md-flex d-block align-items-center justify-content-between my-4 page-header-breadcrumb\">\n            <h1 class=\"page-title fw-semibold fs-18 mb-0\">View Sending Report</h1>\n            <div class=\"ms-md-1 ms-0\">\n                <nav>\n                    <ol class=\"breadcrumb mb-0\">\n                        <li class=\"breadcrumb-item\"><a href=\"";
 echo base_url_admin("email-campaigns");
@@ -149,9 +160,9 @@ echo __("Tháng này");
 echo "                                        </option>\n                                    </select>\n                                </div>\n                            </div>\n                        </form>\n                        <div class=\"table-responsive mb-3\">\n                            <table class=\"table text-nowrap table-striped table-hover table-bordered\">\n                                <thead>\n                                    <tr>\n                                        <th>Username</th>\n                                        <th>Email</th>\n                                        <th class=\"text-center\">Trạng thái</th>\n                                        <th>Thời gian hoàn thành</th>\n                                        <th>Response</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
 foreach ($listDatatable as $row) {
     echo "                                    <tr>\n                                        <td><i class=\"ace-icon fa fa-user bigger-130 mr-1\"></i>\n                                            <strong>";
-    echo getRowRealtime("users", $row["user_id"], "username");
+    echo isset($sendingUsers[(int) $row["user_id"]]) ? $sendingUsers[(int) $row["user_id"]]["username"] : "";
     echo "</strong>\n                                        </td>\n                                        <td><i class=\"ace-icon fa fa-envelope bigger-130 mr-1\"></i>\n                                            <strong>";
-    echo getRowRealtime("users", $row["user_id"], "email");
+    echo isset($sendingUsers[(int) $row["user_id"]]) ? $sendingUsers[(int) $row["user_id"]]["email"] : "";
     echo "</strong>\n                                        </td>\n                                        <td class=\"text-center\">";
     echo display_camp($row["status"]);
     echo "</td>\n                                        <td><i class=\"fa-solid fa-clock mr-1\"></i> ";

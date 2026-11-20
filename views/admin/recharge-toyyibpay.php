@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => __("Recharge Toyyibpay"), "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n\n";
+$body["header"] = "\n\n\n";
 $body["footer"] = "\n<!-- ckeditor -->\n<script src=\"" . BASE_URL("public/ckeditor/ckeditor.js") . "\"></script>\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
@@ -76,9 +76,10 @@ if(isset($_POST["SaveSettings"])) {
         $trans_id = check_string($_GET["trans_id"]);
         $where .= " AND `trans_id` LIKE \"%" . $trans_id . "%\" ";
     }
-    if(!empty($_GET["amount"])) {
-        $amount = check_string($_GET["amount"]);
-        $where .= " AND `amount` = " . $amount . " ";
+    /* Parse, then interpolate: `check_string("1 OR 1=1")` is not numeric and used to reach the query verbatim. */
+    $orbitFilterAmount = isset($_GET["amount"]) ? orbit_positive_amount($_GET["amount"]) : false;
+    if($orbitFilterAmount !== false) {
+        $where .= " AND `amount` = " . orbit_amount_string($orbitFilterAmount) . " ";
     }
     if(!empty($_GET["billName"])) {
         $billName = check_string($_GET["billName"]);
@@ -287,11 +288,12 @@ if(isset($_POST["SaveSettings"])) {
     echo "</th>\n                                        <th>";
     echo __("Update date");
     echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
+    $orbitUserNames = orbit_user_names($listDatatable, "user_id");
     foreach ($listDatatable as $row2) {
         echo "                                    <tr>\n                                        <td class=\"text-center\"><a\n                                                href=\"";
         echo base_url_admin("user-edit&id=" . $row2["user_id"]);
         echo "\">";
-        echo getRowRealtime("users", $row2["user_id"], "username");
+        echo orbit_user_name($orbitUserNames, $row2["user_id"]);
         echo "                                                [ID ";
         echo $row2["user_id"];
         echo "]</a>\n                                        </td>\n                                        <td><small>";

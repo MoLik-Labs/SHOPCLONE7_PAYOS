@@ -40,12 +40,17 @@ if(isset($_POST["save"])) {
                     http_response_code(400);
                     exit('Invalid product image upload.');
                 }
-                $rand = random("QWERTYUIOPASDFGHJKLZXCVBNM0123456789", 8);
-                $uploads_dir = "assets/storage/images/products/";
-                $tmp_name = $_FILES["images"]["tmp_name"][$name];
-                $name_image = $rand . ".png";
-                move_uploaded_file($tmp_name, $uploads_dir . $name_image);
-                $images = $images . PHP_EOL . $name_image;
+                /* The stored extension follows the bytes, and a failed move is not recorded as an image. */
+                $stored = orbit_store_image([
+                    "name" => $value,
+                    "tmp_name" => $_FILES["images"]["tmp_name"][$name],
+                    "error" => $_FILES["images"]["error"][$name],
+                ], "product_", "images/products");
+                if ($stored === false) {
+                    http_response_code(400);
+                    exit('Could not store the product image.');
+                }
+                $images = $images . PHP_EOL . basename($stored);
             }
         }
     }
@@ -89,7 +94,7 @@ echo "\"><i class=\"fa-solid fa-arrow-left\"></i></a> Chỉnh sửa sản\n     
 echo $product["name"];
 echo "            </h1>\n        </div>\n        <form action=\"\" method=\"POST\" enctype=\"multipart/form-data\">\n            ";
 if($product["check_live"] == "Clone" && 120 <= time() - $CMSNT->site("time_cron_checklive_clone")) {
-    echo "            <div class=\"alert alert-danger alert-dismissible fade show custom-alert-icon shadow-sm\" role=\"alert\">\n                <svg class=\"svg-danger\" xmlns=\"http://www.w3.org/2000/svg\" height=\"1.5rem\" viewBox=\"0 0 24 24\"\n                    width=\"1.5rem\" fill=\"#000000\">\n                    <path d=\"M0 0h24v24H0z\" fill=\"none\" />\n                    <path\n                        d=\"M15.73 3H8.27L3 8.27v7.46L8.27 21h7.46L21 15.73V8.27L15.73 3zM12 17.3c-.72 0-1.3-.58-1.3-1.3 0-.72.58-1.3 1.3-1.3.72 0 1.3.58 1.3 1.3 0 .72-.58 1.3-1.3 1.3zm1-4.3h-2V7h2v6z\" />\n                </svg>\n                Vui lòng thực hiện <b><a target=\"_blank\" class=\"text-primary\" href=\"https://help.cmsnt.co/huong-dan/huong-dan-xu-ly-khi-website-bao-loi-cron/\">CRON JOB</a></b> liên kết: <a class=\"text-primary\"\n                    href=\"";
+    echo "            <div class=\"alert alert-danger alert-dismissible fade show custom-alert-icon shadow-sm\" role=\"alert\">\n                <svg class=\"svg-danger\" xmlns=\"http://www.w3.org/2000/svg\" height=\"1.5rem\" viewBox=\"0 0 24 24\"\n                    width=\"1.5rem\" fill=\"#000000\">\n                    <path d=\"M0 0h24v24H0z\" fill=\"none\" />\n                    <path\n                        d=\"M15.73 3H8.27L3 8.27v7.46L8.27 21h7.46L21 15.73V8.27L15.73 3zM12 17.3c-.72 0-1.3-.58-1.3-1.3 0-.72.58-1.3 1.3-1.3.72 0 1.3.58 1.3 1.3 0 .72-.58 1.3-1.3 1.3zm1-4.3h-2V7h2v6z\" />\n                </svg>\n                Vui lòng thực hiện <b><a target=\"_blank\" class=\"text-primary\" href=\"https://help.cmsnt.co/huong-dan/huong-dan-xu-ly-khi-website-bao-loi-cron/\">CRON JOB</a></b> (gửi kèm header <code>X-Cron-Token</code>) liên kết: <a class=\"text-primary\"\n                    href=\"";
     echo base_url("cron/checklive/clone.php");
     echo "\"\n                    target=\"_blank\">";
     echo base_url("cron/checklive/clone.php");
@@ -97,7 +102,7 @@ if($product["check_live"] == "Clone" && 120 <= time() - $CMSNT->site("time_cron_
 }
 echo "            ";
 if($product["check_live"] == "Hotmail" && 120 <= time() - $CMSNT->site("time_cron_checklive_hotmail")) {
-    echo "            <div class=\"alert alert-danger alert-dismissible fade show custom-alert-icon shadow-sm\" role=\"alert\">\n                <svg class=\"svg-danger\" xmlns=\"http://www.w3.org/2000/svg\" height=\"1.5rem\" viewBox=\"0 0 24 24\"\n                    width=\"1.5rem\" fill=\"#000000\">\n                    <path d=\"M0 0h24v24H0z\" fill=\"none\" />\n                    <path\n                        d=\"M15.73 3H8.27L3 8.27v7.46L8.27 21h7.46L21 15.73V8.27L15.73 3zM12 17.3c-.72 0-1.3-.58-1.3-1.3 0-.72.58-1.3 1.3-1.3.72 0 1.3.58 1.3 1.3 0 .72-.58 1.3-1.3 1.3zm1-4.3h-2V7h2v6z\" />\n                </svg>\n                Vui lòng thực hiện <b><a target=\"_blank\" class=\"text-primary\" href=\"https://help.cmsnt.co/huong-dan/huong-dan-xu-ly-khi-website-bao-loi-cron/\">CRON JOB</a></b> liên kết: <a class=\"text-primary\"\n                    href=\"";
+    echo "            <div class=\"alert alert-danger alert-dismissible fade show custom-alert-icon shadow-sm\" role=\"alert\">\n                <svg class=\"svg-danger\" xmlns=\"http://www.w3.org/2000/svg\" height=\"1.5rem\" viewBox=\"0 0 24 24\"\n                    width=\"1.5rem\" fill=\"#000000\">\n                    <path d=\"M0 0h24v24H0z\" fill=\"none\" />\n                    <path\n                        d=\"M15.73 3H8.27L3 8.27v7.46L8.27 21h7.46L21 15.73V8.27L15.73 3zM12 17.3c-.72 0-1.3-.58-1.3-1.3 0-.72.58-1.3 1.3-1.3.72 0 1.3.58 1.3 1.3 0 .72-.58 1.3-1.3 1.3zm1-4.3h-2V7h2v6z\" />\n                </svg>\n                Vui lòng thực hiện <b><a target=\"_blank\" class=\"text-primary\" href=\"https://help.cmsnt.co/huong-dan/huong-dan-xu-ly-khi-website-bao-loi-cron/\">CRON JOB</a></b> (gửi kèm header <code>X-Cron-Token</code>) liên kết: <a class=\"text-primary\"\n                    href=\"";
     echo base_url("cron/checklive/hotmail.php");
     echo "\"\n                    target=\"_blank\">";
     echo base_url("cron/checklive/hotmail.php");
@@ -105,7 +110,7 @@ if($product["check_live"] == "Hotmail" && 120 <= time() - $CMSNT->site("time_cro
 }
 echo "            ";
 if($product["check_live"] == "Gmail" && 120 <= time() - $CMSNT->site("time_cron_checklive_gmail")) {
-    echo "            <div class=\"alert alert-danger alert-dismissible fade show custom-alert-icon shadow-sm\" role=\"alert\">\n                <svg class=\"svg-danger\" xmlns=\"http://www.w3.org/2000/svg\" height=\"1.5rem\" viewBox=\"0 0 24 24\"\n                    width=\"1.5rem\" fill=\"#000000\">\n                    <path d=\"M0 0h24v24H0z\" fill=\"none\" />\n                    <path\n                        d=\"M15.73 3H8.27L3 8.27v7.46L8.27 21h7.46L21 15.73V8.27L15.73 3zM12 17.3c-.72 0-1.3-.58-1.3-1.3 0-.72.58-1.3 1.3-1.3.72 0 1.3.58 1.3 1.3 0 .72-.58 1.3-1.3 1.3zm1-4.3h-2V7h2v6z\" />\n                </svg>\n                Vui lòng thực hiện <b><a target=\"_blank\" class=\"text-primary\" href=\"https://help.cmsnt.co/huong-dan/huong-dan-xu-ly-khi-website-bao-loi-cron/\">CRON JOB</a></b> liên kết: <a class=\"text-primary\"\n                    href=\"";
+    echo "            <div class=\"alert alert-danger alert-dismissible fade show custom-alert-icon shadow-sm\" role=\"alert\">\n                <svg class=\"svg-danger\" xmlns=\"http://www.w3.org/2000/svg\" height=\"1.5rem\" viewBox=\"0 0 24 24\"\n                    width=\"1.5rem\" fill=\"#000000\">\n                    <path d=\"M0 0h24v24H0z\" fill=\"none\" />\n                    <path\n                        d=\"M15.73 3H8.27L3 8.27v7.46L8.27 21h7.46L21 15.73V8.27L15.73 3zM12 17.3c-.72 0-1.3-.58-1.3-1.3 0-.72.58-1.3 1.3-1.3.72 0 1.3.58 1.3 1.3 0 .72-.58 1.3-1.3 1.3zm1-4.3h-2V7h2v6z\" />\n                </svg>\n                Vui lòng thực hiện <b><a target=\"_blank\" class=\"text-primary\" href=\"https://help.cmsnt.co/huong-dan/huong-dan-xu-ly-khi-website-bao-loi-cron/\">CRON JOB</a></b> (gửi kèm header <code>X-Cron-Token</code>) liên kết: <a class=\"text-primary\"\n                    href=\"";
     echo base_url("cron/checklive/gmail.php");
     echo "\"\n                    target=\"_blank\">";
     echo base_url("cron/checklive/gmail.php");

@@ -1,0 +1,13 @@
+.preview-banner {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--warn-soft); color: var(--text);
+  border-bottom: 1px solid var(--warn);
+  padding: 8px 16px; font-size: 13px;
+  backdrop-filter: blur(6px);
+}
+.preview-banner strong { margin-right: 6px; }
+.preview-nav { display: flex; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.preview-nav a { font-size: 13px; }
+.preview-tile { padding: var(--space-5); text-decoration: none; display: block; }
+.preview-tile h3 { margin-bottom: var(--space-2); }
+.preview-tile p { margin: 0; }

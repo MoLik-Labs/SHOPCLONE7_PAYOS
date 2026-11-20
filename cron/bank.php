@@ -8,6 +8,10 @@ require_once __DIR__ . "/../libs/lang.php";
 require_once __DIR__ . "/../libs/helper.php";
 require_once __DIR__ . "/../libs/database/users.php";
 $CMSNT = new DB();
+if (!orbit_cron_allowed()) {
+    http_response_code(403);
+    exit("cron_forbidden");
+}
 $user = new users();
 
 $CMSNT->update("settings", ["value" => time()], " `name` = 'check_time_cron_bank' ");
@@ -18,9 +22,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
         foreach ($result["transactions"] as $data) {
             $tid = check_string($data["transactionID"]);
             $description = str_replace(" ", ".", check_string($data["description"]));
-            $amount = check_string($data["amount"]);
+            $amount = orbit_gateway_amount($data["amount"]);
             $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-            if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+            if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                 if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                     $received = checkPromotion($amount);
                     $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -28,10 +32,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                         $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                         if ($isCong) {
                             if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                $ck = $CMSNT->site("affiliate_ck");
-                                if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                    $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                }
+                                $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                 $price = $received * $ck / 100;
                                 $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                             }
@@ -61,9 +62,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
             foreach ($result["transactions"] as $data) {
                 $tid = check_string($data["transactionID"]);
                 $description = check_string($data["description"]);
-                $amount = check_string((int) $data["amount"]);
+                $amount = orbit_gateway_amount($data["amount"]);
                 $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                     if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                         $received = checkPromotion($amount);
                         $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -71,10 +72,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                             $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                             if ($isCong) {
                                 if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                    $ck = $CMSNT->site("affiliate_ck");
-                                    if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                        $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                    }
+                                    $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                     $price = $received * $ck / 100;
                                     $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                 }
@@ -104,9 +102,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                 foreach ($result["transactions"] as $data) {
                     $tid = check_string($data["transactionID"]);
                     $description = check_string($data["description"]);
-                    $amount = check_string(str_replace(",", "", $data["amount"]));
+                    $amount = orbit_gateway_amount($data["amount"]);
                     $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                    if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                    if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                         if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                             $received = checkPromotion($amount);
                             $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -114,10 +112,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                 $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                 if ($isCong) {
                                     if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                        $ck = $CMSNT->site("affiliate_ck");
-                                        if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                            $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                        }
+                                        $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                         $price = $received * $ck / 100;
                                         $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                     }
@@ -147,9 +142,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                     foreach ($result["transactions"] as $data) {
                         $tid = check_string($data["transactionID"]);
                         $description = check_string($data["description"]);
-                        $amount = check_string(str_replace(",", "", $data["amount"]));
+                        $amount = orbit_gateway_amount($data["amount"]);
                         $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                        if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                        if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                             if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                                 $received = checkPromotion($amount);
                                 $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -157,10 +152,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                     $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                     if ($isCong) {
                                         if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                            $ck = $CMSNT->site("affiliate_ck");
-                                            if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                                $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                            }
+                                            $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                             $price = $received * $ck / 100;
                                             $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                         }
@@ -190,9 +182,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                         foreach ($result["transactions"] as $data) {
                             $tid = check_string($data["transactionID"]);
                             $description = check_string($data["description"]);
-                            $amount = check_string($data["amount"]);
+                            $amount = orbit_gateway_amount($data["amount"]);
                             $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                            if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                            if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                                 if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                                     $received = checkPromotion($amount);
                                     $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -200,10 +192,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                         $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                         if ($isCong) {
                                             if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                                $ck = $CMSNT->site("affiliate_ck");
-                                                if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                                    $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                                }
+                                                $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                                 $price = $received * $ck / 100;
                                                 $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                             }
@@ -233,9 +222,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                             foreach ($result["transactions"] as $data) {
                                 $tid = check_string($data["transactionID"]);
                                 $description = str_replace(" ", ".", check_string($data["description"]));
-                                $amount = check_string($data["amount"]);
+                                $amount = orbit_gateway_amount($data["amount"]);
                                 $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                                if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                                if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                                     if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                                         $received = checkPromotion($amount);
                                         $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -243,10 +232,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                             $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                             if ($isCong) {
                                                 if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                                    $ck = $CMSNT->site("affiliate_ck");
-                                                    if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                                        $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                                    }
+                                                    $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                                     $price = $received * $ck / 100;
                                                     $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                                 }
@@ -276,9 +262,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                 foreach ($result["transactions"] as $data) {
                                     $tid = check_string($data["transactionID"]);
                                     $description = check_string($data["description"]);
-                                    $amount = check_string($data["amount"]);
+                                    $amount = orbit_gateway_amount($data["amount"]);
                                     $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                                    if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                                    if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                                         if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                                             $received = checkPromotion($amount);
                                             $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -286,10 +272,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                                 $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                                 if ($isCong) {
                                                     if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                                        $ck = $CMSNT->site("affiliate_ck");
-                                                        if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                                            $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                                        }
+                                                        $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                                         $price = $received * $ck / 100;
                                                         $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                                     }
@@ -319,9 +302,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                     foreach ($result["transactions"] as $data) {
                                         $tid = check_string($data["transactionID"]);
                                         $description = check_string($data["description"]);
-                                        $amount = check_string(str_replace(",", "", $data["amount"]));
+                                        $amount = orbit_gateway_amount($data["amount"]);
                                         $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                                        if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                                        if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                                             if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                                                 $received = checkPromotion($amount);
                                                 $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -329,10 +312,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                                     $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                                     if ($isCong) {
                                                         if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                                            $ck = $CMSNT->site("affiliate_ck");
-                                                            if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                                                $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                                            }
+                                                            $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                                             $price = $received * $ck / 100;
                                                             $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                                         }

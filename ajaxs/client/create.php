@@ -27,6 +27,7 @@ if(!isset($_POST["action"])) {
 if($CMSNT->site("status_demo") != 0) {
     exit(json_encode(["status" => "error", "msg" => __("Chức năng này không thể sử dụng trên website demo")]));
 }
+orbit_require_csrf();
 if($_POST["action"] == "WithdrawCommission") {
     if($CMSNT->site("status_demo") != 0) {
         exit(json_encode(["status" => "error", "msg" => __("This function cannot be used because this is a demo site")]));
@@ -34,10 +35,17 @@ if($_POST["action"] == "WithdrawCommission") {
     if($CMSNT->site("affiliate_status") != 1) {
         exit(json_encode(["status" => "error", "msg" => __("Chức năng này đang được bảo trì")]));
     }
-    if(empty($_POST["token"])) {
+    /* The withdrawal form used to print the session token into a hidden input. The session already
+       knows who is signed in, so accept it and only fall back to the posted token for older clients. */
+    if (!verify_csrf_token(isset($_POST["csrf_token"]) ? (string) $_POST["csrf_token"] : "")) {
+        exit(json_encode(["status" => "error", "msg" => __("Phiên làm việc đã hết, vui lòng tải lại trang")]));
+    }
+    $withdrawToken = !empty($_POST["token"]) ? check_string($_POST["token"])
+        : (isset($_SESSION["login"]) ? check_string($_SESSION["login"]) : "");
+    if($withdrawToken === "") {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng đăng nhập")]));
     }
-    if(!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token` = '" . check_string($_POST["token"]) . "' AND `banned` = 0 "))) {
+    if(!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token` = '" . $withdrawToken . "' AND `banned` = 0 "))) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng đăng nhập")]));
     }
     if(time() - $getUser["time_request"] < $config["max_time_load"]) {
@@ -55,17 +63,32 @@ if($_POST["action"] == "WithdrawCommission") {
     if(empty($_POST["amount"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập số tiền cần rút")]));
     }
-    if($_POST["amount"] < $CMSNT->site("affiliate_min")) {
+    /*
+     * Validate the number before any comparison. `"abc" < 50000` is false in PHP 8 (the sides are
+     * compared as strings), so the old checks let a non-number through to a SQL update that then
+     * failed with a generic error.
+     */
+    $amountValue = orbit_withdraw_amount($_POST["amount"]);
+    if($amountValue === false) {
+        exit(json_encode(["status" => "error", "msg" => __("Số tiền rút không hợp lệ")]));
+    }
+    if($amountValue < (float) $CMSNT->site("affiliate_min")) {
         exit(json_encode(["status" => "error", "msg" => __("Số tiền rút tối thiểu phải là") . " " . format_currency($CMSNT->site("affiliate_min"))]));
     }
-    if($getUser["ref_price"] < $_POST["amount"]) {
+    if((float) $getUser["ref_price"] < $amountValue) {
         exit(json_encode(["status" => "error", "msg" => __("Số dư hoa hồng khả dụng của bạn không đủ")]));
     }
-    $amount = check_string($_POST["amount"]);
+    /* Canonical decimal text: `check_string("1e6")` would send "1.0E+6" to the numeric column. */
+    $amount = orbit_amount_string($amountValue);
     $trans_id = random("123456789QWERTYUIOPASDFGHJKLZXCVBNM", 6);
     $User = new users();
-    $isTru = $User->RemoveCommission($getUser["id"], $amount, __("Withdraw commission balance") . " #" . $trans_id);
-    if($isTru) {
+    /* The debit re-checks the balance under the user row lock: two concurrent withdrawals can no
+       longer both pass the check above and leave a negative commission balance. */
+    $withdrawState = $User->RemoveCommissionChecked($getUser["id"], $amount, __("Withdraw commission balance") . " #" . $trans_id);
+    if($withdrawState === "insufficient") {
+        exit(json_encode(["status" => "error", "msg" => __("Số dư hoa hồng khả dụng của bạn không đủ")]));
+    }
+    if($withdrawState === "removed") {
         if(getRowRealtime("users", $getUser["id"], "ref_price") < 0) {
             $User->Banned($getUser["id"], __("Gian lận khi rút số dư hoa hồng"));
             exit(json_encode(["status" => "error", "msg" => __("Tài khoản của bạn đã bị khóa vì gian lận")]));
@@ -78,13 +101,21 @@ if($_POST["action"] == "WithdrawCommission") {
             $my_text = str_replace("{bank}", check_string($_POST["bank"]), $my_text);
             $my_text = str_replace("{account_number}", check_string($_POST["stk"]), $my_text);
             $my_text = str_replace("{account_name}", check_string($_POST["name"]), $my_text);
-            $my_text = str_replace("{amount}", format_currency(check_string($_POST["amount"])), $my_text);
+            $my_text = str_replace("{amount}", format_currency($amountValue), $my_text);
             $my_text = str_replace("{ip}", myip(), $my_text);
             $my_text = str_replace("{time}", gettime(), $my_text);
             sendMessTelegram($my_text, "", $CMSNT->site("affiliate_chat_id_telegram"));
             exit(json_encode(["status" => "success", "msg" => __("Yêu cầu rút tiền được tạo thành công, vui lòng đợi ADMIN xử lý")]));
         }
-        exit(json_encode(["status" => "error", "msg" => "ERROR 1 - " . __("System error")]));
+        /* The commission was already debited; put it back so a failed insert cannot cost the member
+           the money. If the restore itself fails, leave an [Error] the owner can act on. */
+        $restored = $User->RestoreCommission($getUser["id"], $amount, __("[Error] Hoàn lại hoa hồng do không tạo được lệnh rút") . " #" . $trans_id);
+        if(!$restored) {
+            $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => (new Mobile_Detect())->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Không tạo được lệnh rút và chưa hoàn lại được hoa hồng") . " #" . $trans_id . " (" . format_currency($amount) . ")"]);
+        }
+        exit(json_encode(["status" => "error", "msg" => $restored
+            ? __("Không tạo được lệnh rút, hoa hồng đã được hoàn lại. Vui lòng thử lại.")
+            : __("Không tạo được lệnh rút và chưa hoàn lại được hoa hồng. Vui lòng liên hệ hỗ trợ kèm mã lệnh.")]));
     }
     exit(json_encode(["status" => "error", "msg" => "ERROR 2 - " . __("System error")]));
 }
@@ -107,8 +138,10 @@ if($_POST["action"] == "nap_the") {
     if(empty($_POST["amount"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng chọn mệnh giá cần nạp")]));
     }
-    if($_POST["amount"] <= 0) {
-        exit(json_encode(["status" => "error", "msg" => __("Vui lòng chọn mệnh giá cần nạp")]));
+    /* Digits only, and within a sane top-up range: this value goes to the card partner and to SQL. */
+    $cardAmount = orbit_positive_amount($_POST["amount"]);
+    if($cardAmount === false || $cardAmount > 100000000 || $cardAmount != (int) $cardAmount) {
+        exit(json_encode(["status" => "error", "msg" => __("Mệnh giá thẻ không hợp lệ")]));
     }
     if(empty($_POST["serial"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập serial thẻ")]));
@@ -117,7 +150,7 @@ if($_POST["action"] == "nap_the") {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập mã thẻ")]));
     }
     $telco = check_string($_POST["telco"]);
-    $amount = check_string($_POST["amount"]);
+    $amount = (int) $cardAmount;
     $serial = check_string($_POST["serial"]);
     $pin = check_string($_POST["pin"]);
     if(!checkFormatCard($telco, $serial, $pin)["status"]) {
@@ -126,7 +159,7 @@ if($_POST["action"] == "nap_the") {
     if(5 < $CMSNT->num_rows(" SELECT * FROM `cards` WHERE `user_id` = '" . $getUser["id"] . "' AND `status` = 'pending'  ")) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng không spam!")]));
     }
-    if(5 <= $CMSNT->num_rows("SELECT * FROM `cards` WHERE `status` = 'error' AND `user_id` = '" . $getUser["id"] . "' AND `create_date` >= DATE(NOW()) AND `create_date` < DATE(NOW()) + INTERVAL 1 DAY  ") - $CMSNT->num_rows("SELECT * FROM `cards` WHERE `status` = 'complted' AND `user_id` = '" . $getUser["id"] . "' AND `create_date` >= DATE(NOW()) AND `create_date` < DATE(NOW()) + INTERVAL 1 DAY  ")) {
+    if(5 <= $CMSNT->num_rows("SELECT * FROM `cards` WHERE `status` = 'error' AND `user_id` = '" . $getUser["id"] . "' AND `create_date` >= DATE(NOW()) AND `create_date` < DATE(NOW()) + INTERVAL 1 DAY  ") - $CMSNT->num_rows("SELECT * FROM `cards` WHERE `status` = 'completed' AND `user_id` = '" . $getUser["id"] . "' AND `create_date` >= DATE(NOW()) AND `create_date` < DATE(NOW()) + INTERVAL 1 DAY  ")) {
         exit(json_encode(["status" => "error", "msg" => __("Bạn đã bị chặn sử dụng chức năng nạp thẻ trong 1 ngày")]));
     }
     $trans_id = random("QWERTYUIOPASDFGHJKLZXCVBNM", 6) . time();
@@ -138,7 +171,12 @@ if($_POST["action"] == "nap_the") {
             $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "Thực hiện nạp thẻ Serial: " . $serial . " - Pin: " . $pin]);
             exit(json_encode(["status" => "success", "msg" => __("Đẩy thẻ lên thành công, vui lòng chờ xử lý thẻ trong giây lát!")]));
         }
-        exit(json_encode(["status" => "error", "msg" => __("Nạp thẻ thất bại, vui lòng liên hệ Admin")]));
+        /* The partner already accepted the card (status 99) but the row could not be written: without
+           a trace the customer's top-up would vanish. The PIN is never logged. */
+        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(),
+            "createdate" => gettime(), "action" => "[Error] " . __("Nhà cung cấp đã nhận thẻ nhưng chưa lưu được")
+                . " - " . $trans_id . " - " . $telco . " - " . format_cash($amount)]);
+        exit(json_encode(["status" => "error", "msg" => __("Nạp thẻ thất bại, vui lòng liên hệ Admin") . " (" . $trans_id . ")"]));
     }
     exit(json_encode(["status" => "error", "msg" => $data["data"]["msg"]]));
 }
@@ -152,13 +190,18 @@ if($_POST["action"] == "CreateInvoiceCrypto") {
     if(empty($_POST["amount"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập số tiền cần nạp")]));
     }
-    $amount = check_string($_POST["amount"]);
-    if($amount < $CMSNT->site("crypto_min")) {
+    /* Validate before comparing: a non-number is never "less than" a numeric limit in PHP 8. */
+    $cryptoAmountValue = orbit_positive_amount($_POST["amount"]);
+    if($cryptoAmountValue === false) {
+        exit(json_encode(["status" => "error", "msg" => __("Số tiền nạp không hợp lệ")]));
+    }
+    if($cryptoAmountValue < (float) $CMSNT->site("crypto_min")) {
         exit(json_encode(["status" => "error", "msg" => __("Số tiền gửi tối thiểu là:") . " \$" . $CMSNT->site("crypto_min")]));
     }
-    if($CMSNT->site("crypto_max") < $amount) {
+    if((float) $CMSNT->site("crypto_max") < $cryptoAmountValue) {
         exit(json_encode(["status" => "error", "msg" => __("Số tiền gửi tối đa là:") . " \$" . format_cash($CMSNT->site("crypto_max"))]));
     }
+    $amount = orbit_amount_string($cryptoAmountValue);
     if($CMSNT->site("crypto_status") != 1) {
         exit(json_encode(["status" => "error", "msg" => __("Chức năng này đang được bảo trì")]));
     }
@@ -168,7 +211,8 @@ if($_POST["action"] == "CreateInvoiceCrypto") {
     if(3 <= $CMSNT->num_rows(" SELECT * FROM `payment_crypto` WHERE `user_id` = '" . $getUser["id"] . "' AND `status` = 'waiting' AND ROUND(`amount`) = '" . $amount . "'  ")) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng không SPAM")]));
     }
-    $name = "Recharge " . check_string($_SERVER["HTTP_HOST"]);
+    $validatedHost = parse_url(orbit_request_origin(), PHP_URL_HOST);
+    $name = "Recharge " . (is_string($validatedHost) ? $validatedHost : "localhost");
     $description = "Recharge invoice to " . $getUser["username"];
     $callback = base_url("api/callback_crypto.php");
     $return_url = base_url("client/recharge-crypto");

@@ -14,6 +14,7 @@ if(!isset($_POST["action"])) {
     $data = json_encode(["status" => "error", "msg" => "The Request Not Found"]);
     exit($data);
 }
+orbit_require_csrf();
 exit(json_encode(["status" => "error", "msg" => __("Invalid data")]));
 
 ?>

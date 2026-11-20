@@ -1,0 +1,172 @@
+/*
+ * Orbit music player — one discreet control in the corner.
+ *
+ * Rules: never autoplay, never cover the primary action, one accent colour, motion behind
+ * prefers-reduced-motion, 44px minimum touch targets. Only loaded when the playlist is non-empty.
+ */
+
+.om {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-player);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+}
+
+/* --- collapsed button ----------------------------------------------------- */
+
+.om__toggle {
+  width: var(--control-h);
+  height: var(--control-h);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.om__toggle:hover { background: var(--surface-2); }
+.om__toggle svg { width: 20px; height: 20px; display: block; }
+.om__toggle[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+
+/* --- panel ---------------------------------------------------------------- */
+
+.om__panel {
+  width: min(320px, calc(100vw - 2 * var(--space-4)));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: var(--space-4);
+  display: none;
+}
+.om--open .om__panel { display: block; }
+
+.om__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.om__title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.om__meta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 2px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.om__close {
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  line-height: 0;
+  border-radius: var(--radius-sm);
+}
+.om__close:hover { color: var(--text); }
+
+.om__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.om__btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.om__btn:hover { background: var(--surface-3); }
+.om__btn svg { width: 18px; height: 18px; display: block; }
+.om__btn--main {
+  width: var(--control-h);
+  height: var(--control-h);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+.om__btn--main:hover { background: var(--accent-strong); }
+.om__btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+.om__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.om__row input[type="range"] {
+  flex: 1 1 auto;
+  accent-color: var(--accent);
+  min-height: 24px;
+}
+
+.om__status { margin-top: var(--space-2); font-size: var(--text-xs); color: var(--text-muted); min-height: 1em; }
+.om__status--error { color: var(--danger); }
+
+/* --- "continue listening" pill (shown after a page navigation) ------------- */
+
+.om__resume {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.om__resume:hover { background: var(--surface-2); }
+.om__resume svg { width: 16px; height: 16px; }
+
+/* --- motion --------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .om__panel { animation: om-in var(--dur) var(--ease); }
+  @keyframes om-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+/* --- small screens: keep clear of the very bottom edge -------------------- */
+
+@media (max-width: 480px) {
+  .om { right: var(--space-3); bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* --- styleguide-only static preview --------------------------------------- */
+
+.om--static { position: static; }
+.om--static .om__panel { display: block; }

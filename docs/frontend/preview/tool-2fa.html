@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>[preview] Tạo mã 2FA | Orbit Shop</title>
+<meta name="description" content="Tạo mã 6 số từ khoá Google Authenticator, ngay trong trình duyệt.">
+<meta name="keywords" content="shop, licence">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Tạo mã 2FA | Orbit Shop">
+<meta property="og:description" content="Tạo mã 6 số từ khoá Google Authenticator, ngay trong trình duyệt.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#fbf9f4">
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/latin-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/vietnamese-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/client/orbit/tokens.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/base.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/components.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/shell.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/store.css?v=preview">
+<link rel="stylesheet" href="assets/preview.css">
+</head>
+<body class="page-content">
+<div class="preview-banner"><strong>Bản xem trước tĩnh</strong> — trang thật chạy trong shop, ở đây dùng dữ liệu mẫu. Không có dữ liệu thật, không gọi mạng, không phát nhạc. Biểu đồ vẽ bằng SVG nội bộ; bảng vẫn đọc được khi tắt JavaScript.</div>
+
+<a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+<header class="topbar" data-topbar>
+  <div class="container topbar__inner">
+    <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+    <nav class="topbar__nav" aria-label="Điều hướng chính">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__actions">
+      <a class="btn btn--ghost topbar__account" href="#preview-client-login">Đăng nhập</a>
+      <a class="btn topbar__cta" href="#preview-action-recharge-bank">Nạp tiền</a>
+      <button class="topbar__toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-toggle>
+        <span class="sr-only">Mở menu</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+    </div>
+  </div>
+  <div class="topbar__sheet" id="site-menu" data-menu-sheet hidden>
+    <nav aria-label="Điều hướng trên điện thoại">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__sheet-actions">
+      <a class="btn btn--ghost btn--block" href="#preview-client-login">Đăng nhập</a>
+      <a class="btn btn--primary btn--block" href="#preview-action-recharge-bank">Nạp tiền</a>
+    </div>
+  </div>
+</header>
+<main id="main" class="container section">
+<section class="section section--tight" aria-labelledby="totp-title">
+  <div class="container container--narrow">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Công cụ</p>
+        <h1 id="totp-title">Tạo mã 2FA</h1>
+        <p class="muted m0">Dán khoá bí mật (chuỗi Base32 trong ứng dụng xác thực) để xem mã hiện tại.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__body">
+        <form data-totp-form novalidate>
+          <div class="field">
+            <label class="field__label" for="totp-secret">Khoá bí mật</label>
+            <input class="input" id="totp-secret" name="secret" type="text" autocomplete="off"
+              autocapitalize="characters" spellcheck="false" placeholder="Ví dụ: JBSWY3DPEHPK3PXP">
+            <p class="field__hint">
+              Chỉ nhập nếu bạn hiểu rủi ro. Khoá không rời khỏi trang này — mã được tính bằng
+              <code>crypto.subtle</code> trong trình duyệt.
+            </p>
+            <p class="field__error" data-error-for="secret" hidden></p>
+          </div>
+          <button class="btn btn--primary" type="submit">Tạo mã</button>
+        </form>
+
+        <div class="totp" data-totp-result hidden>
+          <p class="stat__label">Mã hiện tại</p>
+          <p class="totp__code" data-totp-code aria-live="polite">------</p>
+          <div class="totp__meta">
+            <span>Còn <strong data-totp-left>30</strong> giây</span>
+            <span class="totp__bar"><span data-totp-bar></span></span>
+          </div>
+          <button class="btn btn--ghost" type="button" data-copy-value="" data-totp-copy>Sao chép mã</button>
+          <p class="totp__next">Mã tiếp theo: <code data-totp-next>------</code></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel mt-4">
+      <div class="panel__body prose">
+        <h2 class="panel__title">Dùng thế nào</h2>
+        <ol>
+          <li>Mở ứng dụng xác thực, chọn tài khoản, bấm “Chuyển khoá” hoặc “Hiện khoá”.</li>
+          <li>Sao chép chuỗi Base32 (chữ và số, không có dấu cách).</li>
+          <li>Dán vào ô trên rồi bấm <strong>Tạo mã</strong>. Mã đổi mỗi 30 giây.</li>
+        </ol>
+        <p class="small muted">
+          Công cụ dùng thuật toán TOTP chuẩn (SHA-1, 6 số, bước 30 giây) nên khớp với Google
+          Authenticator, Authy và 1Password. Nếu mã không khớp, kiểm tra đồng hồ thiết bị đã đúng giờ.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+/* RFC 6238 TOTP, SHA-1, 6 digits, 30-second step — computed locally. */
+(function () {
+  "use strict";
+  var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  var form = document.querySelector("[data-totp-form]");
+  var result = document.querySelector("[data-totp-result]");
+  var codeEl = document.querySelector("[data-totp-code]");
+  var nextEl = document.querySelector("[data-totp-next]");
+  var leftEl = document.querySelector("[data-totp-left]");
+  var barEl = document.querySelector("[data-totp-bar]");
+  var copyEl = document.querySelector("[data-totp-copy]");
+  var errorEl = document.querySelector('[data-error-for="secret"]');
+  var key = null;
+  var timer = 0;
+
+  function base32(value) {
+    value = value.toUpperCase().replace(/[\s-]/g, "").replace(/=+$/, "");
+    var bits = 0;
+    var buffer = 0;
+    var bytes = [];
+    for (var i = 0; i < value.length; i++) {
+      var index = alphabet.indexOf(value.charAt(i));
+      if (index < 0) {
+        return null;
+      }
+      buffer = (buffer << 5) | index;
+      bits += 5;
+      if (bits >= 8) {
+        bytes.push((buffer >>> (bits - 8)) & 255);
+        bits -= 8;
+      }
+    }
+    return bytes.length ? new Uint8Array(bytes) : null;
+  }
+
+  function counterBytes(counter) {
+    var out = new Uint8Array(8);
+    for (var i = 7; i >= 0; i--) {
+      out[i] = counter & 255;
+      counter = Math.floor(counter / 256);
+    }
+    return out;
+  }
+
+  function code(secretKey, step) {
+    return window.crypto.subtle.importKey(
+      "raw", secretKey, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]
+    ).then(function (imported) {
+      return window.crypto.subtle.sign("HMAC", imported, counterBytes(step));
+    }).then(function (signature) {
+      var bytes = new Uint8Array(signature);
+      var offset = bytes[bytes.length - 1] & 15;
+      var number = ((bytes[offset] & 127) << 24) | (bytes[offset + 1] << 16)
+        | (bytes[offset + 2] << 8) | bytes[offset + 3];
+      return String(number % 1000000).padStart(6, "0");
+    });
+  }
+
+  function tick() {
+    if (!key) {
+      return;
+    }
+    var step = Math.floor(Date.now() / 30000);
+    var left = 30 - Math.floor((Date.now() % 30000) / 1000);
+    leftEl.textContent = String(left);
+    barEl.style.width = ((left / 30) * 100).toFixed(1) + "%";
+    code(key, step).then(function (value) {
+      codeEl.textContent = value.slice(0, 3) + " " + value.slice(3);
+      copyEl.setAttribute("data-copy-value", value);
+    });
+    code(key, step + 1).then(function (value) {
+      nextEl.textContent = value.slice(0, 3) + " " + value.slice(3);
+    });
+  }
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var secret = document.getElementById("totp-secret").value;
+    var bytes = base32(secret);
+    if (!bytes || bytes.length < 5) {
+      errorEl.textContent = "Khoá chưa đúng: cần chuỗi Base32 (A–Z và 2–7), dài ít nhất 8 ký tự.";
+      errorEl.hidden = false;
+      result.hidden = true;
+      return;
+    }
+    errorEl.hidden = true;
+    key = bytes;
+    result.hidden = false;
+    window.clearInterval(timer);
+    tick();
+    timer = window.setInterval(tick, 1000);
+  });
+})();
+</script>
+</main>
+<footer class="footer">
+  <div class="container">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+        <p class="footer__note">Shop bán tài khoản &amp; licence</p>
+        <ul class="footer__contact">
+<li><span class="footer__label">Hotline</span> <a href="tel:0909123456">0909 123 456</a></li>
+<li><span class="footer__label">Email</span> <a href="mailto:support@orbit.example">support@orbit.example</a></li>
+<li><span class="footer__label">Địa chỉ</span> Quận 1, TP. Hồ Chí Minh</li>        </ul>
+      </div>
+      <div class="footer__cols">
+        <nav class="footer__col" aria-label="Mua hàng">
+          <h2 class="footer__heading">Mua hàng</h2>
+          <ul>
+            <li><a href="#preview-client-home#san-pham">Tất cả sản phẩm</a></li>
+            <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+            <li><a href="#preview-product-orders">Lịch sử đơn hàng</a></li>
+            <li><a href="#preview-client-favorites">Sản phẩm yêu thích</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Hỗ trợ">
+          <h2 class="footer__heading">Hỗ trợ</h2>
+          <ul>
+            <li><a href="#preview-client-faq">Câu hỏi thường gặp</a></li>
+            <li><a href="#preview-client-contact">Liên hệ</a></li>
+            <li><a href="#preview-client-policy">Chính sách</a></li>
+            <li><a href="#preview-client-document-api">Tài liệu API</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Tài khoản">
+          <h2 class="footer__heading">Tài khoản</h2>
+          <ul>
+            <li><a href="#preview-client-login">Đăng nhập</a></li>
+            <li><a href="#preview-client-register">Đăng ký</a></li>
+            <li><a href="#preview-client-login">Nạp tiền</a></li>
+            <li><a href="#preview-client-profile">Trang cá nhân</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+    <div class="footer__legal">
+      <p>© 2026 Orbit Shop</p>
+      <p class="footer__credit">Thiết kế &amp; vận hành: <strong>Orbit Office</strong></p>
+      <ul class="footer__legal-links">
+        <li><a href="#preview-client-policy">Chính sách</a></li>
+        <li><a href="#preview-client-faq">FAQ</a></li>
+        <li><a href="#preview-client-contact">Liên hệ</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+<script defer src="assets/client/orbit/store.js?v=preview"></script>
+<script defer src="assets/common/csrf.js?v=preview"></script>
+</body>
+</html>

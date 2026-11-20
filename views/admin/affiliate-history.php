@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => "Affiliate History", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n\n";
+$body["header"] = "\n\n\n";
 $body["footer"] = "\n \n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
@@ -139,11 +139,12 @@ echo "</th>\n                                        <th class=\"text-center\">"
 echo __("Lý do");
 echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
 $i = 0;
+$orbitUserNames = orbit_user_names($listDatatable, "user_id");
 foreach ($listDatatable as $row) {
     echo "                                    <tr>\n                                        <td><a class=\"text-primary\"\n                                                href=\"";
     echo base_url_admin("user-edit&id=" . $row["user_id"]);
     echo "\">";
-    echo getRowRealtime("users", $row["user_id"], "username");
+    echo orbit_user_name($orbitUserNames, $row["user_id"]);
     echo "                                                [ID ";
     echo $row["user_id"];
     echo "]</a>\n                                        </td>\n                                        <td class=\"text-right\"><span\n                                                class=\"badge bg-success-gradient\">";

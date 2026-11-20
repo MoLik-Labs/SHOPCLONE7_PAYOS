@@ -1,0 +1,4 @@
+{
+  "_comment": "Orbit music player playlist. Empty = the player renders nothing at all (no CSS, no JS, no DOM). Add entries to switch it on. Each track needs a title and either a local file (self-hosted, preferred: stable, private, licensed) or a direct https audio url. Use tools/music-import.php to download a direct URL once into public/music/ so the shop never hotlinks a third party.",
+  "tracks": []
+}

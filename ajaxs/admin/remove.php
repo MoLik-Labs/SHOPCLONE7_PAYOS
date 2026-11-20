@@ -10,6 +10,7 @@ if(!isset($_POST["action"])) {
     $data = json_encode(["status" => "error", "msg" => "The Request Not Found"]);
     exit($data);
 }
+orbit_require_csrf();
 if(!isset($_POST["id"])) {
     $data = json_encode(["status" => "error", "msg" => __("The ID to delete does not exist")]);
     exit($data);
@@ -27,7 +28,7 @@ if($_POST["action"] == "remove_payment_manual") {
     }
     $isRemove = $CMSNT->remove("payment_manual", " `id` = '" . $id . "' ");
     if($isRemove) {
-        unlink("../../" . $row["icon"]);
+        orbit_delete_upload($row["icon"]);
         $Mobile_Detect = new Mobile_Detect();
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Xoá trang nạp tiền thủ công") . " (" . $row["title"] . " ID " . $row["id"] . ")"]);
         $my_text = $CMSNT->site("noti_action");
@@ -227,10 +228,7 @@ if($_POST["action"] == "removeSupplier") {
         sleep(3);
         $CMSNT->remove("products", " `supplier_id` = '" . $supplier["id"] . "' ");
         foreach ($CMSNT->get_list(" SELECT * FROM `categories` WHERE `supplier_id` = '" . $id . "' ") as $category) {
-            $imagePath = "../../" . $category["icon"];
-            if(file_exists($imagePath)) {
-                unlink($imagePath);
-            }
+            orbit_delete_upload($category["icon"]);
             $CMSNT->remove("categories", " `id` = '" . $category["id"] . "' ");
         }
         $Mobile_Detect = new Mobile_Detect();
@@ -363,7 +361,7 @@ if($_POST["action"] == "removeImageProduct") {
         exit(json_encode(["status" => "error", "msg" => "ID sản phẩm không tồn tại trong hệ thống"]));
     }
     $image = check_string($_POST["image"]);
-    unlink("../../" . dirImageProduct($image));
+    orbit_delete_upload(dirImageProduct($image));
     $images = str_replace($image, "", $row["images"]);
     $images = preg_replace("/^\\h*\\v+/m", "", $images);
     $CMSNT->update("products", ["images" => $images], " `id` = '" . $row["id"] . "' ");
@@ -390,10 +388,7 @@ if($_POST["action"] == "removeProduct") {
     if($isRemove) {
         if(!empty($row["images"])) {
             foreach (explode(PHP_EOL, $row["images"]) as $image) {
-                $imagePath = "../../" . dirImageProduct($image);
-                if(file_exists($imagePath)) {
-                    unlink($imagePath);
-                }
+                orbit_delete_upload(dirImageProduct($image));
             }
         }
         $Mobile_Detect = new Mobile_Detect();
@@ -421,7 +416,7 @@ if($_POST["action"] == "removeCategory") {
     }
     $isRemove = $CMSNT->remove("categories", " `id` = '" . $id . "' ");
     if($isRemove) {
-        unlink("../../" . $row["icon"]);
+        orbit_delete_upload($row["icon"]);
         $Mobile_Detect = new Mobile_Detect();
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Xoá chuyên mục") . " (" . $row["name"] . " ID " . $row["id"] . ")"]);
         $my_text = $CMSNT->site("noti_action");
@@ -445,7 +440,7 @@ if($_POST["action"] == "removeCategoryBlog") {
     }
     $isRemove = $CMSNT->remove("post_category", " `id` = '" . $id . "' ");
     if($isRemove) {
-        unlink("../../" . $row["icon"]);
+        orbit_delete_upload($row["icon"]);
         $Mobile_Detect = new Mobile_Detect();
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Xoá chuyên mục bài viết") . " (" . $row["name"] . " ID " . $row["id"] . ")"]);
         $my_text = $CMSNT->site("noti_action");
@@ -469,7 +464,7 @@ if($_POST["action"] == "removePost") {
     }
     $isRemove = $CMSNT->remove("posts", " `id` = '" . $id . "' ");
     if($isRemove) {
-        unlink("../../" . $row["image"]);
+        orbit_delete_upload($row["image"]);
         $Mobile_Detect = new Mobile_Detect();
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Xoá bài viết") . " (" . $row["title"] . " ID " . $row["id"] . ")"]);
         $my_text = $CMSNT->site("noti_action");
@@ -493,7 +488,7 @@ if($_POST["action"] == "removeBank") {
     }
     $isRemove = $CMSNT->remove("banks", " `id` = '" . $id . "' ");
     if($isRemove) {
-        unlink("../../" . $row["image"]);
+        orbit_delete_upload($row["image"]);
         $Mobile_Detect = new Mobile_Detect();
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Xoá ngân hàng") . " (" . $row["short_name"] . " ID " . $row["id"] . ")"]);
         $my_text = $CMSNT->site("noti_action");
@@ -524,7 +519,7 @@ if($_POST["action"] == "removeLanguage") {
     $CMSNT->remove("translate", " `lang_id` = '" . $row["id"] . "' ");
     $isRemove = $CMSNT->remove("languages", " `id` = '" . $id . "' ");
     if($isRemove) {
-        unlink("../../" . $row["image"]);
+        orbit_delete_upload($row["image"]);
         $Mobile_Detect = new Mobile_Detect();
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Xoá ngôn ngữ") . " (" . $row["lang"] . " ID " . $row["id"] . ")"]);
         $my_text = $CMSNT->site("noti_action");

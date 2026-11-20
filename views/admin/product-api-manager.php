@@ -4,14 +4,17 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => "Quản lý API nhà cung cấp", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/1.12.1/css/dataTables.bootstrap5.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/responsive/2.3.0/css/responsive.bootstrap.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/buttons/2.2.3/css/buttons.bootstrap5.min.css\">\n";
-$body["footer"] = "\n<!-- Datatables Cdn -->\n<script src=\"https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js\"></script>\n<script src=\"https://cdn.datatables.net/1.12.1/js/dataTables.bootstrap5.min.js\"></script>\n<script src=\"https://cdn.datatables.net/responsive/2.3.0/js/dataTables.responsive.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/buttons.print.min.js\"></script>\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.6/pdfmake.min.js\"></script>\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/buttons.html5.min.js\"></script>\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js\"></script>\n";
+$body["header"] = "\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/dataTables.bootstrap5.min.css") . "\">\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/responsive.bootstrap5.min.css") . "\">\n\n";
+$body["footer"] = "\n<!-- DataTables (self-hosted) -->\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/jquery.dataTables.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.bootstrap5.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.responsive.min.js") . "\"></script>\n\n\n\n\n\n\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 if(isset($_GET["id"])) {
     $id = check_string($_GET["id"]);
     if(!($supplier = $CMSNT->get_row("SELECT * FROM `suppliers` WHERE `id` = '" . $id . "' "))) {
         redirect(base_url_admin("product-api"));
     }
+    /* Re-use the id the database actually returned: it is interpolated unquoted below (numeric
+       context), so a request string must never reach it even after the equality check above. */
+    $id = (int) $supplier["id"];
 } else {
     redirect(base_url_admin("product-api"));
 }
@@ -324,7 +327,10 @@ echo ";\n                                    const profits = ";
 echo json_encode($profits);
 echo ";\n\n                                    const data = {\n                                        labels: labels,\n                                        datasets: [{\n                                                label: 'Doanh thu',\n                                                backgroundColor: 'rgb(132, 90, 223)',\n                                                borderColor: 'rgb(132, 90, 223)',\n                                                data: revenues,\n                                            },\n                                            {\n                                                label: 'Lợi nhuận',\n                                                backgroundColor: 'rgb(73,182,245)',\n                                                borderColor: 'rgb(73,182,245)',\n                                                data: profits,\n                                            }\n                                        ]\n                                    };\n\n                                    const config = {\n                                        type: 'bar',\n                                        data: data,\n                                        options: {}\n                                    };\n\n                                    const myChart = new Chart(\n                                        document.getElementById('chartjs-line'),\n                                        config\n                                    );\n                                })();\n                                </script>\n                            </div>\n                        </div>\n                    </div>\n\n                </div>\n            </div>\n            <div class=\"tab-pane text-muted\" id=\"tab_category\" role=\"tabpanel\">\n                <div class=\"row\">\n                    <div class=\"col-xl-12\">\n                        <div class=\"card custom-card\">\n                            <div class=\"card-header justify-content-between\">\n                                <div class=\"card-title\">\n                                    DANH SÁCH CHUYÊN MỤC API\n                                </div>\n                            </div>\n                            <div class=\"card-body\">\n                                <div class=\"table-responsive table-wrapper\">\n                                    <table id=\"datatable-basic\" class=\"table table-bordered text-nowrap w-100\">\n                                        <thead>\n                                            <tr>\n                                                <th class=\"text-center\">\n                                                    <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                        <input type=\"checkbox\" class=\"form-check-input\" name=\"check_all\"\n                                                            id=\"check_all_checkbox_category_api\" value=\"option1\">\n                                                    </div>\n                                                </th>\n                                                <th>Tên chuyên mục con</th>\n                                                <th>Chuyên mục cha</th>\n                                                <th>Thống kê</th>\n                                                <th>Ảnh</th>\n                                                <th>Trạng thái</th>\n                                                <th>Thao tác</th>\n                                            </tr>\n                                        </thead>\n                                        <tbody>\n                                            ";
 $i = 0;
-foreach ($CMSNT->get_list(" SELECT * FROM `categories` WHERE `supplier_id` = '" . $id . "' ") as $cate) {
+$orbitApiCategories = $CMSNT->get_list(" SELECT * FROM `categories` WHERE `supplier_id` = '" . $id . "' ");
+$orbitParentCategoryNames = orbit_lookup_names("categories", $orbitApiCategories, "parent_id");
+$orbitCategoryProductCounts = orbit_category_product_counts();
+foreach ($orbitApiCategories as $cate) {
     echo "                                            <tr>\n                                                <td class=\"text-center\">\n                                                    <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                        <input type=\"checkbox\"\n                                                            class=\"form-check-input checkbox_category_api\"\n                                                            data-id=\"";
     echo $cate["id"];
     echo "\" name=\"checkbox_category_api\"\n                                                            value=\"";
@@ -336,11 +342,11 @@ foreach ($CMSNT->get_list(" SELECT * FROM `categories` WHERE `supplier_id` = '" 
         echo "                                                    <a class=\"text-primary\"\n                                                        href=\"";
         echo base_url_admin("category-edit&id=" . $cate["parent_id"]);
         echo "\"><i\n                                                            class=\"fa-solid fa-pen-to-square\"></i>\n                                                        ";
-        echo getRowRealtime("categories", $cate["parent_id"], "name");
+        echo orbit_lookup_name($orbitParentCategoryNames, $cate["parent_id"]);
         echo "</a>\n                                                    ";
     }
     echo "                                                </td>\n                                                <td>\n                                                    <span class=\"badge bg-outline-primary\">Sản phẩm:\n                                                        ";
-    echo format_cash($CMSNT->num_rows(" SELECT * FROM `products` WHERE `category_id` = '" . $cate["id"] . "' "));
+    echo format_cash(isset($orbitCategoryProductCounts[(int) $cate["id"]]) ? $orbitCategoryProductCounts[(int) $cate["id"]] : 0);
     echo "</span><br>\n                                                </td>\n                                                <td><img src=\"";
     echo base_url($cate["icon"]);
     echo "\" width=\"40px\"></td>\n                                                <td class=\"text-center\">\n                                                    <div class=\"form-check form-switch form-check-lg\">\n                                                        <input class=\"form-check-input\" type=\"checkbox\"\n                                                            id=\"list_category_status";
@@ -500,6 +506,7 @@ echo __("Thời gian");
 echo "</th>\n                                                <th class=\"text-center\">";
 echo __("Thao tác");
 echo "</th>\n                                            </tr>\n                                        </thead>\n                                        <tbody>\n                                            ";
+$orbitApiCategoryNames = orbit_lookup_names("categories", $listDatatable, "category_id");
 foreach ($listDatatable as $product) {
     echo "                                            <tr>\n                                                <td class=\"text-center\">\n                                                    <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                        <input type=\"checkbox\"\n                                                            class=\"form-check-input checkbox_product_api\"\n                                                            data-id=\"";
     echo $product["id"];
@@ -512,7 +519,7 @@ foreach ($listDatatable as $product) {
     echo "</b>\n                                                </td>\n                                                <td class=\"text-center\">\n                                                    ";
     if($product["category_id"] != 0) {
         echo "                                                    <span\n                                                        class=\"badge bg-primary\">";
-        echo getRowRealtime("categories", $product["category_id"], "name");
+        echo orbit_lookup_name($orbitApiCategoryNames, $product["category_id"]);
         echo "</span>\n                                                    ";
     }
     echo "                                                </td>\n                                                <td class=\"text-center\">\n                                                    <div class=\"form-check form-switch form-check-lg\"\n                                                        onchange=\"post_update_status_table_product(`";

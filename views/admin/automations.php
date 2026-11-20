@@ -24,11 +24,8 @@ if(isset($_POST["AddTask"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng chọn loại công việc\")){window.history.back().location.reload();}</script>");
     }
     $type = check_string($_POST["type"]);
-    if(empty($_POST["product_id"])) {
-        $product_id = NULL;
-    } else {
-        $product_id = json_encode($_POST["product_id"]);
-    }
+    $productIds = orbit_post_id_list(isset($_POST["product_id"]) ? $_POST["product_id"] : array());
+    $product_id = $productIds ? json_encode($productIds) : NULL;
     if(empty($_POST["schedule"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập thời gian\")){window.history.back().location.reload();}</script>");
     }
@@ -196,11 +193,13 @@ echo format_cash($totalDatatable);
 echo "                                    Results</p>\n                            </div>\n                            <div class=\"col-sm-12 col-md-7 mb-3\">\n                                ";
 echo $limit < $totalDatatable ? $urlDatatable : "";
 echo "                            </div>\n                        </div>\n                        <p>Hướng dẫn sử dụng chức năng xóa đơn hàng đã bán: <a class=\"text-primary\" target=\"_blank\"\n                                href=\"https://help.cmsnt.co/huong-dan/cau-hinh-tu-dong-xoa-don-hang-da-ban-trong-shopclone7/\">https://help.cmsnt.co/huong-dan/cau-hinh-tu-dong-xoa-don-hang-da-ban-trong-shopclone7/</a>\n                        </p>\n                        <p>Hướng dẫn sử dụng chức đổi kho hàng: <a class=\"text-primary\" target=\"_blank\"\n                                href=\"https://help.cmsnt.co/huong-dan/cau-hinh-chuc-nang-tu-doi-kho-hang-tai-khoan-dang-ban/\">https://help.cmsnt.co/huong-dan/cau-hinh-chuc-nang-tu-doi-kho-hang-tai-khoan-dang-ban/</a>\n                        </p>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n\n\n\n\n\n<div class=\"modal fade\" id=\"exampleModalScrollable2\" tabindex=\"-1\" aria-labelledby=\"exampleModalScrollable2\"\n    data-bs-keyboard=\"false\" aria-hidden=\"true\">\n    <!-- Scrollable modal -->\n    <div class=\"modal-dialog modal-dialog-centered modal-lg dialog-scrollable\">\n        <div class=\"modal-content\">\n            <div class=\"modal-header\">\n                <h6 class=\"modal-title\" id=\"staticBackdropLabel2\"><i class=\"fa-solid fa-plus\"></i> THÊM CÔNG VIỆC CẦN TỰ\n                    ĐỘNG\n                </h6>\n                <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\" aria-label=\"Close\"></button>\n            </div>\n            <form action=\"\" method=\"POST\" enctype=\"multipart/form-data\">\n                <div class=\"modal-body\" onchange=\"loadform()\">\n                    <div class=\"row mb-4\">\n                        <label class=\"col-sm-4 col-form-label\" for=\"example-hf-email\">Tên công việc</label>\n                        <div class=\"col-sm-8\">\n                            <div class=\"input-group mb-3\">\n                                <textarea class=\"form-control\" name=\"name\"\n                                    placeholder=\"Nhập tên mô tả task nếu có\"></textarea>\n                            </div>\n                        </div>\n                    </div>\n                    <div class=\"row mb-4\">\n                        <label class=\"col-sm-4 col-form-label\" for=\"example-hf-email\">Loại công việc (<span\n                                class=\"text-danger\">*</span>)</label>\n                        <div class=\"col-sm-8\">\n                            <div class=\"input-group mb-3\">\n                                <select class=\"form-control\" name=\"type\" id=\"type\" required>\n                                    <option value=\"\"> -- Chọn loại công việc --</option>\n                                    <option value=\"delete_order\">Xóa tài khoản đã bán</option>\n                                    <option value=\"delete_order_not_uid\">Xóa tài khoản đã bán, không xóa UID</option>\n                                    <option value=\"delete_order_revenue\">Xóa đơn hàng & tài khoản đã bán</option>\n                                    <option value=\"change_warehouse\">Thay đổi kho hàng</option>\n                                </select>\n                            </div>\n                        </div>\n                    </div>\n                    <div class=\"row mb-4\" id=\"product_id_input\" style=\"display: none;\">\n                        <label class=\"col-sm-4 col-form-label\" for=\"example-hf-email\">Sản phẩm áp dụng (<span\n                                class=\"text-danger\">*</span>)</label>\n                        <div class=\"col-sm-8\">\n                            <select class=\"form-control\" name=\"product_id[]\" id=\"listProduct\" multiple>\n                                <option value=\"\">Mặc định sẽ áp dụng cho toàn bộ sản phẩm nếu không chọn</option>\n                                ";
+/* One grouped products read for the whole select, not one per category. */
+$orbitProductGroups = orbit_products_by_category();
 foreach ($CMSNT->get_list(" SELECT * FROM `categories` ") as $category) {
     echo "                                <optgroup label=\"__";
     echo $category["name"];
     echo "__\">\n                                    ";
-    foreach ($CMSNT->get_list(" SELECT * FROM `products` WHERE `category_id` = '" . $category["id"] . "' ") as $product) {
+    foreach (isset($orbitProductGroups[(int) $category["id"]]) ? $orbitProductGroups[(int) $category["id"]] : [] as $product) {
         echo "                                    <option value=\"";
         echo $product["id"];
         echo "\">";

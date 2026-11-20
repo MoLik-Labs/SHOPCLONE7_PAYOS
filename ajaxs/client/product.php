@@ -30,6 +30,32 @@ if($_REQUEST["action"] == "buyProduct") {
     if($getUser["banned"] != 0) {
         exit(json_encode(["status" => "error", "msg" => __("Tài khoản của bạn đã bị cấm")]));
     }
+    /*
+     * Idempotent checkout. The storefront sends one key per opened buy panel; a retry after a lost
+     * response arrives with the same key, finds the order it already created and answers success
+     * instead of charging again. Checked before the purchase throttle, which would otherwise reject
+     * the retry with "too fast".
+     */
+    $clientOrderKey = isset($_REQUEST["client_order_id"]) && is_string($_REQUEST["client_order_id"])
+        ? trim($_REQUEST["client_order_id"]) : "";
+    $trans_id = "";
+    if($clientOrderKey !== "") {
+        if(preg_match('/^[A-Za-z0-9-]{8,64}$/', $clientOrderKey) !== 1) {
+            exit(json_encode(["status" => "error", "msg" => __("Mã đơn hàng không hợp lệ")]));
+        }
+        $trans_id = orbit_order_id($getUser["id"], $clientOrderKey);
+        $existingOrder = $CMSNT->get_row("SELECT * FROM `product_order` WHERE `trans_id` = '" . addslashes($trans_id) . "' AND `buyer` = " . (int) $getUser["id"] . " ");
+        if($existingOrder) {
+            if(isset($_REQUEST["id"]) && (string) $existingOrder["product_id"] !== (string) check_string($_REQUEST["id"])) {
+                exit(json_encode(["status" => "error", "msg" => __("Mã đơn hàng đã được dùng cho sản phẩm khác")]));
+            }
+            if((int) $existingOrder["trash"] === 1) {
+                /* The order was refunded or deleted: never reuse its trans_id for a second charge. */
+                exit(json_encode(["status" => "error", "msg" => __("Đơn hàng trước đã được huỷ hoặc hoàn tiền, vui lòng mở lại trang để mua lại.")]));
+            }
+            exit(json_encode(["status" => "success", "msg" => __("Đơn hàng này đã được tạo trước đó."), "trans_id" => $trans_id, "data" => []]));
+        }
+    }
     if(time() - $getUser["time_request"] < $CMSNT->site("thoi_gian_mua_cach_nhau")) {
         exit(json_encode(["status" => "error", "msg" => __("Thao tác quá nhanh, vui lòng chờ")]));
     }
@@ -42,15 +68,24 @@ if($_REQUEST["action"] == "buyProduct") {
     if(empty($_REQUEST["amount"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập số lượng cần mua")]));
     }
-    $amount = check_string($_REQUEST["amount"]);
-    if($amount < $product["min"]) {
-        exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối thiểu là") . " " . format_cash($product["min"])]));
-    }
-    if($product["max"] < $amount) {
-        exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối đa là") . " " . format_cash($product["max"])]));
-    }
-    if(is_numeric($amount) && floor($amount) != $amount) {
+    /* Digits only: this value becomes `LIMIT <n>` below, so a non-number must never reach SQL. */
+    $amount = order_quantity($_REQUEST["amount"]);
+    if($amount === false) {
         exit(json_encode(["status" => "error", "msg" => __("Số lượng mua không hợp lệ")]));
+    }
+    /* Same reading of the two columns as the storefront: a minimum below 1 is 1, a maximum below 1
+       means "no limit" (the stock check below is the real ceiling). Taken literally, max = 0 made a
+       product impossible to buy from the modal even though the product page offered it. */
+    $minQuantity = (int) $product["min"];
+    if($minQuantity < 1) {
+        $minQuantity = 1;
+    }
+    $maxQuantity = (int) $product["max"];
+    if($amount < $minQuantity) {
+        exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối thiểu là") . " " . format_cash($minQuantity)]));
+    }
+    if($maxQuantity > 0 && $amount > $maxQuantity) {
+        exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối đa là") . " " . format_cash($maxQuantity)]));
     }
     if($product["supplier_id"] == 0) {
         if($CMSNT->get_row(" SELECT COUNT(id) FROM `product_stock` WHERE `product_code` = '" . $product["code"] . "' ")["COUNT(id)"] < $amount) {
@@ -59,32 +94,52 @@ if($_REQUEST["action"] == "buyProduct") {
     } elseif(!($supplier = $CMSNT->get_row(" SELECT * FROM `suppliers` WHERE `id` = '" . $product["supplier_id"] . "' AND `status` = 1 "))) {
         exit(json_encode(["status" => "error", "msg" => __("Sản phẩm này đang bảo trì, không thể mua hàng vào lúc này")]));
     }
-    $trans_id = random("QWERTYUOPASDFGHJKZXCVBNM123456789", 4) . uniqid();
-    $price = $product["discount"] == 0 ? $product["price"] : $product["price"] - $product["price"] * $product["discount"] / 100;
+    if($trans_id === "") {
+        $trans_id = random("QWERTYUOPASDFGHJKZXCVBNM123456789", 4) . uniqid();
+    }
+    $price = orbit_unit_price($product);
     $money = $amount * $price;
     if($getUser["discount"] == 0) {
         $discount = $money * getDiscount($amount, $product["id"]) / 100;
     } else {
         $discount = $money * $getUser["discount"] / 100;
     }
+    /* A total discount over 100% would make $pay negative, and RemoveCredits(-x) adds money. */
+    if($money < $discount) {
+        $discount = $money;
+    }
     $pay = $money - $discount;
     if(!empty($_REQUEST["coupon"])) {
-        $discount_coupon = checkCoupon($product["id"], check_string($_REQUEST["coupon"]), $getUser["id"], $money, $pay);
+        /* Reserve the coupon before charging. The old read-then-record ordering let two concurrent
+           orders both use a one-slot coupon; this fails the checkout instead. */
+        $discount_coupon = orbit_coupon_claim($product["id"], $_REQUEST["coupon"], $getUser["id"], $money, $trans_id);
+        if($discount_coupon === false) {
+            exit(json_encode(["status" => "error", "msg" => __("Mã giảm giá không hợp lệ hoặc đã được sử dụng")]));
+        }
         $discount = $discount + $discount_coupon;
+        if($money < $discount) {
+            $discount = $money;
+        }
         $pay = $money - $discount;
     }
     if(getRowRealtime("users", $getUser["id"], "money") < $pay) {
         exit(json_encode(["status" => "error", "msg" => __("Số dư không đủ, vui lòng nạp thêm")]));
     }
     $User = new users();
-    $isTru = $User->RemoveCredits($getUser["id"], $pay, __("Thanh toán đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "ORDER_" . $trans_id);
-    if($isTru) {
+    /* The debit itself re-checks the balance under the user row lock; a concurrent purchase can no
+       longer overdraw the wallet (and trigger the fraud ban) between the check above and this line. */
+    $debitState = $User->DebitCreditsChecked($getUser["id"], $pay, __("Thanh toán đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "ORDER_" . $trans_id);
+    if($debitState !== "debited") {
+        exit(json_encode(["status" => "error", "msg" => $debitState === "insufficient" ? __("Số dư không đủ, vui lòng nạp thêm") : __("Vui lòng thử lại")]));
+    }
+    if($debitState === "debited") {
         if(getRowRealtime("users", $getUser["id"], "money") < -500) {
             $User->Banned($getUser["id"], __("Gian lận khi mua tài khoản"));
             exit(json_encode(["status" => "error", "msg" => __("Bạn đã bị khoá tài khoản vì gian lận")]));
         }
         $api_trans_id = NULL;
         $isValue = 0;
+        $partialMessage = "";
         if($product["supplier_id"] == 0) {
             $order_by = "ORDER BY id ASC";
             if($product["order_by"] == 1) {
@@ -97,19 +152,17 @@ if($_REQUEST["action"] == "buyProduct") {
                 $order_by = "ORDER BY RAND()";
             }
             foreach ($CMSNT->get_list(" SELECT * FROM `product_stock` WHERE `product_code` = '" . $product["code"] . "' " . $order_by . " LIMIT " . $amount . " ") as $product_stock) {
-                $isInsertSold = $CMSNT->insert("product_sold", ["type" => $product_stock["type"], "product_code" => $product_stock["product_code"], "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product_stock["seller"], "uid" => $product_stock["uid"], "account" => $product_stock["account"], "create_gettime" => gettime(), "time_check_live" => $product_stock["time_check_live"]]);
-                if($isInsertSold) {
+                if(orbit_deliver_stock($CMSNT, $product_stock, ["type" => $product_stock["type"], "product_code" => $product_stock["product_code"], "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product_stock["seller"], "uid" => $product_stock["uid"], "account" => $product_stock["account"], "create_gettime" => gettime(), "time_check_live" => $product_stock["time_check_live"]])) {
                     $isValue++;
-                    $CMSNT->remove("product_stock", " `id` = '" . $product_stock["id"] . "' ");
                 }
             }
         } else {
             if($supplier["type"] == "SHOPCLONE6") {
                 $data = curl_get2($supplier["domain"] . "/api/BResource.php?username=" . $supplier["username"] . "&password=" . $supplier["password"] . "&id=" . $product["api_id"] . "&amount=" . $amount);
                 $data = json_decode($data, true);
-                if(!isset($data)) {
+                if(!is_array($data)) {
                     $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
-                    exit(json_encode(["status" => "error", "msg" => __($data["msg"])]));
+                    exit(json_encode(["status" => "error", "msg" => __("Nhà cung cấp trả về dữ liệu không hợp lệ, đã hoàn tiền")]));
                 }
                 if($data["msg"] == "Số dư không đủ, vui lòng nạp thêm") {
                     $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
@@ -125,7 +178,11 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["msg"])]));
                 }
                 $api_trans_id = $data["data"]["trans_id"];
-                foreach ($data["data"]["lists"] as $account) {
+                foreach ((array) $data["data"]["lists"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $account = check_string($account["account"]);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -137,9 +194,9 @@ if($_REQUEST["action"] == "buyProduct") {
             if($supplier["type"] == "SHOPCLONE7") {
                 $data = buy_API_SHOPCLONE7($supplier["domain"], $supplier["coupon"], $supplier["api_key"], $product["api_id"], $amount);
                 $data = json_decode($data, true);
-                if(!isset($data)) {
+                if(!is_array($data)) {
                     $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
-                    exit(json_encode(["status" => "error", "msg" => __($data["msg"])]));
+                    exit(json_encode(["status" => "error", "msg" => __("Nhà cung cấp trả về dữ liệu không hợp lệ, đã hoàn tiền")]));
                 }
                 
                 if($data["msg"] == "Số dư không đủ, vui lòng nạp thêm") {
@@ -156,7 +213,11 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["msg"])]));
                 }
                 $api_trans_id = $data["trans_id"];
-                foreach ($data["data"] as $account) {
+                foreach ((array) $data["data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $account = check_string($account);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -176,7 +237,11 @@ if($_REQUEST["action"] == "buyProduct") {
                 $api_trans_id = $data["order_id"];
                 $response = order_API_1($supplier["domain"], $supplier["api_key"], $api_trans_id);
                 $result = json_decode($response, true);
-                foreach ($result["data"] as $account) {
+                foreach ((array) $result["data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $account = check_string($account["full_info"]);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -193,7 +258,11 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($result["message"]["messageVNI"])]));
                 }
                 $api_trans_id = NULL;
-                foreach ($result["data"] as $account) {
+                foreach ((array) $result["data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $account = check_string($account);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -210,18 +279,24 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["message"])]));
                 }
                 $api_trans_id = $data["order_id"];
-                while (true) {
-                    $response = curl_get2($supplier["domain"] . "/api.php?apikey=" . $supplier["api_key"] . "&action=get-order-detail&order_id=" . $api_trans_id);
-                    $data_account = json_decode($response, true);
-                    if($data_account["order"]["status"] == 1) {
-                        break;
+                /* Bounded poll: a supplier that never reports "ready" must not spin forever. */
+                $data_account = orbit_poll_supplier(
+                    function () use ($supplier, $api_trans_id) {
+                        return curl_get2($supplier["domain"] . "/api.php?apikey=" . $supplier["api_key"] . "&action=get-order-detail&order_id=" . $api_trans_id);
+                    },
+                    function ($body) {
+                        return isset($body["order"]["status"]) && (int) $body["order"]["status"] === 1;
                     }
+                );
+                if($data_account === null) {
+                    /* Tell the customer what actually happened: a failed refund must not be reported
+                       as a successful one, or support gets a "you kept my money" ticket with no trail. */
+                    $isRefunded = $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
+                    exit(json_encode(["status" => "error", "msg" => $isRefunded
+                        ? __("Nhà cung cấp chưa trả đơn kịp, đã hoàn tiền. Vui lòng thử lại sau ít phút.")
+                        : __("Nhà cung cấp chưa trả đơn kịp và hệ thống chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.")]));
                 }
-                if(explode(PHP_EOL, $data_account["order"]["data"])) {
-                    $lines = explode(PHP_EOL, $data_account["order"]["data"]);
-                } else {
-                    $lines = $data_account["order"]["data"];
-                }
+                $lines = explode(PHP_EOL, isset($data_account["order"]["data"]) ? (string) $data_account["order"]["data"] : "");
                 foreach ($lines as $account) {
                     if(empty($account)) {
                     } else {
@@ -246,7 +321,11 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($result["error"])]));
                 }
                 $api_trans_id = $result["data"]["buy_id"];
-                foreach ($result["data"]["data"] as $account) {
+                foreach ((array) $result["data"]["data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $account = check_string($account);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -263,14 +342,24 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["message"])]));
                 }
                 $api_trans_id = $data["order_id"];
-                while (true) {
-                    $response = getOrder_API_14($supplier["domain"], $supplier["token"], $api_trans_id);
-                    $data_account = json_decode($response, true);
-                    if(isset($data_account["data"])) {
-                        break;
+                /* Bounded poll: same budget as API_6 — no worker can be pinned by a slow supplier. */
+                $data_account = orbit_poll_supplier(
+                    function () use ($supplier, $api_trans_id) {
+                        return getOrder_API_14($supplier["domain"], $supplier["token"], $api_trans_id);
+                    },
+                    function ($body) {
+                        return isset($body["data"]);
                     }
+                );
+                if($data_account === null) {
+                    /* Tell the customer what actually happened: a failed refund must not be reported
+                       as a successful one. */
+                    $isRefunded = $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
+                    exit(json_encode(["status" => "error", "msg" => $isRefunded
+                        ? __("Nhà cung cấp chưa trả đơn kịp, đã hoàn tiền. Vui lòng thử lại sau ít phút.")
+                        : __("Nhà cung cấp chưa trả đơn kịp và hệ thống chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.")]));
                 }
-                $lines = explode(PHP_EOL, $data_account["data"]["data"]);
+                $lines = explode(PHP_EOL, isset($data_account["data"]["data"]) ? (string) $data_account["data"]["data"] : "");
                 foreach ($lines as $account) {
                     if($account == "") {
                     } else {
@@ -286,16 +375,20 @@ if($_REQUEST["action"] == "buyProduct") {
             if($supplier["type"] == "API_17") {
                 $data = buy_API_17($supplier["domain"], $supplier["username"], $supplier["password"], $product["api_id"], $amount);
                 $data = json_decode($data, true);
-                if(!isset($data)) {
+                if(!is_array($data)) {
                     $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
-                    exit(json_encode(["status" => "error", "msg" => __($data["msg"])]));
+                    exit(json_encode(["status" => "error", "msg" => __("Nhà cung cấp trả về dữ liệu không hợp lệ, đã hoàn tiền")]));
                 }
                 if($data["status"] == "error") {
                     $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
                     exit(json_encode(["status" => "error", "msg" => __($data["msg"])]));
                 }
                 $api_trans_id = $data["data"]["trans_id"];
-                foreach ($data["data"]["lists"] as $account) {
+                foreach ((array) $data["data"]["lists"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $account = check_string($account["account"]);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -312,7 +405,11 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __("Số lượng còn lại trong hệ thống không đủ")]));
                 }
                 $api_trans_id = $data["Data"]["TransId"];
-                foreach ($data["Data"]["Emails"] as $account) {
+                foreach ((array) $data["Data"]["Emails"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $account["Email"], "account" => $account["Email"] . "|" . $account["Password"] . "|" . $account["RefreshToken"] . "|" . $account["AccessToken"] . "|" . $account["ClientId"], "create_gettime" => gettime()]);
                     if($isInsertAPI) {
                         $isValue++;
@@ -327,7 +424,11 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["message"])]));
                 }
                 $api_trans_id = $data["data"]["order_code"];
-                foreach ($data["data"]["list_data"] as $account) {
+                foreach ((array) $data["data"]["list_data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => explode("|", $account)[0], "account" => $account, "create_gettime" => gettime()]);
                     if($isInsertAPI) {
                         $isValue++;
@@ -347,7 +448,11 @@ if($_REQUEST["action"] == "buyProduct") {
                 $result = json_decode($response, true);
                 if($result["success"]) {
                     if(isset($result["data"])) {
-                        foreach ($result["data"] as $account) {
+                        foreach ((array) $result["data"] as $account) {
+                            /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                            if ($isValue >= $amount) {
+                                break;
+                            }
                             $account = check_string($account["product"]);
                             list($uid) = explode("|", $account);
                             $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -370,7 +475,11 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["message"])]));
                 }
                 $api_trans_id = NULL;
-                foreach ($data["data"] as $account) {
+                foreach ((array) $data["data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => explode("|", $account)[0], "account" => $account, "create_gettime" => gettime()]);
                     if($isInsertAPI) {
                         $isValue++;
@@ -385,7 +494,11 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["message"])]));
                 }
                 $api_trans_id = NULL;
-                foreach ($data["data"] as $account) {
+                foreach ((array) $data["data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $account["email"], "account" => $account["email"] . "|" . $account["password"] . "|" . $account["refresh_token"] . "|" . $account["client_id"], "create_gettime" => gettime()]);
                     if($isInsertAPI) {
                         $isValue++;
@@ -400,7 +513,11 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __("Số lượng còn lại trong hệ thống không đủ")]));
                 }
                 $api_trans_id = $data["PurchaseId"];
-                foreach ($data["Accounts"] as $account) {
+                foreach ((array) $data["Accounts"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $account["Email"], "account" => $account["Email"] . "|" . $account["Password"] . "|" . $account["RefreshToken"] . "|" . $account["ClientId"], "create_gettime" => gettime()]);
                     if($isInsertAPI) {
                         $isValue++;
@@ -414,7 +531,11 @@ if($_REQUEST["action"] == "buyProduct") {
                     $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
                     exit(json_encode(["status" => "error", "msg" => __("Số lượng còn lại trong hệ thống không đủ")]));
                 }
-                foreach ($data["data"] as $account) {
+                foreach ((array) $data["data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $api_trans_id = $account["order_id"];
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $account["email"], "account" => $account["email"] . "|" . $account["password"], "create_gettime" => gettime()]);
                     if($isInsertAPI) {
@@ -424,36 +545,54 @@ if($_REQUEST["action"] == "buyProduct") {
             }
         }
         if(0 < $isValue) {
-            if($product["supplier_id"] == 0 && $isValue < $amount) {
-                foreach ($CMSNT->get_list(" SELECT * FROM `product_sold` WHERE `trans_id` = '" . $trans_id . "' AND `supplier_id` = 0 ") as $product_sold) {
-                    $isInsertStock = $CMSNT->insert("product_stock", ["product_code" => $product_sold["product_code"], "seller" => $product_sold["seller"], "uid" => $product_sold["uid"], "account" => $product_sold["account"], "status" => $product_sold["status"], "create_gettime" => gettime(), "type" => "Back", "time_check_live" => $product_sold["time_check_live"]]);
-                    if($isInsertStock) {
-                        $CMSNT->remove("product_sold", " `id` = '" . $product_sold["id"] . "' ");
+            /*
+             * A supplier can confirm fewer accounts than were ordered. The buyer was charged for the
+             * full quantity, so charge only the delivered share and refund the difference under its
+             * own `PARTIAL_` transid: it can never collide with the full `REFUND_` row, and a retried
+             * request finds the same row ("duplicate" = already refunded) instead of paying twice.
+             */
+            if($product["supplier_id"] != 0 && $isValue < $amount) {
+                $payDelivered = orbit_prorated_pay($pay, $amount, $isValue);
+                $refund = $pay - $payDelivered;
+                if(0 < $refund) {
+                    $refundState = $User->RefundCreditsChecked($getUser["id"], $refund, "[Error] " . __("Hoàn tiền phần chưa giao") . " #" . $trans_id, "PARTIAL_" . $trans_id);
+                    if($refundState === "failed") {
+                        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Chưa hoàn được tiền phần chưa giao của đơn hàng") . " #" . $trans_id . " (" . $isValue . "/" . $amount . ")"]);
+                        $partialMessage = __("Chỉ giao được") . " " . $isValue . "/" . $amount . " " . __("sản phẩm; phần còn lại chưa hoàn được tiền, vui lòng liên hệ hỗ trợ.");
+                    } else {
+                        $partialMessage = __("Chỉ giao được") . " " . $isValue . "/" . $amount . " " . __("sản phẩm, đã hoàn tiền phần còn lại.");
                     }
                 }
+                $pay = $payDelivered;
+                $amount = $isValue;
+            }
+            if($product["supplier_id"] == 0 && $isValue < $amount) {
+                orbit_release_sold($CMSNT, $trans_id);
                 $User->RefundCredits($getUser["id"], $pay, "Hoàn tiền đơn hàng mua tài khoản #" . $trans_id, "REFUND_" . $trans_id);
                 exit(json_encode(["status" => "error", "msg" => __("Số lượng còn lại trong hệ thống không đủ")]));
             } else {
-                $isInsertOrder = $CMSNT->insert("product_order", ["trans_id" => $trans_id, "api_transid" => $api_trans_id, "supplier_id" => $product["supplier_id"], "product_id" => $product["id"], "product_name" => $product["name"], "buyer" => $getUser["id"], "seller" => $product["user_id"], "amount" => $amount, "money" => $money, "pay" => $pay, "cost" => $product["cost"] * $amount, "create_gettime" => gettime(), "update_gettime" => gettime(), "trash" => 0, "status_view_order" => $getUser["status_view_order"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent()]);
+                $isInsertOrder = $CMSNT->insert("product_order", ["trans_id" => $trans_id, "api_transid" => $api_trans_id, "supplier_id" => $product["supplier_id"], "product_id" => $product["id"], "product_name" => $product["name"], "buyer" => $getUser["id"], "seller" => $product["user_id"], "amount" => $isValue, "money" => $money, "pay" => $pay, "cost" => $product["cost"] * $isValue, "create_gettime" => gettime(), "update_gettime" => gettime(), "trash" => 0, "status_view_order" => $getUser["status_view_order"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent()]);
                 if($isInsertOrder) {
-                    if($CMSNT->site("cong_tien_nguoi_ban") == 1) {
-                        $User->AddCredits($product["user_id"], $pay, __("Doanh thu đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "DOANH_THU_" . $trans_id);
+                    /* The order exists; the reserved coupon use is now permanent. */
+                    orbit_coupon_commit();
+                    if($pay > 0 && $CMSNT->site("cong_tien_nguoi_ban") == 1) {
+                        /*
+                         * "duplicate" means this transaction already paid the seller (a retried request),
+                         * which is not an error. "failed" means the buyer was charged and the seller was
+                         * not; that must leave a trace for the owner instead of vanishing.
+                         */
+                        $sellerCredit = $User->AddCreditsChecked($product["user_id"], $pay, __("Doanh thu đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "DOANH_THU_" . $trans_id);
+                        if ($sellerCredit === "failed") {
+                            $CMSNT->insert("logs", ["user_id" => $product["user_id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Chưa cộng được doanh thu đơn hàng") . " #" . $trans_id]);
+                        }
                     }
                     if($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                        $ck = $CMSNT->site("affiliate_ck");
-                        if(getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                            $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                        }
+                        $ck = orbit_affiliate_rate($getUser["ref_id"]);
                         $price = $pay * $ck / 100;
-                        $User->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
+                        /* Tag the log row with the order so a refund can claw back the exact amount. */
+                        $User->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]) . " #" . $trans_id);
                     }
-                    if(isset($discount_coupon) && 0 < $discount_coupon) {
-                        $isAddCoupon = $CMSNT->cong("coupons", "used", 1, " `code` = '" . check_string($_REQUEST["coupon"]) . "' ");
-                        if($isAddCoupon) {
-                            $CMSNT->insert("coupon_used", ["coupon_id" => $CMSNT->get_row("SELECT * FROM `coupons` WHERE `code` = '" . check_string($_REQUEST["coupon"]) . "' ")["id"], "user_id" => $getUser["id"], "trans_id" => $trans_id, "create_gettime" => gettime()]);
-                        }
-                    }
-                    $CMSNT->cong("products", "sold", $amount, " `id` = '" . $product["id"] . "' ");
+                    $CMSNT->cong("products", "sold", $isValue, " `id` = '" . $product["id"] . "' ");
                     $accounts = [];
                     $file_txt_email = "";
                     foreach ($CMSNT->get_list("SELECT * FROM `product_sold` WHERE `trans_id` = '" . $trans_id . "' ") as $account_sold) {
@@ -461,7 +600,7 @@ if($_REQUEST["action"] == "buyProduct") {
                         $file_txt_email .= PHP_EOL . htmlspecialchars_decode($account_sold["account"]);
                     }
                     $CMSNT->update("users", ["time_request" => time()], " `id` = '" . $getUser["id"] . "' ");
-                    $CMSNT->insert("order_log", ["buyer" => $getUser["id"], "product_name" => $product["name"], "pay" => $pay, "amount" => $amount, "create_time" => time(), "is_virtual" => 0]);
+                    $CMSNT->insert("order_log", ["buyer" => $getUser["id"], "product_name" => $product["name"], "pay" => $pay, "amount" => $isValue, "create_time" => time(), "is_virtual" => 0]);
                     if($CMSNT->site("email_temp_subject_buy_order") != "") {
                         $content = $CMSNT->site("email_temp_content_buy_order");
                         $content = str_replace("{domain}", $_SERVER["SERVER_NAME"], $content);
@@ -486,10 +625,14 @@ if($_REQUEST["action"] == "buyProduct") {
                         $subject = str_replace("{trans_id}", $trans_id, $subject);
                         $subject = str_replace("{pay}", format_currency($pay), $subject);
                         $bcc = $CMSNT->site("title");
-                        $file_txt_name = $trans_id . ".txt";
-                        file_put_contents($file_txt_name, $file_txt_email);
-                        sendCSM($getUser["email"], $getUser["username"], $subject, $content, $bcc, $file_txt_name);
-                        unlink($file_txt_name);
+                        /* The attachment used to be written into the document root: a crash between
+                           write and unlink left a file of sold accounts behind a web-served path. */
+                        $file_txt_name = rtrim(sys_get_temp_dir(), "/\\") . "/" . $trans_id . ".txt";
+                        sendCSM($getUser["email"], $getUser["username"], $subject, $content, $bcc,
+                            file_put_contents($file_txt_name, $file_txt_email) !== false ? $file_txt_name : "");
+                        if (is_file($file_txt_name)) {
+                            unlink($file_txt_name);
+                        }
                     }
                     if($CMSNT->site("noti_buy_product") != "") {
                         $my_text = $CMSNT->site("noti_buy_product");
@@ -503,14 +646,40 @@ if($_REQUEST["action"] == "buyProduct") {
                         $my_text = str_replace("{time}", gettime(), $my_text);
                         sendMessAdmin($my_text);
                     }
-                    exit(json_encode(["status" => "success", "msg" => __("Tạo đơn hàng thành công!"), "trans_id" => $trans_id, "data" => $accounts]));
+                    exit(json_encode(["status" => "success", "msg" => __("Tạo đơn hàng thành công!") . ($partialMessage !== "" ? " " . $partialMessage : ""), "trans_id" => $trans_id, "data" => $accounts]));
                 } else {
-                    exit(json_encode(["status" => "error", "msg" => "ERROR 1 - " . __("System error")]));
+                    /*
+                     * The buyer has already paid and the accounts are reserved, but the order row could
+                     * not be written. Without this the money was simply gone. Refund under the order's
+                     * own key; `failed` leaves an [Error] line the owner can act on, `duplicate` means
+                     * a retry already refunded it.
+                     */
+                    $refundState = $User->RefundCreditsChecked($getUser["id"], $pay, "[Error] " . __("Hoàn tiền do không tạo được đơn hàng") . " #" . $trans_id, "REFUND_" . $trans_id);
+                    if ($refundState !== "failed") {
+                        /*
+                         * The refund went through, so the accounts must not stay reserved in
+                         * `product_sold` where nobody can see or resell them. Local stock goes back;
+                         * supplier accounts cannot be un-bought, so leave a trace for the owner.
+                         */
+                        $returned = orbit_release_sold($CMSNT, $trans_id);
+                        if ($returned === 0 && $product["supplier_id"] != 0) {
+                            $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Đơn hàng đã hoàn tiền nhưng tài khoản nhà cung cấp vẫn còn trong product_sold") . " #" . $trans_id]);
+                        }
+                    }
+                    if ($refundState === "failed") {
+                        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Không tạo được đơn hàng và chưa hoàn được tiền") . " #" . $trans_id . " (" . format_currency($pay) . ")"]);
+                    }
+                    exit(json_encode(["status" => "error", "msg" => $refundState === "failed"
+                        ? __("Không tạo được đơn hàng và chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.") . " #" . $trans_id
+                        : __("Không tạo được đơn hàng, đã hoàn tiền. Vui lòng thử lại.")]));
                 }
             }
         } else {
-            $User->RefundCredits($getUser["id"], $pay, __("[Error 2] Hoàn tiền đơn hàng mua tài khoản") . " #" . $trans_id, "REFUND_" . $trans_id);
-            exit(json_encode(["status" => "error", "msg" => __("Số lượng còn lại trong hệ thống không đủ")]));
+            /* The local shortfall was already restored to stock above; report the refund honestly. */
+            $refundState = $User->RefundCreditsChecked($getUser["id"], $pay, __("[Error 2] Hoàn tiền đơn hàng mua tài khoản") . " #" . $trans_id, "REFUND_" . $trans_id);
+            exit(json_encode(["status" => "error", "msg" => $refundState === "failed"
+                ? __("Số lượng còn lại trong hệ thống không đủ và chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.") . " #" . $trans_id
+                : __("Số lượng còn lại trong hệ thống không đủ, đã hoàn tiền.")]));
         }
     } else {
         exit(json_encode(["status" => "error", "msg" => "ERROR 2 - " . __("Vui lòng thử lại")]));
@@ -524,12 +693,15 @@ if($_REQUEST["action"] == "buyProduct") {
         if(empty($_REQUEST["amount"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập số lượng cần mua")]));
         }
-        $amount = check_string($_REQUEST["amount"]);
+        $amount = order_quantity($_REQUEST["amount"]);
+        if($amount === false) {
+            exit(json_encode(["status" => "error", "msg" => __("Số lượng mua không hợp lệ")]));
+        }
         if(!($product = $CMSNT->get_row("SELECT * FROM `products` WHERE `id` = '" . $id . "' AND `status` = 1 "))) {
             exit(json_encode(["status" => "error", "msg" => __("Sản phẩm không khả dụng")]));
         }
         $discount = 0;
-        $price = $product["discount"] == 0 ? $product["price"] : $product["price"] - $product["price"] * $product["discount"] / 100;
+        $price = orbit_unit_price($product);
         $money = $amount * $price;
         $pay = $money;
         if(!empty($_REQUEST["token"])) {
@@ -549,7 +721,14 @@ if($_REQUEST["action"] == "buyProduct") {
             }
         } else {
             $discount = $money * getDiscount($amount, $product["id"]) / 100;
+            /* The guest quote used to show the discount but keep `pay` at the full price. */
+            $pay = $money - $discount;
         }
+        /* A quote must never come out negative, whatever percentage the settings or a coupon add up to. */
+        if($money < $discount) {
+            $discount = $money;
+        }
+        $pay = $money - $discount;
         exit(json_encode(["status" => "success", "money" => format_currency($money), "discount" => format_currency($discount), "discount_number" => $discount, "pay" => format_currency($pay)]));
     }
     exit(json_encode(["status" => "error", "msg" => __("Request does not exist")]));

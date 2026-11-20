@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => "Toàn bộ tài khoản trong kho hàng | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n";
+$body["header"] = "\n<script src=\"" . BASE_URL("public/common/clipboard.js") . "\"></script>\n";
 $body["footer"] = "\n\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
@@ -150,6 +150,7 @@ echo $shortByDate == 3 ? "selected" : "";
 echo " value=\"3\">\n                                            ";
 echo __("Tháng này");
 echo "                                        </option>\n                                    </select>\n                                </div>\n                            </div>\n                        </form>\n                        <div class=\"table-responsive table-wrapper mb-3\">\n                            <table class=\"table text-nowrap table-striped table-hover table-bordered\">\n                                <thead>\n                                    <tr>\n                                        <th class=\"text-center\">\n                                            <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                <input type=\"checkbox\" class=\"form-check-input\" name=\"check_all\"\n                                                    id=\"check_all_checkbox_product_stock\" value=\"option1\">\n                                            </div>\n                                        </th>\n                                        <th class=\"text-center\">UID</th>\n                                        <th class=\"text-center\">Tài khoản</th>\n                                        <th class=\"text-center\">Kho hàng</th>\n                                        <th class=\"text-center\">Seller</th>\n                                        <th class=\"text-center\">Thời gian</th>\n                                        <th class=\"text-center\">Check live gần nhất</th>\n                                        <th class=\"text-center\">Type</th>\n                                        <th class=\"text-center\">Thao tác</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
+$orbitUserNames = orbit_user_names($listDatatable, "seller");
 foreach ($listDatatable as $row) {
     echo "                                    <tr>\n                                        <td class=\"text-center\">\n                                            <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                <input type=\"checkbox\" class=\"form-check-input checkbox_product_stock\"\n                                                    data-id=\"";
     echo $row["id"];
@@ -168,7 +169,7 @@ foreach ($listDatatable as $row) {
     echo "</strong>\n                                        </td>\n                                        <td class=\"text-center\"><a class=\"text-primary\"\n                                                href=\"";
     echo base_url_admin("user-edit&id=" . $row["seller"]);
     echo "\">";
-    echo getRowRealtime("users", $row["seller"], "username");
+    echo orbit_user_name($orbitUserNames, $row["seller"]);
     echo "                                                [ID ";
     echo $row["seller"];
     echo "]</a>\n                                        </td>\n                                        <td class=\"text-center\">\n                                            <small data-toggle=\"tooltip\" data-placement=\"bottom\"\n                                                title=\"";

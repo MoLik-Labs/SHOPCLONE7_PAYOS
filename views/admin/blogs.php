@@ -4,8 +4,11 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => __("Danh sách bài viết") . " | " . $CMSNT->site("title"), "desc" => $CMSNT->site("description"), "keyword" => $CMSNT->site("keywords")];
-$body["header"] = "\n\n<!-- Page JS Plugins CSS -->\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-bs5/css/dataTables.bootstrap5.min.css\">\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-buttons-bs5/css/buttons.bootstrap5.min.css\">\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-responsive-bs5/css/responsive.bootstrap5.min.css\">\n";
-$body["footer"] = "\n\n\n<!-- Page JS Plugins -->\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables/jquery.dataTables.min.js\"></script>\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-bs5/js/dataTables.bootstrap5.min.js\"></script>\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-responsive/js/dataTables.responsive.min.js\"></script>\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-responsive-bs5/js/responsive.bootstrap5.min.js\"></script>\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-buttons/dataTables.buttons.min.js\"></script>\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-buttons-bs5/js/buttons.bootstrap5.min.js\"></script>\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-buttons-jszip/jszip.min.js\"></script>\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-buttons-pdfmake/pdfmake.min.js\"></script>\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-buttons-pdfmake/vfs_fonts.js\"></script>\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-buttons/buttons.print.min.js\"></script>\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/plugins/datatables-buttons/buttons.html5.min.js\"></script>\n<!-- Page JS Code -->\n<script src=\"" . BASE_URL("public/theme/") . "assets/js/pages/be_tables_datatables.min.js\"></script>\n\n";
+/* The DataTables plugin bundle these pages pointed at never shipped with this checkout
+   (public/theme/assets/js/plugins is absent), so every include was a 404 and no table
+   was ever enhanced. The tables use the theme's plain Bootstrap styles. */
+$body["header"] = "";
+$body["footer"] = "";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
 require_once __DIR__ . "/sidebar.php";
@@ -131,6 +134,7 @@ echo __("Trạng thái");
 echo "</th>\n                                        <th class=\"text-center\">Lượt xem</th>\n                                        <th>";
 echo __("Thao tác");
 echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
+$orbitPostCategoryNames = orbit_lookup_names("post_category", $listDatatable, "category_id");
 foreach ($listDatatable as $row) {
     echo "                                    <tr>\n                                        <td>";
     echo $row["title"];
@@ -143,7 +147,7 @@ foreach ($listDatatable as $row) {
     echo "</td>\n                                        <td><a class=\"text-primary\" href=\"";
     echo base_url_admin("blog-category-edit&id=" . $row["category_id"]);
     echo "\"\n                                                target=\"_blank\"><i class=\"fa fa-pencil-alt\"></i>\n                                                ";
-    echo getRowRealtime("post_category", $row["category_id"], "name");
+    echo orbit_lookup_name($orbitPostCategoryNames, $row["category_id"]);
     echo "</a>\n                                        </td>\n                                        <td class=\"text-center\">";
     echo display_status_product($row["status"]);
     echo "</td>\n                                        <td class=\"text-center\">";

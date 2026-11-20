@@ -9,6 +9,10 @@ require_once __DIR__ . "/../libs/lang.php";
 require_once __DIR__ . "/../libs/helper.php";
 require_once __DIR__ . "/../libs/database/users.php";
 $CMSNT = new DB();
+if (!orbit_cron_allowed()) {
+    http_response_code(403);
+    exit("cron_forbidden");
+}
 $user = new users();
 curl_get2(base_url("cron/cron.php"));
 if($CMSNT->site("check_time_cron_momo") < time() && time() - $CMSNT->site("check_time_cron_momo") < 5) {
@@ -28,19 +32,16 @@ if($CMSNT->site("momo_status") == 1) {
             $description = $data["comment"];
             $tid = $data["tranId"];
             $partnerName = $data["partnerName"];
-            $amount = $data["amount"];
+            $amount = orbit_gateway_amount($data["amount"]);
             $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-            if(($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_momo` WHERE `tid` = '" . $tid . "' ") == 0) {
+            if($amount !== false && ($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_momo` WHERE `tid` = '" . $tid . "' ") == 0) {
                 $received = checkPromotion($amount);
                 $insertSv2 = $CMSNT->insert("payment_momo", ["tid" => $tid, "method" => "MOMO", "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
                 if($insertSv2) {
                     $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua ví MOMO (#" . $tid . " - " . $description . " - " . $amount . ")", $tid);
                     if($isCong) {
                         if($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                            $ck = $CMSNT->site("affiliate_ck");
-                            if(getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                            }
+                            $ck = orbit_affiliate_rate($getUser["ref_id"]);
                             $price = $received * $ck / 100;
                             $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                         }
@@ -61,6 +62,12 @@ if($CMSNT->site("momo_status") == 1) {
         }
     }
 }
-curl_get(base_url("cron/cron.php"));
+/*
+ * This called cron/cron.php over HTTP from the same server. The cron guard refuses an unauthenticated
+ * HTTP call, and on CLI the request did not carry CRON_TOKEN either — the call could only ever time
+ * out (10 s) or be rejected. Including it keeps the intent (run the shared cron after MoMo) and works
+ * in both the CLI and the token-authenticated HTTP path, because it is the same request.
+ */
+require __DIR__ . "/cron.php";
 
 ?>

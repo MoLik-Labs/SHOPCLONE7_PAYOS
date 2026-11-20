@@ -1,0 +1,16 @@
+{
+  "name": "orbit-license-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Orbit Office licence portal — activation, HWID binding and self-service resets (Node stdlib only, deployable to Render).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/portal.test.js",
+    "create-admin": "node server.js --create-admin"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

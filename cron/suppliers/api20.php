@@ -7,6 +7,10 @@ require_once __DIR__ . "/../../libs/lang.php";
 require_once __DIR__ . "/../../libs/helper.php";
 require_once __DIR__ . "/../../libs/suppliers.php";
 $CMSNT = new DB();
+if (!orbit_cron_allowed()) {
+    http_response_code(403);
+    exit("cron_forbidden");
+}
 if($CMSNT->site("time_cron_suppliers_api20") < time() && time() - $CMSNT->site("time_cron_suppliers_api20") < 5) {
     exit("Thao tác quá nhanh, vui lòng thử lại sau!");
 }

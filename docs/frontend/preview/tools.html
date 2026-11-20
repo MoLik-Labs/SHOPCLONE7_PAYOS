@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>[preview] Công cụ | Orbit Shop</title>
+<meta name="description" content="Bốn công cụ nhỏ dùng miễn phí cho khách của shop.">
+<meta name="keywords" content="shop, licence">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Công cụ | Orbit Shop">
+<meta property="og:description" content="Bốn công cụ nhỏ dùng miễn phí cho khách của shop.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#fbf9f4">
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/latin-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/vietnamese-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/client/orbit/tokens.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/base.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/components.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/shell.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/store.css?v=preview">
+<link rel="stylesheet" href="assets/preview.css">
+</head>
+<body class="page-content">
+<div class="preview-banner"><strong>Bản xem trước tĩnh</strong> — trang thật chạy trong shop, ở đây dùng dữ liệu mẫu. Không có dữ liệu thật, không gọi mạng, không phát nhạc. Biểu đồ vẽ bằng SVG nội bộ; bảng vẫn đọc được khi tắt JavaScript.</div>
+
+<a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+<header class="topbar" data-topbar>
+  <div class="container topbar__inner">
+    <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+    <nav class="topbar__nav" aria-label="Điều hướng chính">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__actions">
+      <a class="btn btn--ghost topbar__account" href="#preview-client-login">Đăng nhập</a>
+      <a class="btn topbar__cta" href="#preview-action-recharge-bank">Nạp tiền</a>
+      <button class="topbar__toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-toggle>
+        <span class="sr-only">Mở menu</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+    </div>
+  </div>
+  <div class="topbar__sheet" id="site-menu" data-menu-sheet hidden>
+    <nav aria-label="Điều hướng trên điện thoại">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="topbar__sheet-actions">
+      <a class="btn btn--ghost btn--block" href="#preview-client-login">Đăng nhập</a>
+      <a class="btn btn--primary btn--block" href="#preview-action-recharge-bank">Nạp tiền</a>
+    </div>
+  </div>
+</header>
+<main id="main" class="container section">
+<section class="section section--tight" aria-labelledby="tools-title">
+  <div class="container">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Tiện ích</p>
+        <h1 id="tools-title">Công cụ</h1>
+        <p class="muted m0">Bốn công cụ nhỏ, miễn phí. Không công cụ nào gửi dữ liệu bạn nhập ra ngoài trừ khi bạn tự bấm.</p>
+      </div>
+    </div>
+
+    <div class="grid grid--2">
+            <a class="card card--interactive" href="#preview-tool-get-2fa">
+        <div class="card__body">
+          <h2 class="card__title">Mã 2FA</h2>
+          <p class="muted m0 mt-2">Tạo mã 6 số từ khoá bí mật Google Authenticator. Khoá chỉ nằm trong trình duyệt của bạn.</p>
+        </div>
+      </a>
+            <a class="card card--interactive" href="#preview-tool-check-live-facebook">
+        <div class="card__body">
+          <h2 class="card__title">Check live Facebook</h2>
+          <p class="muted m0 mt-2">Dán danh sách UID để xem nhanh UID nào còn ảnh đại diện.</p>
+        </div>
+      </a>
+            <a class="card card--interactive" href="#preview-tool-icon-facebook">
+        <div class="card__body">
+          <h2 class="card__title">Biểu tượng cảm xúc</h2>
+          <p class="muted m0 mt-2">Bảng biểu tượng để chép vào bài đăng, tin nhắn.</p>
+        </div>
+      </a>
+            <a class="card card--interactive" href="#preview-tool-random-face">
+        <div class="card__body">
+          <h2 class="card__title">Ảnh khuôn mặt ngẫu nhiên</h2>
+          <p class="muted m0 mt-2">Mở dịch vụ ảnh AI bên ngoài trong tab mới.</p>
+        </div>
+      </a>
+          </div>
+
+    <p class="small muted mt-4">
+      Công cụ 2FA chạy hoàn toàn trong trình duyệt: khoá bí mật không được gửi lên máy chủ và không
+      được ghi lại. Nếu bạn nghi ngờ khoá đã lộ, hãy tạo lại khoá trong ứng dụng xác thực.
+    </p>
+  </div>
+</section>
+</main>
+<footer class="footer">
+  <div class="container">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+        <p class="footer__note">Shop bán tài khoản &amp; licence</p>
+        <ul class="footer__contact">
+<li><span class="footer__label">Hotline</span> <a href="tel:0909123456">0909 123 456</a></li>
+<li><span class="footer__label">Email</span> <a href="mailto:support@orbit.example">support@orbit.example</a></li>
+<li><span class="footer__label">Địa chỉ</span> Quận 1, TP. Hồ Chí Minh</li>        </ul>
+      </div>
+      <div class="footer__cols">
+        <nav class="footer__col" aria-label="Mua hàng">
+          <h2 class="footer__heading">Mua hàng</h2>
+          <ul>
+            <li><a href="#preview-client-home#san-pham">Tất cả sản phẩm</a></li>
+            <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+            <li><a href="#preview-product-orders">Lịch sử đơn hàng</a></li>
+            <li><a href="#preview-client-favorites">Sản phẩm yêu thích</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Hỗ trợ">
+          <h2 class="footer__heading">Hỗ trợ</h2>
+          <ul>
+            <li><a href="#preview-client-faq">Câu hỏi thường gặp</a></li>
+            <li><a href="#preview-client-contact">Liên hệ</a></li>
+            <li><a href="#preview-client-policy">Chính sách</a></li>
+            <li><a href="#preview-client-document-api">Tài liệu API</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Tài khoản">
+          <h2 class="footer__heading">Tài khoản</h2>
+          <ul>
+            <li><a href="#preview-client-login">Đăng nhập</a></li>
+            <li><a href="#preview-client-register">Đăng ký</a></li>
+            <li><a href="#preview-client-login">Nạp tiền</a></li>
+            <li><a href="#preview-client-profile">Trang cá nhân</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+    <div class="footer__legal">
+      <p>© 2026 Orbit Shop</p>
+      <p class="footer__credit">Thiết kế &amp; vận hành: <strong>Orbit Office</strong></p>
+      <ul class="footer__legal-links">
+        <li><a href="#preview-client-policy">Chính sách</a></li>
+        <li><a href="#preview-client-faq">FAQ</a></li>
+        <li><a href="#preview-client-contact">Liên hệ</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+<script defer src="assets/client/orbit/store.js?v=preview"></script>
+<script defer src="assets/common/csrf.js?v=preview"></script>
+</body>
+</html>

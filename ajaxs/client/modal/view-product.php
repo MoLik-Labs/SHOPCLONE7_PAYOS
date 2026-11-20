@@ -42,7 +42,7 @@ if($CMSNT->site("product_rating_display") == 1) {
 echo "\n                <h3 class=\"view-price\">\n                    ";
 echo 0 < $product["discount"] ? "<del>" . format_currency($product["price"]) . "</del>" : "";
 echo "<span>";
-echo format_currency($product["price"] - $product["price"] * $product["discount"] / 100);
+echo format_currency(orbit_unit_price($product));
 echo "</span>\n                </h3>\n                ";
 if(!isset($getUser) || $getUser["discount"] == 0) {
     echo "                ";

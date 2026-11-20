@@ -1,9 +1,57 @@
 <?php
+/*
+ * 404 — Orbit v3.
+ *
+ * Reached through index.php when a module/action is missing, and for the reserved section names
+ * (header, footer, nav, …) that are partials and must never render on their own. Rendering it on the
+ * shared shell keeps the header, footer and typography identical to every other page; the old file
+ * pulled Google fonts, two MaxCDN shims and a Cloudflare beacon from third-party hosts.
+ */
 
-echo "<!DOCTYPE html>\n<html lang=\"en\">\n\n<head>\n    <meta charset=\"utf-8\">\n    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\n    <title>404</title>\n\n    <style id=\"\" media=\"all\">\n    /* vietnamese */\n    @font-face {\n        font-family: 'Josefin Sans';\n        font-style: normal;\n        font-weight: 400;\n        src: url(/fonts.gstatic.com/s/josefinsans/v17/Qw3aZQNVED7rKGKxtqIqX5EUAnx4Vn8siqM7.woff2) format('woff2');\n        unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;\n    }\n\n    /* latin-ext */\n    @font-face {\n        font-family: 'Josefin Sans';\n        font-style: normal;\n        font-weight: 400;\n        src: url(/fonts.gstatic.com/s/josefinsans/v17/Qw3aZQNVED7rKGKxtqIqX5EUA3x4Vn8siqM7.woff2) format('woff2');\n        unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;\n    }\n\n    /* latin */\n    @font-face {\n        font-family: 'Josefin Sans';\n        font-style: normal;\n        font-weight: 400;\n        src: url(/fonts.gstatic.com/s/josefinsans/v17/Qw3aZQNVED7rKGKxtqIqX5EUDXx4Vn8sig.woff2) format('woff2');\n        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n    }\n\n    /* vietnamese */\n    @font-face {\n        font-family: 'Josefin Sans';\n        font-style: normal;\n        font-weight: 700;\n        src: url(/fonts.gstatic.com/s/josefinsans/v17/Qw3aZQNVED7rKGKxtqIqX5EUAnx4Vn8siqM7.woff2) format('woff2');\n        unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;\n    }\n\n    /* latin-ext */\n    @font-face {\n        font-family: 'Josefin Sans';\n        font-style: normal;\n        font-weight: 700;\n        src: url(/fonts.gstatic.com/s/josefinsans/v17/Qw3aZQNVED7rKGKxtqIqX5EUA3x4Vn8siqM7.woff2) format('woff2');\n        unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;\n    }\n\n    /* latin */\n    @font-face {\n        font-family: 'Josefin Sans';\n        font-style: normal;\n        font-weight: 700;\n        src: url(/fonts.gstatic.com/s/josefinsans/v17/Qw3aZQNVED7rKGKxtqIqX5EUDXx4Vn8sig.woff2) format('woff2');\n        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n    }\n    </style>\n\n    <link type=\"text/css\" rel=\"stylesheet\" href=\"";
-echo base_url("public/css/Error404.css");
-echo "\" />\n\n\n    <!--[if lt IE 9]>\n\t\t  <script src=\"https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js\"></script>\n\t\t  <script src=\"https://oss.maxcdn.com/respond/1.4.2/respond.min.js\"></script>\n\t\t<![endif]-->\n    <meta name=\"robots\" content=\"noindex, follow\">\n</head>\n\n<body>\n    <div id=\"notfound\">\n        <div class=\"notfound\">\n            <div class=\"notfound-404\">\n                <h1>4<span>0</span>4</h1>\n            </div><br>\n            <p>Trang bạn đang tìm kiếm có thể đã bị xóa, đổi tên hoặc tạm thời không có sẵn.</p>\n            <a href=\"";
-echo base_url("");
-echo "\">Home</a>\n        </div>\n    </div>\n\n    <script defer src=\"https://static.cloudflareinsights.com/beacon.min.js\"\n        data-cf-beacon='{\"rayId\":\"694ec809fd77d1fb\",\"token\":\"cd0b4b3a733644fc843ef0b185f98241\",\"version\":\"2021.8.1\",\"si\":10}'>\n    </script>\n</body>\n\n</html>";
+if (!defined("IN_SITE")) {
+    http_response_code(404);
+    exit("The Request Not Found");
+}
 
+require_once __DIR__ . "/store-shell.php";
+
+http_response_code(404);
+$storeMethods = store_payment_methods($CMSNT);
+$storeShell = array(
+    "title" => __("Không tìm thấy trang") . " | " . $CMSNT->site("title"),
+    "desc" => __("Trang bạn tìm có thể đã được đổi tên, chuyển đi hoặc tạm thời không mở."),
+    "robots" => "noindex, follow",
+    "nav" => store_nav_default($CMSNT, $storeMethods),
+    "body_class" => "page-content",
+);
+store_shell_open($storeShell);
 ?>
+<section class="section section--tight" aria-labelledby="notfound-title">
+  <div class="container container--narrow">
+    <p class="eyebrow">Lỗi 404</p>
+    <h1 id="notfound-title">Không tìm thấy trang này</h1>
+    <p class="muted measure">
+      Có thể đường dẫn đã đổi tên, hoặc trang đã được chuyển đi. Bạn kiểm tra lại địa chỉ,
+      hoặc bắt đầu lại từ những chỗ dưới đây.
+    </p>
+
+    <div class="hero__actions">
+      <a class="btn btn--primary" href="<?php echo store_e(BASE_URL("")); ?>">Về trang chủ</a>
+      <a class="btn btn--ghost" href="<?php echo store_e(BASE_URL("client/product")); ?>">Xem sản phẩm</a>
+      <a class="btn btn--ghost" href="<?php echo store_e(BASE_URL("client/contact")); ?>">Liên hệ shop</a>
+    </div>
+
+    <div class="panel mt-4">
+      <div class="panel__body">
+        <h2 class="panel__title">Bạn đang tìm một đơn hàng?</h2>
+        <p class="muted m0">
+          Đăng nhập rồi mở <a href="<?php echo store_e(BASE_URL("client/orders")); ?>">Đơn hàng của tôi</a>
+          — mã đơn nằm trong mục đó, kèm tài khoản đã giao. Nếu vẫn không thấy, gửi mã đơn cho shop qua
+          trang liên hệ.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+<?php
+store_shell_close();

@@ -4,8 +4,8 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => __("List of languages"), "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/1.12.1/css/dataTables.bootstrap5.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/responsive/2.3.0/css/responsive.bootstrap.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/buttons/2.2.3/css/buttons.bootstrap5.min.css\">\n\n";
-$body["footer"] = "\n<script src=\"https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js\"></script>\n<script src=\"https://cdn.datatables.net/1.12.1/js/dataTables.bootstrap5.min.js\"></script>\n<script src=\"https://cdn.datatables.net/responsive/2.3.0/js/dataTables.responsive.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/buttons.print.min.js\"></script>\n";
+$body["header"] = "\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/dataTables.bootstrap5.min.css") . "\">\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/responsive.bootstrap5.min.css") . "\">\n\n\n";
+$body["footer"] = "\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/jquery.dataTables.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.bootstrap5.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.responsive.min.js") . "\"></script>\n\n\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
 require_once __DIR__ . "/sidebar.php";
@@ -22,24 +22,17 @@ if(isset($_POST["AddLang"])) {
     }
     $icon = "";
     if(check_img("icon")) {
-        $rand = check_string($_POST["lang"]);
-        $uploads_dir = "assets/storage/flags/flag_" . $rand . ".png";
-        $tmp_name = $_FILES["icon"]["tmp_name"];
-        $addIcon = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addIcon) {
-            $icon = "assets/storage/flags/flag_" . $rand . ".png";
-        } else {
-            $icon = "";
-        }
+        $stored = orbit_store_image($_FILES["icon"], "flag_" . check_string($_POST["lang"]) . "_", "flags");
+        $icon = $stored !== false ? $stored : "";
     }
     $isInsert = $CMSNT->insert("languages", ["icon" => $icon, "lang" => check_string($_POST["lang"]), "status" => check_string($_POST["status"])]);
     if($isInsert) {
         $Mobile_Detect = new Mobile_Detect();
-        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thêm ngôn ngữ") . " (" . $_POST["lang"] . ")."]);
+        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thêm ngôn ngữ") . " (" . check_string($_POST["lang"]) . ")."]);
         $my_text = $CMSNT->site("noti_action");
         $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
         $my_text = str_replace("{username}", $getUser["username"], $my_text);
-        $my_text = str_replace("{action}", __("Thêm ngôn ngữ") . " (" . $_POST["lang"] . ").", $my_text);
+        $my_text = str_replace("{action}", __("Thêm ngôn ngữ") . " (" . check_string($_POST["lang"]) . ").", $my_text);
         $my_text = str_replace("{ip}", myip(), $my_text);
         $my_text = str_replace("{time}", gettime(), $my_text);
         sendMessAdmin($my_text);

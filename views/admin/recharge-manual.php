@@ -4,8 +4,8 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => __("Recharge Manual"), "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/1.12.1/css/dataTables.bootstrap5.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/responsive/2.3.0/css/responsive.bootstrap.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/buttons/2.2.3/css/buttons.bootstrap5.min.css\">\n\n";
-$body["footer"] = "\n<script src=\"https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js\"></script>\n<script src=\"https://cdn.datatables.net/1.12.1/js/dataTables.bootstrap5.min.js\"></script>\n<script src=\"https://cdn.datatables.net/responsive/2.3.0/js/dataTables.responsive.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/buttons.print.min.js\"></script>\n";
+$body["header"] = "\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/dataTables.bootstrap5.min.css") . "\">\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/responsive.bootstrap5.min.css") . "\">\n\n\n";
+$body["footer"] = "\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/jquery.dataTables.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.bootstrap5.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.responsive.min.js") . "\"></script>\n\n\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
 require_once __DIR__ . "/sidebar.php";
@@ -40,12 +40,10 @@ if(isset($_POST["SaveSettings"])) {
         }
         $url_icon = NULL;
         if(check_img("icon")) {
-            $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 4);
-            $uploads_dir = "assets/storage/images/icon_gateway" . $rand . ".png";
-            $tmp_name = $_FILES["icon"]["tmp_name"];
-            $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-            if($addlogo) {
-                $url_icon = $uploads_dir;
+            /* The extension follows the bytes, not a hard-coded ".png". */
+            $stored = orbit_store_image($_FILES["icon"], "icon_gateway", "images");
+            if($stored !== false) {
+                $url_icon = $stored;
             }
         }
         $isInsert = $CMSNT->insert("payment_manual", ["icon" => $url_icon, "title" => check_string($_POST["title"]), "description" => check_string($_POST["description"]), "slug" => check_string($_POST["slug"]), "content" => isset($_POST["content"]) ? base64_encode($_POST["content"]) : NULL, "display" => check_string($_POST["display"]), "create_gettime" => gettime(), "update_gettime" => gettime()]);

@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>[preview] Orbit Shop</title>
+<meta name="description" content="Shop bán tài khoản &amp; licence">
+<meta name="keywords" content="shop, licence">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Orbit Shop">
+<meta property="og:description" content="Shop bán tài khoản &amp; licence">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#fbf9f4">
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/latin-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/client/fonts/be-vietnam-pro/vietnamese-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/client/orbit/tokens.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/base.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/components.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/shell.css?v=preview">
+<link rel="stylesheet" href="assets/client/orbit/store.css?v=preview">
+<link rel="stylesheet" href="assets/preview.css">
+</head>
+<body class="">
+<div class="preview-banner"><strong>Bản xem trước tĩnh</strong> — trang thật chạy trong shop, ở đây dùng dữ liệu mẫu. Không có dữ liệu thật, không gọi mạng, không phát nhạc. Biểu đồ vẽ bằng SVG nội bộ; bảng vẫn đọc được khi tắt JavaScript.</div>
+
+<a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+<header class="topbar" data-topbar>
+  <div class="container topbar__inner">
+    <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+    <nav class="topbar__nav" aria-label="Điều hướng chính">
+      <ul>
+        <li><a href="#preview-client-home#san-pham" aria-current="page">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <form class="topbar__search" role="search" action="#preview-client-home" method="get">
+      <label class="sr-only" for="site-search">Tìm sản phẩm</label>
+      <input class="input" id="site-search" type="search" name="keyword" value="" placeholder="Tìm sản phẩm…" autocomplete="off">
+      <button class="btn btn--ghost btn--icon" type="submit" aria-label="Tìm">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+      </button>
+    </form>
+    <div class="topbar__actions">
+      <a class="btn btn--ghost topbar__account" href="#preview-client-login">Đăng nhập</a>
+      <a class="btn topbar__cta" href="#preview-action-recharge-bank">Nạp tiền</a>
+      <button class="topbar__toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-toggle>
+        <span class="sr-only">Mở menu</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+    </div>
+  </div>
+  <div class="topbar__sheet" id="site-menu" data-menu-sheet hidden>
+    <nav aria-label="Điều hướng trên điện thoại">
+      <ul>
+        <li><a href="#preview-client-home#san-pham">Sản phẩm</a></li>
+        <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+        <li><a href="#preview-action-recharge-bank">Nạp tiền</a></li>
+        <li><a href="#preview-product-orders">Lịch sử</a></li>
+        <li><a href="#preview-client-contact">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <form class="topbar__search" role="search" action="#preview-client-home" method="get">
+      <label class="sr-only" for="site-search-mobile">Tìm sản phẩm</label>
+      <input class="input" id="site-search-mobile" type="search" name="keyword" placeholder="Tìm sản phẩm…" autocomplete="off">
+      <button class="btn btn--ghost" type="submit">Tìm</button>
+    </form>
+    <div class="topbar__sheet-actions">
+      <a class="btn btn--ghost btn--block" href="#preview-client-login">Đăng nhập</a>
+      <a class="btn btn--primary btn--block" href="#preview-action-recharge-bank">Nạp tiền</a>
+    </div>
+  </div>
+</header>
+<main id="main">
+
+
+<section class="container hero" aria-labelledby="hero-title">
+  <div class="hero__text">
+    <p class="eyebrow">Sản phẩm đang bán</p>
+    <h1 class="hero__title" id="hero-title">Orbit Shop</h1>
+    <p class="hero__lead lead">Shop bán tài khoản &amp; licence</p>
+    <div class="hero__actions">
+      <a class="btn btn--primary btn--lg" href="#san-pham">Xem sản phẩm</a>
+      <a class="btn btn--lg" href="#preview-action-recharge-bank">Nạp tiền</a>
+    </div>
+    <ul class="hero__facts">
+      <li class="hero__fact"><strong>8</strong><span>sản phẩm đang bán</span></li>
+      <li class="hero__fact"><strong>3</strong><span>danh mục</span></li>
+            <li class="hero__fact"><strong>1</strong><span>phương thức nạp tiền</span></li>
+          </ul>
+  </div>
+
+  <aside class="hero__panel" aria-labelledby="hero-panel-title">
+    <div class="hero__panel-head">
+      <h2 id="hero-panel-title">Đang bán</h2>
+      <span class="pill">8 sản phẩm</span>
+    </div>
+        <ul class="hero__list">
+            <li>
+        <a class="hero__item" href="#preview-product-netflix-premium-1-thang">
+          <span class="hero__item-name">Netflix Premium 1 tháng</span>
+          <span class="hero__item-meta">
+            Còn 24 · Đã bán 128          </span>
+          <span class="hero__item-price">
+            120.000đ            <small>giá hiện tại</small>
+          </span>
+        </a>
+      </li>
+            <li>
+        <a class="hero__item" href="#preview-product-spotify-premium-3-thang">
+          <span class="hero__item-name">Spotify Premium 3 tháng</span>
+          <span class="hero__item-meta">
+            Còn 9 · Đã bán 86          </span>
+          <span class="hero__item-price">
+            162.000đ            <small>đã giảm 10%</small>
+          </span>
+        </a>
+      </li>
+            <li>
+        <a class="hero__item" href="#preview-product-youtube-premium-2-thang">
+          <span class="hero__item-name">YouTube Premium 2 tháng</span>
+          <span class="hero__item-meta">
+            Còn 15 · Đã bán 64          </span>
+          <span class="hero__item-price">
+            150.000đ            <small>giá hiện tại</small>
+          </span>
+        </a>
+      </li>
+            <li>
+        <a class="hero__item" href="#preview-product-canva-pro-1-nam">
+          <span class="hero__item-name">Canva Pro 1 năm</span>
+          <span class="hero__item-meta">
+            Còn 6 · Đã bán 41          </span>
+          <span class="hero__item-price">
+            250.000đ            <small>giá hiện tại</small>
+          </span>
+        </a>
+      </li>
+            <li>
+        <a class="hero__item" href="#preview-product-office-365-family-1-nam">
+          <span class="hero__item-name">Office 365 Family 1 năm</span>
+          <span class="hero__item-meta">
+            Còn 4 · Đã bán 29          </span>
+          <span class="hero__item-price">
+            382.500đ            <small>đã giảm 15%</small>
+          </span>
+        </a>
+      </li>
+          </ul>
+        <div class="hero__panel-foot">
+      <span>Giá cập nhật từ danh mục sản phẩm</span>
+      <a href="#san-pham">Tất cả →</a>
+    </div>
+  </aside>
+</section>
+
+<section class="section band" id="danh-muc" aria-labelledby="danh-muc-title">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h2 id="danh-muc-title">Danh mục</h2>
+        <p class="muted">Chọn nhóm sản phẩm bạn cần.</p>
+      </div>
+    </div>
+    <div class="grid grid--categories">
+            <a class="category-card" href="#preview-category-tai-khoan-giai-tri">
+                <span class="category-card__mark" aria-hidden="true">T</span>
+                <span class="category-card__name">Tài khoản giải trí</span>
+        <span class="category-card__meta">4 sản phẩm</span>
+      </a>
+            <a class="category-card" href="#preview-category-phan-mem-licence">
+                <span class="category-card__mark" aria-hidden="true">P</span>
+                <span class="category-card__name">Phần mềm &amp; licence</span>
+        <span class="category-card__meta">3 sản phẩm</span>
+      </a>
+            <a class="category-card" href="#preview-category-nap-tien-tien-ich">
+                <span class="category-card__mark" aria-hidden="true">N</span>
+                <span class="category-card__name">Nạp &amp; tiện ích</span>
+        <span class="category-card__meta">1 sản phẩm</span>
+      </a>
+          </div>
+  </div>
+</section>
+
+<section class="section" id="san-pham" aria-labelledby="san-pham-title">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h2 id="san-pham-title">Sản phẩm</h2>
+        <p class="muted">Toàn bộ sản phẩm đang bán.</p>
+      </div>
+          </div>
+
+    <div class="catalog-bar">
+      <div class="chips" role="list" aria-label="Danh mục sản phẩm">
+        <a class="chip" role="listitem" href="#preview-client-home#san-pham"
+          aria-current="page">Tất cả</a>
+                <a class="chip" role="listitem" href="#preview-category-tai-khoan-giai-tri#san-pham"
+          >Tài khoản giải trí</a>
+                <a class="chip" role="listitem" href="#preview-category-phan-mem-licence#san-pham"
+          >Phần mềm &amp; licence</a>
+                <a class="chip" role="listitem" href="#preview-category-nap-tien-tien-ich#san-pham"
+          >Nạp &amp; tiện ích</a>
+              </div>
+      <form class="catalog-bar__sort cluster" method="get" action="#preview-client-home#san-pham">
+                        <label class="sr-only" for="sort">Sắp xếp</label>
+        <select class="select" id="sort" name="sort">
+                    <option value="">Mặc định</option>
+                    <option value="price-asc" selected>Giá thấp đến cao</option>
+                    <option value="price-desc">Giá cao đến thấp</option>
+                    <option value="sold">Bán chạy</option>
+                    <option value="name">Tên A–Z</option>
+                  </select>
+        <button class="btn" type="submit">Áp dụng</button>
+      </form>
+    </div>
+
+        <div class="product-grid">
+            <article class="product-card">
+        <a class="product-card__media" href="#preview-product-netflix-premium-1-thang" tabindex="-1" aria-hidden="true">
+                    <span class="product-card__mark">N</span>
+                            </a>
+        <div class="product-card__body">
+                    <span class="product-card__category">Tài khoản giải trí</span>
+                    <h3 class="product-card__title">
+            <a href="#preview-product-netflix-premium-1-thang">Netflix Premium 1 tháng</a>
+          </h3>
+          <p class="product-card__desc clamp-2">Tài khoản riêng, xem trên 1 thiết bị.</p>
+          <div class="product-card__meta">
+            <span class="stock">
+              Còn 24            </span>
+                        <span class="meta-sep" aria-hidden="true">·</span>
+            <span class="xs faint">Đã bán 128</span>
+                      </div>
+          <div class="product-card__foot">
+            <span class="price-block">
+                            <span class="price">120.000đ</span>
+            </span>
+                        <a class="btn" href="#preview-product-netflix-premium-1-thang">Xem</a>
+                      </div>
+        </div>
+      </article>
+            <article class="product-card">
+        <a class="product-card__media" href="#preview-product-spotify-premium-3-thang" tabindex="-1" aria-hidden="true">
+                    <span class="product-card__mark">S</span>
+                              <span class="product-card__badge">-10%</span>
+                  </a>
+        <div class="product-card__body">
+                    <span class="product-card__category">Tài khoản giải trí</span>
+                    <h3 class="product-card__title">
+            <a href="#preview-product-spotify-premium-3-thang">Spotify Premium 3 tháng</a>
+          </h3>
+          <p class="product-card__desc clamp-2">Nâng cấp chính chủ, giữ nguyên playlist.</p>
+          <div class="product-card__meta">
+            <span class="stock">
+              Còn 9            </span>
+                        <span class="meta-sep" aria-hidden="true">·</span>
+            <span class="xs faint">Đã bán 86</span>
+                      </div>
+          <div class="product-card__foot">
+            <span class="price-block">
+                            <span class="price--old">180.000đ</span>
+                            <span class="price">162.000đ</span>
+            </span>
+                        <a class="btn" href="#preview-product-spotify-premium-3-thang">Xem</a>
+                      </div>
+        </div>
+      </article>
+            <article class="product-card">
+        <a class="product-card__media" href="#preview-product-youtube-premium-2-thang" tabindex="-1" aria-hidden="true">
+                    <span class="product-card__mark">Y</span>
+                            </a>
+        <div class="product-card__body">
+                    <span class="product-card__category">Tài khoản giải trí</span>
+                    <h3 class="product-card__title">
+            <a href="#preview-product-youtube-premium-2-thang">YouTube Premium 2 tháng</a>
+          </h3>
+          <p class="product-card__desc clamp-2">Không quảng cáo, phát nền.</p>
+          <div class="product-card__meta">
+            <span class="stock">
+              Còn 15            </span>
+                        <span class="meta-sep" aria-hidden="true">·</span>
+            <span class="xs faint">Đã bán 64</span>
+                      </div>
+          <div class="product-card__foot">
+            <span class="price-block">
+                            <span class="price">150.000đ</span>
+            </span>
+                        <a class="btn" href="#preview-product-youtube-premium-2-thang">Xem</a>
+                      </div>
+        </div>
+      </article>
+            <article class="product-card">
+        <a class="product-card__media" href="#preview-product-canva-pro-1-nam" tabindex="-1" aria-hidden="true">
+                    <span class="product-card__mark">C</span>
+                            </a>
+        <div class="product-card__body">
+                    <span class="product-card__category">Tài khoản giải trí</span>
+                    <h3 class="product-card__title">
+            <a href="#preview-product-canva-pro-1-nam">Canva Pro 1 năm</a>
+          </h3>
+          <p class="product-card__desc clamp-2">Mở khoá toàn bộ mẫu thiết kế.</p>
+          <div class="product-card__meta">
+            <span class="stock">
+              Còn 6            </span>
+                        <span class="meta-sep" aria-hidden="true">·</span>
+            <span class="xs faint">Đã bán 41</span>
+                      </div>
+          <div class="product-card__foot">
+            <span class="price-block">
+                            <span class="price">250.000đ</span>
+            </span>
+                        <a class="btn" href="#preview-product-canva-pro-1-nam">Xem</a>
+                      </div>
+        </div>
+      </article>
+            <article class="product-card">
+        <a class="product-card__media" href="#preview-product-office-365-family-1-nam" tabindex="-1" aria-hidden="true">
+                    <span class="product-card__mark">O</span>
+                              <span class="product-card__badge">-15%</span>
+                  </a>
+        <div class="product-card__body">
+                    <span class="product-card__category">Phần mềm &amp; licence</span>
+                    <h3 class="product-card__title">
+            <a href="#preview-product-office-365-family-1-nam">Office 365 Family 1 năm</a>
+          </h3>
+          <p class="product-card__desc clamp-2">Word, Excel, PowerPoint và 1 TB OneDrive.</p>
+          <div class="product-card__meta">
+            <span class="stock stock--low">
+              Còn 4            </span>
+                        <span class="meta-sep" aria-hidden="true">·</span>
+            <span class="xs faint">Đã bán 29</span>
+                      </div>
+          <div class="product-card__foot">
+            <span class="price-block">
+                            <span class="price--old">450.000đ</span>
+                            <span class="price">382.500đ</span>
+            </span>
+                        <a class="btn" href="#preview-product-office-365-family-1-nam">Xem</a>
+                      </div>
+        </div>
+      </article>
+            <article class="product-card">
+        <a class="product-card__media" href="#preview-product-adobe-cc-1-nam" tabindex="-1" aria-hidden="true">
+                    <span class="product-card__mark">A</span>
+                            </a>
+        <div class="product-card__body">
+                    <span class="product-card__category">Phần mềm &amp; licence</span>
+                    <h3 class="product-card__title">
+            <a href="#preview-product-adobe-cc-1-nam">Adobe Creative Cloud 1 năm</a>
+          </h3>
+          <p class="product-card__desc clamp-2">Bộ ứng dụng thiết kế đầy đủ.</p>
+          <div class="product-card__meta">
+            <span class="stock stock--low">
+              Còn 2            </span>
+                        <span class="meta-sep" aria-hidden="true">·</span>
+            <span class="xs faint">Đã bán 12</span>
+                      </div>
+          <div class="product-card__foot">
+            <span class="price-block">
+                            <span class="price">890.000đ</span>
+            </span>
+                        <a class="btn" href="#preview-product-adobe-cc-1-nam">Xem</a>
+                      </div>
+        </div>
+      </article>
+            <article class="product-card">
+        <a class="product-card__media" href="#preview-product-windows-11-pro" tabindex="-1" aria-hidden="true">
+                    <span class="product-card__mark">W</span>
+                            </a>
+        <div class="product-card__body">
+                    <span class="product-card__category">Phần mềm &amp; licence</span>
+                    <h3 class="product-card__title">
+            <a href="#preview-product-windows-11-pro">Windows 11 Pro</a>
+          </h3>
+          <p class="product-card__desc clamp-2">Khoá kích hoạt vĩnh viễn.</p>
+          <div class="product-card__meta">
+            <span class="stock">
+              Còn 11            </span>
+                        <span class="meta-sep" aria-hidden="true">·</span>
+            <span class="xs faint">Đã bán 18</span>
+                      </div>
+          <div class="product-card__foot">
+            <span class="price-block">
+                            <span class="price">390.000đ</span>
+            </span>
+                        <a class="btn" href="#preview-product-windows-11-pro">Xem</a>
+                      </div>
+        </div>
+      </article>
+            <article class="product-card">
+        <a class="product-card__media" href="#preview-product-the-nap-100k" tabindex="-1" aria-hidden="true">
+                    <span class="product-card__mark">T</span>
+                            </a>
+        <div class="product-card__body">
+                    <span class="product-card__category">Nạp &amp; tiện ích</span>
+                    <h3 class="product-card__title">
+            <a href="#preview-product-the-nap-100k">Thẻ nạp 100.000đ</a>
+          </h3>
+          <p class="product-card__desc clamp-2">Mã thẻ giao ngay sau khi thanh toán.</p>
+          <div class="product-card__meta">
+            <span class="stock">
+              Còn 100            </span>
+                        <span class="meta-sep" aria-hidden="true">·</span>
+            <span class="xs faint">Đã bán 230</span>
+                      </div>
+          <div class="product-card__foot">
+            <span class="price-block">
+                            <span class="price">100.000đ</span>
+            </span>
+                        <a class="btn" href="#preview-product-the-nap-100k">Xem</a>
+                      </div>
+        </div>
+      </article>
+          </div>
+
+    <nav class="pager" aria-label="Phân trang"><span aria-current="page">1</span><a href="#preview-client-home?sort=price-asc&amp;page=2">2</a><a rel="next" href="#preview-client-home?sort=price-asc&amp;page=2">Sau</a></nav>      </div>
+</section>
+
+<section class="section band" id="cach-mua" aria-labelledby="cach-mua-title">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h2 id="cach-mua-title">Cách mua</h2>
+        <p class="muted">Ba bước, tất cả nằm trong tài khoản của bạn.</p>
+      </div>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <h3>Chọn sản phẩm</h3>
+        <p>Mở sản phẩm, chọn số lượng trong giới hạn shop cho phép và thêm vào đơn.</p>
+      </div>
+      <div class="step">
+        <h3>Thanh toán</h3>
+        <p>Trả bằng số dư tài khoản hoặc nạp tiền qua phương thức shop đang bật.</p>
+      </div>
+      <div class="step">
+        <h3>Nhận hàng</h3>
+        <p>Đơn và nội dung sản phẩm được lưu trong mục lịch sử đơn hàng để tra cứu lại.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="thanh-toan" aria-labelledby="thanh-toan-title">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h2 id="thanh-toan-title">Nạp tiền</h2>
+        <p class="muted">Các phương thức shop đang mở.</p>
+      </div>
+      <a class="section-head__link" href="#preview-action-recharge-bank">Nạp ngay</a>
+    </div>
+    <div class="payment-grid">
+            <a class="payment" href="#preview-action-recharge-bank">
+                <img src="assets/img/icon-bank.svg" alt="" width="28" height="28" loading="lazy" decoding="async">
+                <span>
+          <strong>Ngân hàng (payOS)</strong>
+          <span>Nạp vào số dư</span>
+        </span>
+      </a>
+          </div>
+  </div>
+</section>
+
+<section class="section band" id="ho-tro" aria-labelledby="ho-tro-title">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h2 id="ho-tro-title">Hỗ trợ</h2>
+        <p class="muted">Liên hệ đúng kênh shop đang dùng.</p>
+      </div>
+      <a class="section-head__link" href="#preview-client-contact">Trang liên hệ</a>
+    </div>
+    <div class="support">
+      <div class="support__panel">
+        <ul class="support__list">
+                    <li>
+            <span>Hotline</span>
+            <strong>0909 123 456</strong>
+          </li>
+                    <li>
+            <span>Email</span>
+            <strong>support@orbit.example</strong>
+          </li>
+                    <li>
+            <span>Địa chỉ</span>
+            <strong>Quận 1, TP. Hồ Chí Minh</strong>
+          </li>
+                            </ul>
+                <p class="muted small m0">Thông tin lấy từ phần cài đặt của shop, không phải nội dung mẫu.</p>
+              </div>
+      <div class="support__panel">
+        <h3 class="mb-2">Câu hỏi thường gặp</h3>
+        <p class="muted small">Xem hướng dẫn mua hàng, nạp tiền và xử lý đơn trước khi liên hệ.</p>
+        <div class="cluster mt-4">
+          <a class="btn btn--ghost" href="#preview-client-faq">Đọc FAQ</a>
+          <a class="btn btn--ghost" href="#preview-client-document-api">Tài liệu API</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+</main>
+<footer class="footer">
+  <div class="container">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <a class="topbar__brand" href="#preview-client-home"><span class="topbar__mark" aria-hidden="true">O</span><span class="topbar__name">Orbit Shop</span></a>
+        <p class="footer__note">Shop bán tài khoản &amp; licence</p>
+        <ul class="footer__contact">
+<li><span class="footer__label">Hotline</span> <a href="tel:0909123456">0909 123 456</a></li>
+<li><span class="footer__label">Email</span> <a href="mailto:support@orbit.example">support@orbit.example</a></li>
+<li><span class="footer__label">Địa chỉ</span> Quận 1, TP. Hồ Chí Minh</li>        </ul>
+      </div>
+      <div class="footer__cols">
+        <nav class="footer__col" aria-label="Mua hàng">
+          <h2 class="footer__heading">Mua hàng</h2>
+          <ul>
+            <li><a href="#preview-client-home#san-pham">Tất cả sản phẩm</a></li>
+            <li><a href="#preview-client-home#danh-muc">Danh mục</a></li>
+            <li><a href="#preview-product-orders">Lịch sử đơn hàng</a></li>
+            <li><a href="#preview-client-favorites">Sản phẩm yêu thích</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Hỗ trợ">
+          <h2 class="footer__heading">Hỗ trợ</h2>
+          <ul>
+            <li><a href="#preview-client-faq">Câu hỏi thường gặp</a></li>
+            <li><a href="#preview-client-contact">Liên hệ</a></li>
+            <li><a href="#preview-client-policy">Chính sách</a></li>
+            <li><a href="#preview-client-document-api">Tài liệu API</a></li>
+          </ul>
+        </nav>
+        <nav class="footer__col" aria-label="Tài khoản">
+          <h2 class="footer__heading">Tài khoản</h2>
+          <ul>
+            <li><a href="#preview-client-login">Đăng nhập</a></li>
+            <li><a href="#preview-client-register">Đăng ký</a></li>
+            <li><a href="#preview-client-login">Nạp tiền</a></li>
+            <li><a href="#preview-client-profile">Trang cá nhân</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+    <div class="footer__legal">
+      <p>© 2026 Orbit Shop</p>
+      <p class="footer__credit">Thiết kế &amp; vận hành: <strong>Orbit Office</strong></p>
+      <ul class="footer__legal-links">
+        <li><a href="#preview-client-policy">Chính sách</a></li>
+        <li><a href="#preview-client-faq">FAQ</a></li>
+        <li><a href="#preview-client-contact">Liên hệ</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+<script defer src="assets/client/orbit/store.js?v=preview"></script>
+<script defer src="assets/common/csrf.js?v=preview"></script>
+</body>
+</html>

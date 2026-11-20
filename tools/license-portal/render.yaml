@@ -1,0 +1,64 @@
+# Render blueprint for the Orbit Office licence portal.
+#
+# Important free-tier facts (verified 2026-10-05):
+#   * Free web services SPIN DOWN after 15 minutes idle (30-60 s cold start).
+#     Keep it awake with Uptime Kuma monitoring https://<service>.onrender.com/healthz every 5-10 min.
+#   * Free web services have an EPHEMERAL FILESYSTEM and cannot attach persistent disks.
+#     DO NOT rely on the file store in production: point PORTAL_DATA_DIR at a mounted disk
+#     (paid) or, better, switch the store driver to a free PostgreSQL (Neon / Supabase free
+#     tiers do not expire; Render's own free Postgres is deleted after 30 days + 14 day grace).
+#     See docs/frontend/03-license-portal-design.md §4 before going live.
+#
+# Deploy:  Render → New → Blueprint → this repository, root directory tools/license-portal
+
+services:
+  - type: web
+    name: orbit-license-portal
+    runtime: node
+    plan: free
+    rootDir: tools/license-portal
+    buildCommand: npm install --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Generate a strong secret in the Render dashboard; never commit one.
+      - key: PORTAL_SIGNING_SECRET
+        generateValue: true
+      - key: PORTAL_DATA_DIR
+        value: /var/data
+      - key: RESET_COOLDOWN_DAYS
+        value: "30"
+      # Render terminates TLS in front of the service, so the immediate peer is always
+      # Render's proxy. Enabling this makes rate limiting key off the real client
+      # address (the rightmost X-Forwarded-For hop, which Render appends) instead of
+      # lumping every visitor into one bucket. Leave it unset/false if you ever expose
+      # the service directly — otherwise a caller can spoof the header.
+      - key: TRUST_PROXY_HEADERS
+        value: "true"
+      # Failed logins allowed per client address per 15 minutes.
+      - key: PORTAL_LOGIN_LIMIT
+        value: "10"
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: CONTACT_EMAIL
+        sync: false
+      - key: CONTACT_TELEGRAM
+        sync: false
+      - key: CONTACT_ZALO
+        sync: false
+      - key: CONTACT_DOCS_URL
+        sync: false
+      # Optional: bootstrap the first admin on first boot, then remove these two.
+      - key: PORTAL_ADMIN_EMAIL
+        sync: false
+      - key: PORTAL_ADMIN_PASSWORD
+        sync: false
+
+# Optional paid disk (only if you deliberately choose the file store over PostgreSQL):
+# disks:
+#   - name: portal-data
+#     mountPath: /var/data
+#     sizeGB: 1

@@ -4,7 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => "Logs", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js\"></script>\n\n";
+$body["header"] = "\n\n\n";
 $body["footer"] = "\n \n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
@@ -160,17 +160,21 @@ echo "</th>\n                                        <th>";
 echo __("Thiết bị");
 echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
 $i = 0;
+$orbitUserNames = orbit_user_names($listDatatable, "user_id");
 foreach ($listDatatable as $row) {
     echo "                                    <tr>\n                                        <td>";
     echo $row["id"];
     echo "</td>\n                                        <td><a class=\"text-primary\" href=\"";
     echo base_url_admin("user-edit&id=" . $row["user_id"]);
     echo "\">";
-    echo getRowRealtime("users", $row["user_id"], "username");
+    echo orbit_user_name($orbitUserNames, $row["user_id"]);
     echo "                                                [ID ";
     echo $row["user_id"];
     echo "]</a>\n                                        </td>\n                                        <td>";
-    echo $row["action"];
+    /* Log actions embed reason/name fields from the request. Most forms call check_string(), but a
+       few (currency/language/bank create) write the raw value; escaping here makes every row safe
+       without having to audit each producer again. */
+    echo htmlspecialchars((string) $row["action"], ENT_QUOTES, "UTF-8");
     echo "</td>\n                                        <td><span class=\"badge bg-light text-dark\" data-toggle=\"tooltip\" data-placement=\"bottom\"\n                                                title=\"";
     echo timeAgo(strtotime($row["createdate"]));
     echo "\">";

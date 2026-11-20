@@ -7,7 +7,17 @@ echo "\n";
 echo $CMSNT->site("script_footer_admin");
 echo "\n\n\n<!-- Footer Start -->\n<footer class=\"footer mt-auto py-3 bg-white text-center\">\n    <div class=\"container\">\n        <span class=\"text-muted\"> Copyright © <span id=\"year\"></span> <a href=\"#\"\n                class=\"text-dark fw-semibold\">";
 echo $CMSNT->site("title");
-echo "</a>.\n            Software by <a href=\"https://www.cmsnt.co/\">\n                <span class=\"fw-semibold text-primary text-decoration-underline\">CMSNT.CO</span> 🇻🇳\n            </a> All\n            rights\n            reserved\n        </span>\n        <div class=\"gtranslate_wrapper\"></div>\n        <script>\n        window.gtranslateSettings = {\n            \"default_language\": \"vi\",\n            \"languages\": [\"vi\", \"en\", \"th\", \"ms\", \"zh-CN\", \"tl\", \"de\", \"km\", \"ru\", \"my\", \"lo\", \"tr\", \"uk\", \"ko\",\n                \"zh-TW\", \"it\", \"fr\", \"ar\"\n            ],\n            \"wrapper_selector\": \".gtranslate_wrapper\"\n        }\n        </script>\n        <script src=\"https://cdn.gtranslate.net/widgets/latest/flags.js\" defer></script>\n    </div>\n</footer>\n<!-- Footer End -->\n\n</div>\n\n<!-- Scroll To Top -->\n<div class=\"scrollToTop\">\n    <span class=\"arrow\"><i class=\"ri-arrow-up-s-fill fs-20\"></i></span>\n</div>\n<div id=\"responsive-overlay\"></div>\n<!-- Scroll To Top -->\n\n";
+echo "</a>.\n            Software by <a href=\"https://www.cmsnt.co/\">\n                <span class=\"fw-semibold text-primary text-decoration-underline\">CMSNT.CO</span> 🇻🇳\n            </a> All\n            rights\n            reserved\n        </span>\n";
+/*
+ * The footer language switcher is Google Translate's widget. Only shops that chose the
+ * `gtranslate` language mode load it — the same rule the storefront nav follows — so every other
+ * admin page makes no request to cdn.gtranslate.net.
+ */
+if ((string) $CMSNT->site("language_type") === "gtranslate") {
+    // Same contract as the storefront nav: the owner pastes the widget snippet in settings.
+    echo $CMSNT->site("gtranslate_script");
+}
+echo "\n    </div>\n</footer>\n<!-- Footer End -->\n\n</div>\n\n<!-- Scroll To Top -->\n<div class=\"scrollToTop\">\n    <span class=\"arrow\"><i class=\"ri-arrow-up-s-fill fs-20\"></i></span>\n</div>\n<div id=\"responsive-overlay\"></div>\n<!-- Scroll To Top -->\n\n";
 if($CMSNT->site("status_update") == 1) {
     echo "<script>\n    \$(document).ready(function(){\n        \$.ajax({\n            url: '";
     echo base_url("update.php");
@@ -15,7 +25,9 @@ if($CMSNT->site("status_update") == 1) {
     echo BASE_URL("install.php");
     echo "\",\n            type: \"GET\",\n            success: function(result) {\n            }\n        });\n    });\n</script>\n";
 }
-echo "\n\n<script>\n\n</script>\n<!-- Popper JS -->\n<script src=\"";
+echo "\n\n<script>\n\n</script>\n<script src=\"";
+echo base_url("public/common/csrf.js");
+echo "\"></script>\n<!-- Popper JS -->\n<script src=\"";
 echo base_url("public/theme/");
 echo "assets/libs/@popperjs/core/umd/popper.min.js\"></script>\n\n<!-- Bootstrap JS -->\n<script src=\"";
 echo base_url("public/theme/");

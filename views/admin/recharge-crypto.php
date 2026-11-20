@@ -73,9 +73,10 @@ if(isset($_POST["SaveSettings"])) {
         $trans_id = check_string($_GET["trans_id"]);
         $where .= " AND `trans_id` LIKE \"%" . $trans_id . "%\" ";
     }
-    if(!empty($_GET["amount"])) {
-        $amount = check_string($_GET["amount"]);
-        $where .= " AND `amount` = " . $amount . " ";
+    /* Parse, then interpolate: `check_string("1 OR 1=1")` is not numeric and used to reach the query verbatim. */
+    $orbitFilterAmount = isset($_GET["amount"]) ? orbit_positive_amount($_GET["amount"]) : false;
+    if($orbitFilterAmount !== false) {
+        $where .= " AND `amount` = " . orbit_amount_string($orbitFilterAmount) . " ";
     }
     if(!empty($_GET["create_gettime"])) {
         $create_gettime = check_string($_GET["create_gettime"]);
@@ -270,11 +271,12 @@ if(isset($_POST["SaveSettings"])) {
     echo "</th>\n                                    <th>";
     echo __("Update date");
     echo "</th>\n                                </tr>\n                            </thead>\n                            <tbody>\n                                ";
+    $orbitUserNames = orbit_user_names($listDatatable, "user_id");
     foreach ($listDatatable as $row2) {
         echo "                                <tr>\n                                    <td class=\"text-center\"><a class=\"text-primary\"\n                                            href=\"";
         echo base_url_admin("user-edit&id=" . $row2["user_id"]);
         echo "\">";
-        echo getRowRealtime("users", $row2["user_id"], "username");
+        echo orbit_user_name($orbitUserNames, $row2["user_id"]);
         echo "                                            [ID ";
         echo $row2["user_id"];
         echo "]</a>\n                                    </td>\n                                    <td class=\"text-center\"><small><a class=\"text-primary\" target=\"_blank\"\n                                                href=\"";

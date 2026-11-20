@@ -4,8 +4,8 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $body = ["title" => "Roles", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CMSNT, cmsnt.co,"];
-$body["header"] = "\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/1.12.1/css/dataTables.bootstrap5.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/responsive/2.3.0/css/responsive.bootstrap.min.css\">\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/buttons/2.2.3/css/buttons.bootstrap5.min.css\">\n";
-$body["footer"] = "\n<script src=\"https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js\"></script>\n<script src=\"https://cdn.datatables.net/1.12.1/js/dataTables.bootstrap5.min.js\"></script>\n<script src=\"https://cdn.datatables.net/responsive/2.3.0/js/dataTables.responsive.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js\"></script>\n<script src=\"https://cdn.datatables.net/buttons/2.2.3/js/buttons.print.min.js\"></script>\n";
+$body["header"] = "\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/dataTables.bootstrap5.min.css") . "\">\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/datatables/css/responsive.bootstrap5.min.css") . "\">\n\n";
+$body["footer"] = "\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/jquery.dataTables.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.bootstrap5.min.js") . "\"></script>\n<script src=\"" . BASE_URL("public/common/vendor/datatables/js/dataTables.responsive.min.js") . "\"></script>\n\n\n";
 require_once __DIR__ . "/../../models/is_admin.php";
 require_once __DIR__ . "/header.php";
 require_once __DIR__ . "/sidebar.php";
@@ -27,7 +27,13 @@ if(isset($_POST["addRole"])) {
     if(empty($_POST["role"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng chọn quyền cho role\")){window.history.back().location.reload();}</script>");
     }
-    $role = json_encode($_POST["role"]);
+    $roleKeys = array();
+    foreach ($admin_roles as $roleCategory) {
+        foreach ($roleCategory as $roleKey => $roleLabel) {
+            $roleKeys[] = (string) $roleKey;
+        }
+    }
+    $role = json_encode(array_values(array_intersect($roleKeys, array_map("strval", (array) $_POST["role"]))));
     $isInsert = $CMSNT->insert("admin_role", ["name" => $name, "role" => $role, "create_gettime" => gettime(), "update_gettime" => gettime()]);
     if($isInsert) {
         $Mobile_Detect = new Mobile_Detect();
@@ -56,7 +62,7 @@ foreach ($CMSNT->get_list("SELECT * FROM `admin_role` ORDER BY id DESC ") as $ro
     echo "\">\n                                            <i class=\"fas fa-trash\"></i>\n                                        </a>\n                                    </td>\n                                    <td>\n                                        ";
     echo $row["name"];
     echo "                                    </td>\n                                    <td>\n                                        ";
-    foreach (json_decode($row["role"]) as $rl) {
+    foreach ((array) json_decode($row["role"]) as $rl) {
         echo "                                        <span class=\"badge bg-outline-primary\">";
         echo $rl;
         echo "</span>\n                                        ";

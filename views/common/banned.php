@@ -1,5 +1,10 @@
 <?php
 
+if (!defined("IN_SITE")) {
+    http_response_code(404);
+    exit("The Request Not Found");
+}
+
 echo "<head>\n  <title>Tài khoản bị khoá</title>\n</head>\n<style>\n    html,\nbody {\n  height: 100%;\n  width: 100%;\n  margin: 0;\n}\nbody {\n  background-color: #2c5a57;\n  background-image: linear-gradient(#101922, #275451);\n  background-size: 100%;\n  text-align: center;\n  line-height: 1.45;\n}\n\np {\n  text-transform: uppercase;\n  font-family: 'Montserrat', sans-serif;\n  font-weight: 600;\n  font-size: 26px;\n  letter-spacing: 4px;\n  color: white;\n  margin: 3em 0 1em;\n  opacity: 0;\n  animation: fadedown .5s ease-in-out;\n  animation-delay: 1s;\n  animation-fill-mode: forwards;\n}\n\nh3 {\n  color: #ecdb35;\n  font-family: 'squada one';\n  text-transform: uppercase;\n  font-size: 50px;\n  text-shadow: 0 3px red;\n  margin: 0;\n  transform: scale(0);\n  animation: zoomin 1s ease-in-out;\n  animation-delay: 2s;\n  animation-fill-mode: forwards;\n}\n\nh1 span {\n  display: inline-block;\n}\n\nh1 + p {\n  font-size: 20px;\n  letter-spacing: 2px;\n  max-width: 50%;\n  margin-left: auto;\n  margin-right: auto;\n  animation-delay: 3.5s;\n}\n\n@keyframes zoomin {\n  0% {\n    transform: scale(0);\n  }\n  90% {\n    transform: scale(1.1);\n  }\n  95% {\n    transform: scale(1.07);\n  }\n  100% {\n    transform: scale(1);\n  }\n}\n\n@keyframes fadedown {\n  0% {\n    opacity: 0;\n    transform: translate3d(0,-10px,0);\n  }\n  90% {\n    transform: translate3d(0,1px,0);\n  }\n  100% {\n    opacity: 1;\n    transform: translate3d(0,0,0);\n  }\n}\n</style>\n<p>";
 echo __("Welcome to 403:");
 echo "</p>\n<h3>";

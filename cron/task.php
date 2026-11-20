@@ -6,6 +6,10 @@ require_once __DIR__ . "/../config.php";
 require_once __DIR__ . "/../libs/lang.php";
 require_once __DIR__ . "/../libs/helper.php";
 $CMSNT = new DB();
+if (!orbit_cron_allowed()) {
+    http_response_code(403);
+    exit("cron_forbidden");
+}
 if($CMSNT->site("check_time_cron_task") < time() && time() - $CMSNT->site("check_time_cron_task") < 3) {
     exit("Thao tác quá nhanh, vui lòng thử lại sau!");
 }
@@ -17,8 +21,16 @@ foreach ($CMSNT->get_list(" SELECT * FROM `automations` ") as $task) {
                 $isUpdate = $CMSNT->update("product_stock", ["product_code" => $task["other"], "create_gettime" => gettime()], " `id` = '" . $product_stock["id"] . "' ");
             }
         } else {
-            foreach (json_decode($task["product_id"], true) as $product) {
-                if($product_code = $CMSNT->get_row(" SELECT * FROM `products` WHERE `id` = '" . $product . "' ")["code"]) {
+            /* Resolve every configured product code once, instead of one SELECT per product id. */
+            $taskProductIds = json_decode($task["product_id"], true);
+            $taskProductRows = [];
+            foreach ((array) $taskProductIds as $taskProductId) {
+                $taskProductRows[] = ["id" => (int) $taskProductId];
+            }
+            $taskProductCodes = orbit_lookup_names("products", $taskProductRows, "id", "code");
+            foreach ((array) $taskProductIds as $product) {
+                $product_code = isset($taskProductCodes[(int) $product]) ? $taskProductCodes[(int) $product] : "";
+                if($product_code !== "") {
                     $CMSNT->update("product_stock", ["product_code" => $task["other"], "create_gettime" => gettime()], " `product_code` = '" . $product_code . "' AND " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
                 }
             }
@@ -29,7 +41,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `automations` ") as $task) {
             $CMSNT->update("product_order", ["trash" => 1], " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
             $CMSNT->remove("product_sold", " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
         } else {
-            foreach (json_decode($task["product_id"], true) as $product) {
+            foreach ((array) json_decode($task["product_id"], true) as $product) {
                 foreach ($CMSNT->get_list(" SELECT * FROM `product_order` WHERE `product_id` = '" . $product . "' AND " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " AND `trash` = 0 ") as $product_order) {
                     $CMSNT->update("product_order", ["trash" => 1], " `trans_id` = '" . $product_order["trans_id"] . "' ");
                     $CMSNT->remove("product_sold", " `trans_id` = '" . $product_order["trans_id"] . "' ");
@@ -42,7 +54,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `automations` ") as $task) {
             $CMSNT->update("product_order", ["trash" => 1], " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
             $CMSNT->update("product_sold", ["account" => __("Tài khoản đã được xóa tự động")], " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
         } else {
-            foreach (json_decode($task["product_id"], true) as $product) {
+            foreach ((array) json_decode($task["product_id"], true) as $product) {
                 foreach ($CMSNT->get_list(" SELECT * FROM `product_order` WHERE `product_id` = '" . $product . "' AND " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " AND `trash` = 0 ") as $product_order) {
                     $CMSNT->update("product_order", ["trash" => 1], " `trans_id` = '" . $product_order["trans_id"] . "' ");
                     $CMSNT->update("product_sold", ["account" => __("Tài khoản đã được xóa tự động")], " `trans_id` = '" . $product_order["trans_id"] . "' ");
@@ -55,7 +67,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `automations` ") as $task) {
             $CMSNT->remove("product_order", " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
             $CMSNT->remove("product_sold", " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
         } else {
-            foreach (json_decode($task["product_id"], true) as $product) {
+            foreach ((array) json_decode($task["product_id"], true) as $product) {
                 foreach ($CMSNT->get_list(" SELECT * FROM `product_order` WHERE `product_id` = '" . $product . "' AND " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " AND `trash` = 0 ") as $product_order) {
                     $CMSNT->remove("product_order", " `trans_id` = '" . $product_order["trans_id"] . "' ");
                     $CMSNT->remove("product_sold", " `trans_id` = '" . $product_order["trans_id"] . "' ");
