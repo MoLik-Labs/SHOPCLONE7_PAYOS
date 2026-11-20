@@ -1110,6 +1110,38 @@ function orbit_return_stock($db, $soldRow, array $stock)
     });
 }
 /**
+ * Return every account a failed checkout delivered back to local stock.
+ *
+ * Used when the order row could not be written: the buyer is refunded, so the accounts must not stay
+ * reserved in `product_sold` where nobody can see or resell them.
+ *
+ * @param DB $db
+ * @param string $trans_id
+ * @param int $supplier_id 0 for locally stocked accounts
+ * @return int number of accounts returned
+ */
+function orbit_release_sold($db, $trans_id, $supplier_id = 0)
+{
+    $moved = 0;
+    $sql = " SELECT * FROM `product_sold` WHERE `trans_id` = '" . addslashes((string) $trans_id) . "' AND `supplier_id` = " . (int) $supplier_id . " ";
+    foreach ($db->get_list($sql) as $sold) {
+        $stock = array(
+            "product_code" => $sold["product_code"],
+            "seller" => $sold["seller"],
+            "uid" => $sold["uid"],
+            "account" => $sold["account"],
+            "status" => $sold["status"],
+            "create_gettime" => gettime(),
+            "type" => "Back",
+            "time_check_live" => $sold["time_check_live"],
+        );
+        if(orbit_return_stock($db, $sold, $stock)) {
+            ++$moved;
+        }
+    }
+    return $moved;
+}
+/**
  * A finite, strictly positive bank/MoMo amount, or false.
  *
  * These values arrive from a third-party gateway as strings such as "1,500,000". `check_string()`

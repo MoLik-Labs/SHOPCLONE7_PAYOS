@@ -69,7 +69,20 @@ class DB
     {
         return $name === 'timezone' ? 'Asia/Ho_Chi_Minh' : '';
     }
-    public function get_list($sql) { return array(); }
+    public function get_list($sql)
+    {
+        if (strpos($sql, '`product_sold`') !== false) {
+            $rows = $this->sold;
+            if (preg_match('/`supplier_id` = (\d+)/', $sql, $match)) {
+                $wanted = (int) $match[1];
+                $rows = array_values(array_filter($rows, function ($row) use ($wanted) {
+                    return (int) $row['supplier_id'] === $wanted;
+                }));
+            }
+            return $rows;
+        }
+        return array();
+    }
     public function get_row($sql) { return false; }
     public function num_rows($sql) { return 0; }
     public function insert($table, $data)
@@ -144,6 +157,18 @@ check_stock('a claim with no row id is refused without touching the database',
 check_stock('a return with no row id is refused',
     orbit_return_stock($db, null, $stockData) === false);
 
+/* ---- a failed order insert must release what was delivered ----------------- */
+$db = new DB();
+$db->sold = array(
+    array('id' => 201, 'product_code' => 'DEMO', 'supplier_id' => 0, 'seller' => 1, 'uid' => 'a', 'account' => 'a@example.test', 'status' => 1, 'time_check_live' => time()),
+    array('id' => 202, 'product_code' => 'DEMO', 'supplier_id' => 0, 'seller' => 1, 'uid' => 'b', 'account' => 'b@example.test', 'status' => 1, 'time_check_live' => time()),
+    array('id' => 203, 'product_code' => 'DEMO', 'supplier_id' => 4, 'seller' => 1, 'uid' => 'c', 'account' => 'c@example.test', 'status' => 1, 'time_check_live' => time()),
+);
+check_stock('a refunded order returns its local accounts to stock',
+    orbit_release_sold($db, 'ORDER123') === 2 && count($db->stock) === 4, 'stock=' . count($db->stock));
+check_stock('…without touching accounts that came from a supplier',
+    count($db->sold) === 1 && (int) $db->sold[0]['id'] === 203);
+
 /* ---- wiring --------------------------------------------------------------- */
 foreach (array('ajaxs/client/product.php', 'api/api.php') as $file) {
     $source = (string) file_get_contents(__DIR__ . '/../' . $file);
@@ -151,8 +176,12 @@ foreach (array('ajaxs/client/product.php', 'api/api.php') as $file) {
         strpos($source, 'orbit_deliver_stock($CMSNT, $product_stock,') !== false
         && strpos($source, 'remove("product_stock"') === false);
     check_stock($file . ' returns failed local stock through the claiming helper',
-        strpos($source, 'orbit_return_stock($CMSNT, $product_sold,') !== false
+        strpos($source, 'orbit_release_sold($CMSNT, $trans_id)') !== false
         && strpos($source, 'remove("product_sold"') === false);
+    check_stock($file . ' releases reserved accounts when the order row cannot be written',
+        substr_count($source, 'orbit_release_sold($CMSNT, $trans_id)') === 2);
+    check_stock($file . ' reports the shortfall refund through the checked path',
+        strpos($source, '$refundState = $User->RefundCreditsChecked($getUser["id"], $pay, __("[Error 2]') !== false);
 }
 
 echo "\n" . $checks . " checks, " . $failures . " failure(s)\n";

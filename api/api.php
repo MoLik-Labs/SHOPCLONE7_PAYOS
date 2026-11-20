@@ -398,9 +398,7 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 $amount = $isValue;
             }
             if ($product["supplier_id"] == 0 && $isValue < $amount) {
-                foreach ($CMSNT->get_list(" SELECT * FROM `product_sold` WHERE `trans_id` = '" . $trans_id . "' AND `supplier_id` = 0 ") as $product_sold) {
-                    orbit_return_stock($CMSNT, $product_sold, ["product_code" => $product_sold["product_code"], "seller" => $product_sold["seller"], "uid" => $product_sold["uid"], "account" => $product_sold["account"], "status" => $product_sold["status"], "create_gettime" => gettime(), "type" => "Back", "time_check_live" => $product_sold["time_check_live"]]);
-                }
+                orbit_release_sold($CMSNT, $trans_id);
                 $User->RefundCredits($getUser["id"], $pay, "Hoàn tiền đơn hàng mua tài khoản #" . $trans_id, "REFUND_" . $trans_id);
                 exit(json_encode(["code" => 201, "message" => __("Số lượng còn lại trong hệ thống không đủ")]));
             } else {
@@ -481,7 +479,18 @@ if ($apiAction == "get-balance") { // lấy sô dư
                      * a retry already refunded it.
                      */
                     $refundState = $User->RefundCreditsChecked($getUser["id"], $pay, "[Error] " . __("Hoàn tiền do không tạo được đơn hàng") . " #" . $trans_id, "REFUND_" . $trans_id);
-                    if ($refundState === "failed") {
+                                        if ($refundState !== "failed") {
+                        /*
+                         * The refund went through, so the accounts must not stay reserved in `product_sold`
+                         * where nobody can see or resell them. Local stock goes back; supplier accounts cannot
+                         * be un-bought, so leave a trace for the owner.
+                         */
+                        $returned = orbit_release_sold($CMSNT, $trans_id);
+                        if ($returned === 0 && $product["supplier_id"] != 0) {
+                            $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Đơn hàng đã hoàn tiền nhưng tài khoản nhà cung cấp vẫn còn trong product_sold") . " #" . $trans_id]);
+                        }
+                    }
+if ($refundState === "failed") {
                         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Không tạo được đơn hàng và chưa hoàn được tiền") . " #" . $trans_id . " (" . format_currency($pay) . ")"]);
                     }
                     exit(json_encode(["code" => 500, "message" => $refundState === "failed"
@@ -490,8 +499,11 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 }
             }
         } else {
-            $User->RefundCredits($getUser["id"], $pay, __("[Error 2] Hoàn tiền đơn hàng mua tài khoản") . " #" . $trans_id, "REFUND_" . $trans_id);
-            exit(json_encode(["code" => 201, "message" => __("Số lượng còn lại trong hệ thống không đủ")]));
+            /* The local shortfall was already restored to stock above; report the refund honestly. */
+            $refundState = $User->RefundCreditsChecked($getUser["id"], $pay, __("[Error 2] Hoàn tiền đơn hàng mua tài khoản") . " #" . $trans_id, "REFUND_" . $trans_id);
+            exit(json_encode(["code" => 201, "message" => $refundState === "failed"
+                ? __("Số lượng còn lại trong hệ thống không đủ và chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.") . " #" . $trans_id
+                : __("Số lượng còn lại trong hệ thống không đủ, đã hoàn tiền.")]));
         }
     } else {
         exit(json_encode(["code" => 500, "message" => "ERROR 2 - " . __("Vui lòng thử lại")]));

@@ -199,6 +199,12 @@ two statements to the row that was actually claimed:
 - the losing `DELETE` removed nothing, so the stock count was also wrong;
 - a failed `product_sold` insert left the stock row in place but could be retried into a duplicate.
 
+A failed `product_order` insert after a delivery used to refund the buyer but leave the delivered
+accounts reserved in `product_sold`, invisible to everyone. The refund path now calls
+`orbit_release_sold()`: local accounts go back to stock, supplier accounts cannot be un-bought so an
+`[Error]` log line names the order. The last-refund (local-stock shortfall) path also reports through
+`RefundCreditsChecked()` instead of announcing a refund that may have failed.
+
 `orbit_deliver_stock()` now deletes the stock row inside a transaction and only inserts the sold
 record when that `DELETE` affected exactly one row; a failed insert rolls the delete back. The mirror
 operation, `orbit_return_stock()`, claims the sold row the same way before re-inserting it into
@@ -234,7 +240,7 @@ both helpers against an in-memory database and checks that both checkout paths u
 | `db_hardening_test.php` | 47 (was 33) | tri-state credit/refund/debit, row locks, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 44 | updated for the third clamp in the web quote; coupon admin validation |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
-| `stock_claim_test.php` | 14 (new) | exactly-once stock claim and return, rollback on failed insert |
+| `stock_claim_test.php` | 20 (new) | exactly-once stock claim and return, rollback on failed insert, release after a failed order insert |
 | `amount_guard_test.php` | 59 (new) | amount parsing (strings, exponents, NAN/INF, injections), withdrawal wiring, commission lock, restore path, legacy card/crypto amounts |
 | `count_query_test.php` | 26 (new) | COUNT rewrite: plain scans, aliases, literals containing "ORDER BY"; and every shape that must not be rewritten |
 
