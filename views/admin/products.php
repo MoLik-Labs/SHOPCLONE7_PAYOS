@@ -212,6 +212,7 @@ echo "</th>\n                                        <th class=\"text-center\">"
 echo __("Thời gian");
 echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
 $orbitUserNames = orbit_user_names($listDatatable, "user_id");
+$orbitCategoryNames = orbit_lookup_names("categories", $listDatatable, "category_id");
 foreach ($listDatatable as $product) {
     echo "                                    <tr>\n                                        <td class=\"text-center\">\n                                            <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                <input type=\"checkbox\" class=\"form-check-input checkbox_product\"\n                                                    data-id=\"";
     echo $product["id"];
@@ -250,7 +251,7 @@ foreach ($listDatatable as $product) {
     echo "\">";
     echo $product["name"];
     echo "</a>\n                                        </td>\n                                        <td class=\"text-center\"><span\n                                                class=\"badge bg-primary\">";
-    echo $product["category_id"] != 0 ? getRowRealtime("categories", $product["category_id"], "name") : "";
+    echo $product["category_id"] != 0 ? orbit_lookup_name($orbitCategoryNames, $product["category_id"]) : "";
     echo "</span>\n                                        </td>\n                                        <td class=\"text-center\">\n                                            <div class=\"form-check form-switch form-check-lg\"\n                                                onchange=\"post_update_status_table_product(`";
     echo $product["id"];
     echo "`)\">\n                                                <input class=\"form-check-input\" type=\"checkbox\"\n                                                    id=\"status";

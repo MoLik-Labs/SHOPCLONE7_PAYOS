@@ -374,17 +374,25 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 if ($isInsertOrder) {
                     /* The order exists; the reserved coupon use is now permanent. */
                     orbit_coupon_commit();
-                    if ($CMSNT->site("cong_tien_nguoi_ban") == 1) {
-                        $User->AddCredits($product["user_id"], $pay, __("Doanh thu đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "DOANH_THU_" . $trans_id);
+                    if($CMSNT->site("cong_tien_nguoi_ban") == 1) {
+                        /*
+                         * "duplicate" means this transaction already paid the seller (a retried request),
+                         * which is not an error. "failed" means the buyer was charged and the seller was
+                         * not; that must leave a trace for the owner instead of vanishing.
+                         */
+                        $sellerCredit = $User->AddCreditsChecked($product["user_id"], $pay, __("Doanh thu đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "DOANH_THU_" . $trans_id);
+                        if ($sellerCredit === "failed") {
+                            $CMSNT->insert("logs", ["user_id" => $product["user_id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Chưa cộng được doanh thu đơn hàng") . " #" . $trans_id]);
+                        }
                     }
-                    $CMSNT->cong("products", "sold", $amount, " `id` = '" . $product["id"] . "' ");
+                    $CMSNT->cong("products", "sold", $isValue, " `id` = '" . $product["id"] . "' ");
                     $accounts = [];
                     $file_txt_email = "";
                     foreach ($CMSNT->get_list("SELECT * FROM `product_sold` WHERE `trans_id` = '" . $trans_id . "' ") as $account_sold) {
                         $accounts[] = preg_replace("/\r/", "", $account_sold["account"]);
                         $file_txt_email .= PHP_EOL . htmlspecialchars_decode($account_sold["account"]);
                     }
-                    $CMSNT->insert("order_log", ["buyer" => $getUser["id"], "product_name" => $product["name"], "pay" => $pay, "amount" => $amount, "create_time" => time(), "is_virtual" => 0]);
+                    $CMSNT->insert("order_log", ["buyer" => $getUser["id"], "product_name" => $product["name"], "pay" => $pay, "amount" => $isValue, "create_time" => time(), "is_virtual" => 0]);
                     if ($CMSNT->site("email_temp_subject_buy_order") != "") {
                         $content = $CMSNT->site("email_temp_content_buy_order");
                         $content = str_replace("{domain}", $_SERVER["SERVER_NAME"], $content);

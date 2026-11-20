@@ -216,7 +216,9 @@ if(isset($_POST["RemoveAccounts"])) {
     echo "</th>\n                                        <th class=\"text-center\">";
     echo __("Giá bán");
     echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
-    foreach ($CMSNT->get_list(" SELECT * FROM `products` WHERE `code` = '" . $code . "' ") as $product) {
+    $orbitStockProducts = $CMSNT->get_list(" SELECT * FROM `products` WHERE `code` = '" . $code . "' ");
+    $orbitStockCategoryNames = orbit_lookup_names("categories", $orbitStockProducts, "category_id");
+    foreach ($orbitStockProducts as $product) {
         echo "                                    <tr onchange=\"updateFormProduct(`";
         echo $product["id"];
         echo "`)\">\n                                        <td>\n                                            <a type=\"button\"\n                                                href=\"";
@@ -234,7 +236,7 @@ if(isset($_POST["RemoveAccounts"])) {
         echo ">\n                                            </div>\n                                        </td>\n                                        <td>\n                                            ";
         echo $product["name"];
         echo "                                        </td>\n                                        <td class=\"text-center\"><span\n                                                class=\"badge bg-primary\">";
-        echo getRowRealtime("categories", $product["category_id"], "name");
+        echo orbit_lookup_name($orbitStockCategoryNames, $product["category_id"]);
         echo "</span>\n                                        </td>\n                                        <td class=\"text-right\"><span\n                                                class=\"badge bg-danger\">";
         echo format_currency($product["price"]);
         echo "</span>\n                                        </td>\n                                    </tr>\n                                    ";

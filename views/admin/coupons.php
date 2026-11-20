@@ -158,6 +158,14 @@ echo $shortByDate == 3 ? "selected" : "";
 echo " value=\"3\">\n                                            ";
 echo __("Tháng này");
 echo "                                        </option>\n                                    </select>\n                                </div>\n                            </div>\n                        </form>\n                        <div class=\"table-responsive mb-3\">\n                            <table class=\"table text-nowrap table-striped table-hover table-bordered\">\n                                <thead>\n                                    <tr>\n                                        <th>Mã giảm giá</th>\n                                        <th>Sản phẩm áp dụng</th>\n                                        <th class=\"text-center\">Số lượng</th>\n                                        <th class=\"text-center\">Đã sử dụng</th>\n                                        <th>Giảm</th>\n                                        <th>Thời gian</th>\n                                        <th class=\"text-center\">Thao tác</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
+/* Coupon rows carry a JSON list of product ids; resolve every name in one query. */
+$orbitCouponProductRows = array();
+foreach ($listDatatable as $orbitCouponRow) {
+    foreach ((array) json_decode($orbitCouponRow["product_id"]) as $orbitCouponProductId) {
+        $orbitCouponProductRows[] = array("id" => $orbitCouponProductId);
+    }
+}
+$orbitCouponProductNames = orbit_lookup_names("products", $orbitCouponProductRows, "id");
 foreach ($listDatatable as $row) {
     echo "                                    <tr>\n                                        <td><b>";
     echo $row["code"];
@@ -168,7 +176,7 @@ foreach ($listDatatable as $row) {
         echo "<span class=\"badge bg-info-transparent\">Áp dụng cho toàn bộ sản phẩm</span>";
     } else {
         foreach (json_decode($row["product_id"]) as $product_id) {
-            echo "<span class=\"badge bg-primary-transparent\">" . getRowRealtime("products", $product_id, "name") . "</span><br>";
+            echo "<span class=\"badge bg-primary-transparent\">" . orbit_lookup_name($orbitCouponProductNames, $product_id) . "</span><br>";
         }
     }
     echo "                                        </td>\n                                        <td class=\"text-center\"><span style=\"font-size: 15px;\"\n                                                class=\"badge bg-info\">";

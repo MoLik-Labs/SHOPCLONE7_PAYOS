@@ -90,6 +90,21 @@ foreach (array('ajaxs/client/product.php', 'api/api.php') as $file) {
         strpos($source, 'sys_get_temp_dir()') !== false && strpos($source, 'file_put_contents($file_txt_name') !== false);
 }
 
+foreach (array('ajaxs/client/product.php', 'api/api.php') as $file) {
+    $source = (string) file_get_contents($root . '/' . $file);
+    check_flow($file . ' asks the ledger what happened to the seller credit',
+        substr_count($source, 'AddCreditsChecked($product["user_id"]') === 1
+        && strpos($source, '$User->AddCredits($product["user_id"]') === false);
+    check_flow($file . ' leaves a trace when the seller credit fails',
+        strpos($source, 'Chưa cộng được doanh thu đơn hàng') !== false
+        && strpos($source, '$sellerCredit === "failed"') !== false);
+}
+
+$apiSold = (string) file_get_contents($root . '/api/api.php');
+check_flow('the API counts delivered units, not requested ones, as sold',
+    strpos($apiSold, '$CMSNT->cong("products", "sold", $isValue,') !== false
+    && strpos($apiSold, '"amount" => $isValue, "create_time" => time(), "is_virtual" => 0') !== false);
+
 $api = (string) file_get_contents($root . '/api/api.php');
 check_flow('get-services returns every category, not the last one built',
     strpos($api, '"data" => $data_category') !== false);

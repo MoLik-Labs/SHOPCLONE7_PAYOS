@@ -19,17 +19,39 @@ class DB
     public function dis_connect() { return true; }
     public function site($name) { return $name === 'timezone' ? 'Asia/Ho_Chi_Minh' : ''; }
     public function get_row($sql) { return false; }
+    public static $tables = array(
+        'categories' => array(1 => 'Điện thoại', 2 => 'Laptop'),
+        'products' => array(5 => 'Netflix 1 tháng'),
+        'suppliers' => array(9 => 'api.example.com'),
+        'post_category' => array(4 => 'Tin tức'),
+    );
     public function get_list($sql)
     {
         self::$log[] = $sql;
-        if (preg_match('/FROM `users` WHERE `id` IN \(([0-9,]+)\)/', $sql, $m)) {
-            $wanted = array_map('intval', explode(',', $m[1]));
-            return array_values(array_filter(self::$userRows, function ($row) use ($wanted) {
-                return in_array((int) $row['id'], $wanted, true);
-            }));
+        if (preg_match('/FROM `([a-z_]+)` WHERE `id` IN \(([0-9,]+)\)/', $sql, $m)) {
+            $table = $m[1];
+            $wanted = array_map('intval', explode(',', $m[2]));
+            $rows = array();
+            if ($table === 'users') {
+                foreach (self::$userRows as $row) {
+                    if (in_array((int) $row['id'], $wanted, true)) {
+                        $rows[] = $row;
+                    }
+                }
+                return $rows;
+            }
+            if (isset(self::$tables[$table])) {
+                foreach (self::$tables[$table] as $id => $name) {
+                    if (in_array((int) $id, $wanted, true)) {
+                        $rows[] = array('id' => $id, 'name' => $name, 'domain' => $name);
+                    }
+                }
+            }
+            return $rows;
         }
         return array();
     }
+
     public function query($sql) { self::$log[] = $sql; return true; }
 }
 
@@ -91,6 +113,28 @@ for ($i = 1; $i <= 1200; ++$i) {
 orbit_user_names($big, 'user_id');
 check_lookup('large pages are chunked, not sent as one giant IN', count(DB::$log) === 3);
 
+/* ---- the generic lookup helper -------------------------------------------- */
+
+DB::$log = array();
+$categoryRows = array(
+    array('id' => 1, 'category_id' => 1),
+    array('id' => 2, 'category_id' => 2),
+    array('id' => 3, 'category_id' => 1),
+    array('id' => 4, 'category_id' => 0),
+);
+$categories = orbit_lookup_names('categories', $categoryRows, 'category_id');
+check_lookup('a category map resolves every distinct id', $categories[1] === 'Điện thoại' && $categories[2] === 'Laptop' && count($categories) === 2);
+check_lookup('the category map costs one query', count(DB::$log) === 1);
+check_lookup('orbit_lookup_name() falls back to an empty cell', orbit_lookup_name($categories, 99) === '');
+check_lookup('a zero foreign key is not queried', strpos(DB::$log[0], 'IN (1,2)') !== false);
+
+DB::$log = array();
+check_lookup('an unknown table is refused', orbit_lookup_names('settings', $categoryRows, 'category_id') === array() && DB::$log === array());
+check_lookup('an unknown column is refused', orbit_lookup_names('categories', $categoryRows, 'category_id', 'value') === array() && DB::$log === array());
+check_lookup('supplier domains resolve through the same helper',
+    orbit_lookup_names('suppliers', array(array('supplier_id' => 9)), 'supplier_id', 'domain') === array(9 => 'api.example.com'));
+
+
 /* ---- no admin page still looks a user up per row -------------------------- */
 $offenders = array();
 $files = glob(__DIR__ . '/../views/admin/*.php');
@@ -102,7 +146,7 @@ foreach ($files as $file) {
         if (preg_match('/foreach\s*\(/', $line)) {
             $inLoop = true;
         }
-        if ($inLoop && strpos($line, 'getRowRealtime("users"') !== false) {
+        if ($inLoop && strpos($line, 'getRowRealtime(') !== false) {
             $offenders[] = basename($file) . ':' . ($index + 1);
         }
         /* A crude "end of loop" signal: the closing brace at the loop's own indent. Good enough for

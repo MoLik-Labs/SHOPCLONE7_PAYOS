@@ -134,6 +134,7 @@ echo __("Trạng thái");
 echo "</th>\n                                        <th class=\"text-center\">Lượt xem</th>\n                                        <th>";
 echo __("Thao tác");
 echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
+$orbitPostCategoryNames = orbit_lookup_names("post_category", $listDatatable, "category_id");
 foreach ($listDatatable as $row) {
     echo "                                    <tr>\n                                        <td>";
     echo $row["title"];
@@ -146,7 +147,7 @@ foreach ($listDatatable as $row) {
     echo "</td>\n                                        <td><a class=\"text-primary\" href=\"";
     echo base_url_admin("blog-category-edit&id=" . $row["category_id"]);
     echo "\"\n                                                target=\"_blank\"><i class=\"fa fa-pencil-alt\"></i>\n                                                ";
-    echo getRowRealtime("post_category", $row["category_id"], "name");
+    echo orbit_lookup_name($orbitPostCategoryNames, $row["category_id"]);
     echo "</a>\n                                        </td>\n                                        <td class=\"text-center\">";
     echo display_status_product($row["status"]);
     echo "</td>\n                                        <td class=\"text-center\">";

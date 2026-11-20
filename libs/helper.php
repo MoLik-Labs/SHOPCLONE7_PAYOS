@@ -824,10 +824,59 @@ function orbit_user_names($rows, $key = "user_id")
     }
     return $names;
 }
-/** Safe lookup into the map orbit_user_names() returns; unknown ids print as an empty cell. */
-function orbit_user_name($names, $id)
+/**
+ * Resolve a display column for a list of rows in one query per 500 ids.
+ *
+ * Admin tables showed a category, supplier or product name by calling getRowRealtime() inside the
+ * row loop — one SELECT per row. The table and column come from this whitelist, never from a request,
+ * so the identifiers interpolated into SQL are fixed strings.
+ *
+ * @param string $table  users|categories|suppliers|post_category|products
+ * @param array  $rows   rows already loaded for the page
+ * @param string $key    key in $rows that holds the foreign id
+ * @param string $column column to read (must be allowed for that table)
+ * @return array<int,string>
+ */
+function orbit_lookup_names($table, $rows, $key, $column = "name")
+{
+    global $CMSNT;
+    static $allowed = array(
+        "users" => array("username"),
+        "categories" => array("name"),
+        "suppliers" => array("domain"),
+        "post_category" => array("name"),
+        "products" => array("name"),
+    );
+    if (!is_array($rows) || !$rows || !isset($allowed[$table]) || !in_array($column, $allowed[$table], true)) {
+        return array();
+    }
+    $ids = array();
+    foreach ($rows as $row) {
+        if (is_array($row) && isset($row[$key]) && 0 < (int) $row[$key]) {
+            $ids[(int) $row[$key]] = true;
+        }
+    }
+    if (!$ids) {
+        return array();
+    }
+    $names = array();
+    foreach (array_chunk(array_keys($ids), 500) as $chunk) {
+        $sql = "SELECT `id`,`" . $column . "` FROM `" . $table . "` WHERE `id` IN (" . implode(",", $chunk) . ")";
+        foreach ($CMSNT->get_list($sql) as $row) {
+            $names[(int) $row["id"]] = (string) $row[$column];
+        }
+    }
+    return $names;
+}
+/** Safe lookup into a map from orbit_lookup_names(); unknown ids print as an empty cell. */
+function orbit_lookup_name($names, $id)
 {
     return is_array($names) && isset($names[(int) $id]) ? $names[(int) $id] : "";
+}
+/** Backwards-compatible name for the users variant of orbit_lookup_names(). */
+function orbit_user_name($names, $id)
+{
+    return orbit_lookup_name($names, $id);
 }
 /**
  * Normalise the `listUser[]` field of "create email campaign".

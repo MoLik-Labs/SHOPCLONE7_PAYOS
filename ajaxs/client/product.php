@@ -468,7 +468,15 @@ if($_REQUEST["action"] == "buyProduct") {
                     /* The order exists; the reserved coupon use is now permanent. */
                     orbit_coupon_commit();
                     if($CMSNT->site("cong_tien_nguoi_ban") == 1) {
-                        $User->AddCredits($product["user_id"], $pay, __("Doanh thu đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "DOANH_THU_" . $trans_id);
+                        /*
+                         * "duplicate" means this transaction already paid the seller (a retried request),
+                         * which is not an error. "failed" means the buyer was charged and the seller was
+                         * not; that must leave a trace for the owner instead of vanishing.
+                         */
+                        $sellerCredit = $User->AddCreditsChecked($product["user_id"], $pay, __("Doanh thu đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "DOANH_THU_" . $trans_id);
+                        if ($sellerCredit === "failed") {
+                            $CMSNT->insert("logs", ["user_id" => $product["user_id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Chưa cộng được doanh thu đơn hàng") . " #" . $trans_id]);
+                        }
                     }
                     if($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
                         $ck = $CMSNT->site("affiliate_ck");

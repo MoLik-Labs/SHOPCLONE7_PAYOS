@@ -199,6 +199,7 @@ echo "</th>\n                                        <th class=\"text-center\">"
 echo __("Thời gian");
 echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
 $orbitUserNames = orbit_user_names($listDatatable, "buyer");
+$orbitSupplierNames = orbit_lookup_names("suppliers", $listDatatable, "supplier_id", "domain");
 foreach ($listDatatable as $order) {
     echo "                                    <tr>\n                                        <td class=\"text-center\">\n                                            <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                <input type=\"checkbox\" class=\"form-check-input checkbox_product\"\n                                                    data-id=\"";
     echo $order["id"];
@@ -233,7 +234,7 @@ foreach ($listDatatable as $order) {
         echo "                                            Server API (nếu có):\n                                            <a\n                                                href=\"";
         echo base_url_admin("product-api-manager&id=" . $order["supplier_id"]);
         echo "\">";
-        echo $order["supplier_id"] != 0 ? getRowRealtime("suppliers", $order["supplier_id"], "domain") : "";
+        echo $order["supplier_id"] != 0 ? orbit_lookup_name($orbitSupplierNames, $order["supplier_id"]) : "";
         echo "</a><br>\n                                            ";
     }
     echo "                                        </td>\n                                        <td>\n                                            Số lượng: <strong>";
