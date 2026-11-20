@@ -205,7 +205,24 @@ operation, `orbit_return_stock()`, claims the sold row the same way before re-in
 stock, so a repeated refund cleanup cannot duplicate an account. `stock_claim_test.php` exercises
 both helpers against an in-memory database and checks that both checkout paths use them.
 
-## 9. Tests
+## 9. Administrative adjustments and other read-then-write fixes
+
+- **Admin credit/debit (`views/admin/user-edit.php`)** announced "Cộng số dư thành công" even when the
+  balance update had failed, and the debit path read the balance, compared it, and debited in a
+  separate statement. Credit now reports the real `AddCreditsChecked()` outcome; debit uses
+  `DebitCreditsChecked()` (balance re-checked under the row lock) and reports
+  `insufficient`/`failed` distinctly. The debt wallet cannot be reduced below zero.
+- **Role checks (`checkPermission`)** passed a decoded role list straight to `in_array()`; an empty or
+  corrupt `admin_role.role` decodes to `null`, which PHP 8 rejects. The list is validated as an array
+  first.
+- **Sitemap (`cron/cron.php`)** wrote to `../sitemap.xml` relative to the *caller's* working directory;
+  run from the webroot it wrote outside the site. The path is anchored to `__DIR__` and a failed write
+  is logged.
+- **Supplier payloads** are iterated as arrays in both checkouts, so a provider that answers with a
+  string or `null` cannot raise a warning per row (the partial-delivery refund still runs).
+- **Admin lists** (`roles`, `coupons`) no longer iterate `null` when a JSON column is empty.
+
+## 10. Tests
 
 | Suite | Checks | Covers |
 | --- | --- | --- |
@@ -233,7 +250,7 @@ one failure in `random_user_test.php`: the first version of the helper could ret
 requested when every random probe missed a sparse id space. That was a real helper bug, not test
 noise; the walk-forward fill above fixes it, and the suite passed 20 consecutive runs afterwards.
 
-## 10. Not verified / owner actions
+## 11. Not verified / owner actions
 
 - **No live AJAX or login test.** The sandbox has no MySQL, so the CSRF guard is verified by source
   scan and unit-level token/origin checks, not by a browser session.

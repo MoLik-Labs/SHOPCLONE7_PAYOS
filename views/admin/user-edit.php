@@ -93,13 +93,20 @@ if(isset($_GET["id"])) {
         }
         $Mobile_Detect = new Mobile_Detect();
         $reason = "[VÍ CHÍNH] " . check_string($_POST["reason"]);
-        if($_POST["wallet"] == 2) {
-            $CMSNT->cong("users", "debit", $amount, " `id` = '" . $id . "' ");
+        $wallet = isset($_POST["wallet"]) ? (int) $_POST["wallet"] : 0;
+        if($wallet == 2) {
             $reason = "[VÍ GHI NỢ] " . check_string($_POST["reason"]);
         }
-        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "createdate" => gettime(), "device" => $Mobile_Detect->getUserAgent(), "ip" => myip(), "action" => "[Admin] Cộng " . format_currency($amount) . " cho User " . $user["username"] . "[" . $user["id"] . "] lý do (" . $reason . ")."]);
         $DBUser = new users();
-        $DBUser->AddCredits($id, $amount, $reason, "admin_add_" . uniqid());
+        $creditState = $DBUser->AddCreditsChecked($id, $amount, $reason, "admin_add_" . uniqid());
+        if($creditState !== "credited") {
+            /* The page used to announce success even when the balance update failed. */
+            admin_msg_error("Cộng số dư thất bại, vui lòng thử lại!", "", 1500);
+        }
+        if($wallet == 2 && !$CMSNT->cong("users", "debit", $amount, " `id` = '" . $id . "' ")) {
+            $CMSNT->insert("logs", ["user_id" => $getUser["id"], "createdate" => gettime(), "device" => $Mobile_Detect->getUserAgent(), "ip" => myip(), "action" => "[Error] Đã cộng " . format_currency($amount) . " nhưng chưa ghi được ví ghi nợ cho User " . $user["username"] . "[" . $user["id"] . "]."]);
+        }
+        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "createdate" => gettime(), "device" => $Mobile_Detect->getUserAgent(), "ip" => myip(), "action" => "[Admin] Cộng " . format_currency($amount) . " cho User " . $user["username"] . "[" . $user["id"] . "] lý do (" . $reason . ")."]);
         $my_text = $CMSNT->site("noti_action");
         $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
         $my_text = str_replace("{username}", $getUser["username"], $my_text);
@@ -119,16 +126,25 @@ if(isset($_GET["id"])) {
             exit("<script type=\"text/javascript\">if(!alert(\"Amount không hợp lệ !\")){window.history.back().location.reload();}</script>");
         }
         $Mobile_Detect = new Mobile_Detect();
-        if($_POST["wallet"] == 2) {
-            $CMSNT->tru("users", "debit", $amount, " `id` = '" . $id . "' ");
+        $wallet = isset($_POST["wallet"]) ? (int) $_POST["wallet"] : 0;
+        if($wallet == 2) {
+            /* The debt balance itself cannot go below zero. */
+            $debt = (float) getRowRealtime("users", $id, "debit");
+            if($debt < $amount || !$CMSNT->tru("users", "debit", $amount, " `id` = " . (int) $id . " ")) {
+                exit("<script type=\"text/javascript\">if(!alert(\"Số nợ cần trừ vượt quá số nợ hiện tại\")){window.history.back().location.reload();}</script>");
+            }
             $reason = "[VÍ GHI NỢ] " . check_string($_POST["reason"]);
         } else {
-            if(getRowRealtime("users", $id, "money") < $amount) {
-                exit("<script type=\"text/javascript\">if(!alert(\"Số dư bạn trừ vượt quá số dư khả dụng của thành viên\")){window.history.back().location.reload();}</script>");
-            }
             $reason = "[VÍ CHÍNH] " . check_string($_POST["reason"]);
             $DBUser = new users();
-            $DBUser->RemoveCredits($id, $amount, $reason, "admin_remove_" . uniqid());
+            /* Re-checks the balance under the row lock: the old read-then-debit could overdraw. */
+            $debitState = $DBUser->DebitCreditsChecked($id, $amount, $reason, "admin_remove_" . uniqid());
+            if($debitState === "insufficient") {
+                exit("<script type=\"text/javascript\">if(!alert(\"Số dư bạn trừ vượt quá số dư khả dụng của thành viên\")){window.history.back().location.reload();}</script>");
+            }
+            if($debitState !== "debited") {
+                admin_msg_error("Trừ số dư thất bại, vui lòng thử lại!", "", 1500);
+            }
         }
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "createdate" => gettime(), "device" => $Mobile_Detect->getUserAgent(), "ip" => myip(), "action" => "[Admin] Trừ " . format_currency($amount) . " cho User " . $user["username"] . "[" . $user["id"] . "] lý do (" . $reason . ")."]);
         $my_text = $CMSNT->site("noti_action");

@@ -62,7 +62,7 @@ foreach ($CMSNT->get_list("SELECT * FROM `admin_role` ORDER BY id DESC ") as $ro
     echo "\">\n                                            <i class=\"fas fa-trash\"></i>\n                                        </a>\n                                    </td>\n                                    <td>\n                                        ";
     echo $row["name"];
     echo "                                    </td>\n                                    <td>\n                                        ";
-    foreach (json_decode($row["role"]) as $rl) {
+    foreach ((array) json_decode($row["role"]) as $rl) {
         echo "                                        <span class=\"badge bg-outline-primary\">";
         echo $rl;
         echo "</span>\n                                        ";

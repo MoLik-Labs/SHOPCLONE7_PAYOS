@@ -141,5 +141,14 @@ $ok = strpos($web, '"cost" => $product["cost"] * $isValue') !== false;
 $failures += $ok ? 0 : 1;
 echo ($ok ? 'PASS' : 'FAIL') . "  the web order cost uses the delivered quantity\n";
 
+/* A supplier that answers with a non-list body must not raise a warning for every row. */
+foreach (array('api/api.php', 'ajaxs/client/product.php') as $file) {
+    $source = (string) file_get_contents($root . '/' . $file);
+    ++$checks;
+    $ok = substr_count($source, 'foreach ((array) $') >= 8;
+    echo ($ok ? 'PASS' : 'FAIL') . "  $file iterates supplier payloads as arrays\n";
+    $failures += $ok ? 0 : 1;
+}
+
 echo "\n" . $checks . " checks, " . $failures . " failure(s)\n";
 exit($failures === 0 ? 0 : 1);

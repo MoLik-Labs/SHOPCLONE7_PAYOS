@@ -71,6 +71,14 @@ foreach ($urls as $url) {
     $urlset->appendChild($urlElement);
 }
 $xml->appendChild($urlset);
-$xml->save("../sitemap.xml");
+/*
+ * Relative paths resolve against the caller's working directory: run from the webroot,
+ * "../sitemap.xml" landed *outside* the site and the public sitemap was never updated. Anchor it to
+ * this file instead, and leave a log line when the file cannot be written.
+ */
+$sitemapPath = __DIR__ . "/../sitemap.xml";
+if($xml->save($sitemapPath) === false) {
+    error_log("[orbit] sitemap could not be written to " . $sitemapPath);
+}
 
 ?>

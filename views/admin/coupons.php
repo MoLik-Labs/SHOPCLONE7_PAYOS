@@ -189,7 +189,7 @@ foreach ($listDatatable as $row) {
     if(empty($row["product_id"])) {
         echo "<span class=\"badge bg-info-transparent\">Áp dụng cho toàn bộ sản phẩm</span>";
     } else {
-        foreach (json_decode($row["product_id"]) as $product_id) {
+        foreach ((array) json_decode($row["product_id"]) as $product_id) {
             echo "<span class=\"badge bg-primary-transparent\">" . orbit_lookup_name($orbitCouponProductNames, $product_id) . "</span><br>";
         }
     }

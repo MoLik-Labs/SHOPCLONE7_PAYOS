@@ -142,7 +142,7 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["msg"])]));
                 }
                 $api_trans_id = $data["data"]["trans_id"];
-                foreach ($data["data"]["lists"] as $account) {
+                foreach ((array) $data["data"]["lists"] as $account) {
                     $account = check_string($account["account"]);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -173,7 +173,7 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["msg"])]));
                 }
                 $api_trans_id = $data["trans_id"];
-                foreach ($data["data"] as $account) {
+                foreach ((array) $data["data"] as $account) {
                     $account = check_string($account);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -193,7 +193,7 @@ if($_REQUEST["action"] == "buyProduct") {
                 $api_trans_id = $data["order_id"];
                 $response = order_API_1($supplier["domain"], $supplier["api_key"], $api_trans_id);
                 $result = json_decode($response, true);
-                foreach ($result["data"] as $account) {
+                foreach ((array) $result["data"] as $account) {
                     $account = check_string($account["full_info"]);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -210,7 +210,7 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($result["message"]["messageVNI"])]));
                 }
                 $api_trans_id = NULL;
-                foreach ($result["data"] as $account) {
+                foreach ((array) $result["data"] as $account) {
                     $account = check_string($account);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -269,7 +269,7 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($result["error"])]));
                 }
                 $api_trans_id = $result["data"]["buy_id"];
-                foreach ($result["data"]["data"] as $account) {
+                foreach ((array) $result["data"]["data"] as $account) {
                     $account = check_string($account);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -328,7 +328,7 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["msg"])]));
                 }
                 $api_trans_id = $data["data"]["trans_id"];
-                foreach ($data["data"]["lists"] as $account) {
+                foreach ((array) $data["data"]["lists"] as $account) {
                     $account = check_string($account["account"]);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -345,7 +345,7 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __("Số lượng còn lại trong hệ thống không đủ")]));
                 }
                 $api_trans_id = $data["Data"]["TransId"];
-                foreach ($data["Data"]["Emails"] as $account) {
+                foreach ((array) $data["Data"]["Emails"] as $account) {
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $account["Email"], "account" => $account["Email"] . "|" . $account["Password"] . "|" . $account["RefreshToken"] . "|" . $account["AccessToken"] . "|" . $account["ClientId"], "create_gettime" => gettime()]);
                     if($isInsertAPI) {
                         $isValue++;
@@ -360,7 +360,7 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["message"])]));
                 }
                 $api_trans_id = $data["data"]["order_code"];
-                foreach ($data["data"]["list_data"] as $account) {
+                foreach ((array) $data["data"]["list_data"] as $account) {
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => explode("|", $account)[0], "account" => $account, "create_gettime" => gettime()]);
                     if($isInsertAPI) {
                         $isValue++;
@@ -380,7 +380,7 @@ if($_REQUEST["action"] == "buyProduct") {
                 $result = json_decode($response, true);
                 if($result["success"]) {
                     if(isset($result["data"])) {
-                        foreach ($result["data"] as $account) {
+                        foreach ((array) $result["data"] as $account) {
                             $account = check_string($account["product"]);
                             list($uid) = explode("|", $account);
                             $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -403,7 +403,7 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["message"])]));
                 }
                 $api_trans_id = NULL;
-                foreach ($data["data"] as $account) {
+                foreach ((array) $data["data"] as $account) {
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => explode("|", $account)[0], "account" => $account, "create_gettime" => gettime()]);
                     if($isInsertAPI) {
                         $isValue++;
@@ -418,7 +418,7 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __($data["message"])]));
                 }
                 $api_trans_id = NULL;
-                foreach ($data["data"] as $account) {
+                foreach ((array) $data["data"] as $account) {
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $account["email"], "account" => $account["email"] . "|" . $account["password"] . "|" . $account["refresh_token"] . "|" . $account["client_id"], "create_gettime" => gettime()]);
                     if($isInsertAPI) {
                         $isValue++;
@@ -433,7 +433,7 @@ if($_REQUEST["action"] == "buyProduct") {
                     exit(json_encode(["status" => "error", "msg" => __("Số lượng còn lại trong hệ thống không đủ")]));
                 }
                 $api_trans_id = $data["PurchaseId"];
-                foreach ($data["Accounts"] as $account) {
+                foreach ((array) $data["Accounts"] as $account) {
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $account["Email"], "account" => $account["Email"] . "|" . $account["Password"] . "|" . $account["RefreshToken"] . "|" . $account["ClientId"], "create_gettime" => gettime()]);
                     if($isInsertAPI) {
                         $isValue++;
@@ -447,7 +447,7 @@ if($_REQUEST["action"] == "buyProduct") {
                     $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
                     exit(json_encode(["status" => "error", "msg" => __("Số lượng còn lại trong hệ thống không đủ")]));
                 }
-                foreach ($data["data"] as $account) {
+                foreach ((array) $data["data"] as $account) {
                     $api_trans_id = $account["order_id"];
                     $isInsertAPI = $CMSNT->insert("product_sold", ["type" => $supplier["domain"], "product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $account["email"], "account" => $account["email"] . "|" . $account["password"], "create_gettime" => gettime()]);
                     if($isInsertAPI) {

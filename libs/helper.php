@@ -257,10 +257,13 @@ function checkPermission($admin_id, $role)
     if($admin_id == 99999) {
         return true;
     }
-    if(($row = $CMSNT->get_row(" SELECT * FROM `admin_role` WHERE `id` = '" . $admin_id . "' ")) && in_array($role, json_decode($row["role"]))) {
-        return true;
+    $row = $CMSNT->get_row(" SELECT * FROM `admin_role` WHERE `id` = '" . $admin_id . "' ");
+    if(!$row) {
+        return false;
     }
-    return false;
+    /* A role row with empty or corrupt JSON decoded to null; PHP 8 throws on in_array(null). */
+    $roles = json_decode(isset($row["role"]) ? (string) $row["role"] : "", true);
+    return is_array($roles) && in_array($role, $roles);
 }
 function orbit_db()
 {
