@@ -100,5 +100,15 @@ check("only the bootstrap and the lazy fallback open a connection",
 check("the rest of helper.php reuses it", substr_count($helper, "orbit_db()") >= 12);
 check("orbit_db() never calls itself", strpos($helper, "if (!(\$CMSNT instanceof DB)) {\n        \$CMSNT = new DB();") !== false);
 
+$audit = (string) file_get_contents(__DIR__ . "/../tools/db-index-audit.php");
+check("the index audit reports ledger duplicates before suggesting UNIQUE",
+    strpos($audit, "HAVING `n` > 1") !== false
+    && strpos($audit, "uniq_dongtien_transid") !== false);
+check("the index audit reports coupon duplicates before suggesting UNIQUE",
+    strpos($audit, "uniq_coupon_used") !== false
+    && strpos($audit, "GROUP BY `coupon_id`, `user_id`") !== false);
+check("the audit is read-only", strpos($audit, "ADD UNIQUE") !== false
+    && strpos($audit, "->query(\"ALTER") === false);
+
 echo "\n" . $pass . " passed, " . $fail . " failed.\n";
 exit($fail === 0 ? 0 : 1);

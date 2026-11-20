@@ -124,7 +124,7 @@ as an owner-side migration rather than executed here.
 | `partial_delivery_test.php` | 30 (new) | proration table, boundaries, ledger key, delivered-vs-requested records |
 | `admin_user_lookup_test.php` | 31 (was 21) | count helper, whitelist, 500-code chunking, batched product/supplier/task pages |
 | `purchase_flow_guards_test.php` | 28 (was 25) | quote clamp, guest quote, delivered quantities |
-| `db_hardening_test.php` | 34 (was 33) | tri-state refund, row lock, transaction pairing |
+| `db_hardening_test.php` | 37 (was 33) | tri-state refund, row lock, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 38 | updated for the third clamp in the web quote |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
 
@@ -146,6 +146,8 @@ single failure that could not be reproduced in either later run; it is not count
 - **Schema indexes still missing**: `UNIQUE (transid)` on `dongtien` and `UNIQUE (coupon_id, user_id)`
   on `coupon_used`. The coupon claim path already serialises with `GET_LOCK` and the ledger path now
   locks the user row, but the database-level constraints remain the correct long-term fix.
+  `tools/db-index-audit.php` now reports duplicate ledger keys **and** duplicate coupon/user pairs and
+  prints the exact `ALTER TABLE … ADD UNIQUE` for each, without ever writing to the database.
 - **Partial-delivery path is exercised by arithmetic and source assertions**, not by a live supplier
   response. The next staging run should place one order where the supplier confirms fewer accounts.
 - `install.php` still contains no schema DDL; no migration was run against any database.

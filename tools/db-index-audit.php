@@ -63,6 +63,7 @@ $required = array(
     "coupons" => array(array("code")),
     "currencies" => array(array("display", "default_currency")),
     "dongtien" => array(array("user_id"), array("transid")),
+    "coupon_used" => array(array("coupon_id", "user_id"), array("trans_id")),
 );
 
 $missing = 0;
@@ -127,6 +128,31 @@ try {
     }
 } catch (Throwable $error) {
     echo "  SKIP  dongtien (table not present or not readable)\n";
+}
+
+/* A coupon is one-per-member. The claim path serialises with GET_LOCK, but only a unique key makes
+   that true for every writer (admin imports, manual SQL). Report duplicates before suggesting it. */
+echo "\nCoupon redemption idempotency (advisory)\n";
+try {
+    $duplicates = $db->query("SELECT `coupon_id`, `user_id`, COUNT(*) AS `n` FROM `coupon_used`
+        GROUP BY `coupon_id`, `user_id` HAVING `n` > 1 ORDER BY `n` DESC LIMIT 20");
+    if ($duplicates && $duplicates->num_rows > 0) {
+        $duplicateCount = 0;
+        while ($row = $duplicates->fetch_assoc()) {
+            ++$duplicateCount;
+            echo "  DUPLICATE coupon " . $row["coupon_id"] . " / user " . $row["user_id"] . " × " . $row["n"] . "\n";
+        }
+        echo "  " . $duplicateCount . " duplicated coupon/user pair(s). Resolve them before adding a unique index;\n";
+        echo "  do NOT add UNIQUE while duplicates exist.\n";
+    } else {
+        echo "  no duplicated coupon/user pair — a unique index would hold.\n";
+        echo "  ALTER TABLE `coupon_used` ADD UNIQUE INDEX `uniq_coupon_used` (`coupon_id`, `user_id`);\n";
+    }
+    if ($duplicates) {
+        $duplicates->free();
+    }
+} catch (Throwable $error) {
+    echo "  SKIP  coupon_used (table not present or not readable)\n";
 }
 
 $db->close();
