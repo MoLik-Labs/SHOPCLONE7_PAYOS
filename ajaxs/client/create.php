@@ -211,7 +211,8 @@ if($_POST["action"] == "CreateInvoiceCrypto") {
     if(3 <= $CMSNT->num_rows(" SELECT * FROM `payment_crypto` WHERE `user_id` = '" . $getUser["id"] . "' AND `status` = 'waiting' AND ROUND(`amount`) = '" . $amount . "'  ")) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng không SPAM")]));
     }
-    $name = "Recharge " . check_string($_SERVER["HTTP_HOST"]);
+    $validatedHost = parse_url(orbit_request_origin(), PHP_URL_HOST);
+    $name = "Recharge " . (is_string($validatedHost) ? $validatedHost : "localhost");
     $description = "Recharge invoice to " . $getUser["username"];
     $callback = base_url("api/callback_crypto.php");
     $return_url = base_url("client/recharge-crypto");

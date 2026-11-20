@@ -57,7 +57,7 @@ store_shell_open($storeShell);
       <div class="field">
         <label class="field__label" for="register-password">Mật khẩu</label>
         <input class="input" id="register-password" name="password" type="password" autocomplete="new-password"
-          required data-password-strength-input>
+          minlength="6" required data-password-strength-input>
         <p class="field__help" data-password-strength role="status"></p>
         <p class="field__error" data-error-for="password" hidden></p>
       </div>

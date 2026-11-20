@@ -20,6 +20,30 @@
  * checks, and loading it changes no behaviour by itself.
  */
 
+/* ------------------------------------------------------------------ request identity */
+
+/**
+ * A syntactically valid domain string for the portal.
+ *
+ * HTTP_HOST is client-controlled. Reject malformed values containing slashes, query strings,
+ * whitespace or userinfo and fall back to SERVER_NAME. This is not a host allowlist: deployments
+ * must configure their web server to accept only their own domains.
+ */
+function licence_request_domain(array $server = null)
+{
+    if ($server === null) {
+        $server = $_SERVER;
+    }
+    $candidate = isset($server['HTTP_HOST']) ? (string) $server['HTTP_HOST'] : '';
+    if ($candidate === '' || preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?(?::[0-9]{1,5})?$/D', $candidate) !== 1) {
+        $candidate = isset($server['SERVER_NAME']) ? (string) $server['SERVER_NAME'] : '';
+    }
+    if ($candidate === '' || preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?(?::[0-9]{1,5})?$/D', $candidate) !== 1) {
+        return '';
+    }
+    return $candidate;
+}
+
 /* ------------------------------------------------------------------ states */
 
 const LICENCE_STATE_UNCONFIGURED = 'unconfigured';   // no key entered yet
@@ -349,7 +373,7 @@ function licence_request(LicenceStore $store, array $cfg, $mode, callable $trans
     $payload = array(
         'key'   => $key,
         'hwid'  => $hwid,
-        'domain' => isset($_SERVER['HTTP_HOST']) ? (string) $_SERVER['HTTP_HOST'] : '',
+        'domain' => licence_request_domain(),
         'php'   => PHP_VERSION,
         'version' => '1.0.0',
     );

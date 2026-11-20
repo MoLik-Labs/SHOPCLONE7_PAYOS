@@ -316,9 +316,8 @@
     if (!submit) {
       return;
     }
-    /* One key per opened panel. A retry after a lost response reuses it, so the server returns the
-       order it already created instead of charging again; a server-reported failure rotates it so
-       the user can genuinely try again. */
+    /* Keep one key for the life of the panel, even after an error. An error may mean an earlier
+       request is still processing; rotating here could turn a retry into a second purchase. */
     function newOrderKey() {
       if (window.crypto && typeof window.crypto.randomUUID === "function") {
         return window.crypto.randomUUID();
@@ -367,8 +366,7 @@
           statusEl.classList.add("is-ok");
           submit.textContent = "Đã thanh toán";
         } else {
-          orderKey = newOrderKey();
-          setStatus(statusEl, data.msg || "Thanh toán thất bại.", "error");
+          setStatus(statusEl, data.msg || "Chưa xác định được kết quả. Vui lòng kiểm tra lịch sử đơn hàng trước khi mua lại.", "error");
           submit.disabled = false;
         }
       }).catch(function () {

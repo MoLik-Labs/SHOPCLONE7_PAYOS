@@ -152,7 +152,9 @@ class users extends DB
      */
     public function RefundCreditsChecked($user_id, $amount, $reason, $transid = NULL)
     {
-        if((float) $amount <= 0) {
+        /* Refunding a free order is a zero-value, keyed no-op, not a payment failure. */
+        if ((!is_string($amount) && !is_int($amount) && !is_float($amount))
+            || !is_numeric($amount) || !is_finite((float) $amount) || (float) $amount < 0) {
             $this->refund_outcome = "failed";
             return "failed";
         }
@@ -201,7 +203,10 @@ class users extends DB
     }
     private function debit_credits($user_id, $amount, $reason, $transid, $allowNegative)
     {
-        if((float) $amount <= 0) {
+        /* Free products and 100% coupons legitimately produce zero. They still need a keyed
+           ledger claim to prevent duplicate delivery, but must never permit a negative debit. */
+        if ((!is_string($amount) && !is_int($amount) && !is_float($amount))
+            || !is_numeric($amount) || !is_finite((float) $amount) || (float) $amount < 0) {
             $this->debit_outcome = "failed";
             return "failed";
         }

@@ -104,6 +104,13 @@ if [ "$MODE" != "lint" ]; then
     runs=$((runs+1))
     echo "=== legacy_payment_gate"
     if ! bash tools/dev/legacy-gate.sh; then fails=$((fails+1)); echo "FAILED: legacy_payment_gate"; fi
+    for suite in tests/js/*_test.mjs; do
+      [ -f "$suite" ] || continue
+      runs=$((runs+1))
+      label=$(basename "$suite" _test.mjs)
+      echo "=== $label"
+      if ! node "$suite"; then fails=$((fails+1)); echo "FAILED: $label"; fi
+    done
   fi
 fi
 

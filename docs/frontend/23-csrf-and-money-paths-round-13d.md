@@ -256,13 +256,14 @@ did not, so a row holding `150` produced a negative unit price, a negative total
 negative amount — `RemoveCredits(-x)` credits the buyer. `getDiscount()` had the same exposure through
 `product_discount`. `libs/money.php` now owns the arithmetic: `orbit_percent()` clamps to 0–100 and
 `orbit_unit_price()` never returns a negative price. The modal, the public API, the product page, the
-home page and the AJAX quote all call it, so a displayed price and a charged price cannot disagree.
+home page and the AJAX quote all call it for the product's base discount. Member, tier and coupon
+discounts are applied separately, so the product-card price is not a complete personalized quote.
 
 ## 6i. One reCAPTCHA call, bounded and private
 
 Four copies of the captcha check were pasted into `ajaxs/client/auth.php`. Each built
-`…siteverify?secret=<secret>&response=<token>` and fetched it with `file_get_contents()` — no timeout,
-no TLS context, and the shared secret in the URL (visible in any proxy log). Each then read `->success`
+`…siteverify?secret=<secret>&response=<token>` and fetched it with `file_get_contents()` — no explicit
+timeout or TLS context, and the shared secret in the URL (visible in any proxy log). Each then read `->success`
 off whatever came back, so an unreachable Google hung the login for the default socket timeout and
 then raised a warning on null. `orbit_recaptcha_ok()` posts the secret in the body over verified TLS,
 gives up after 8 s, and fails closed on every error (network, JSON, missing secret). The preview's
@@ -272,26 +273,26 @@ invoice countdown now reads `orbit_now()`, so a rebuild stays byte-identical.
 
 `AddCreditsChecked()`, `RefundCreditsChecked()` and the debit path are called with amounts computed
 from posted forms and provider responses. A negative "credit" is a debit under the opposite name, and
-a negative debit credits — both bypass every check the caller wrote. All three now refuse an amount at
-or below zero and report `failed`, so no single bad caller can move money the wrong way. The admin
-"log out all members" action also rotates session tokens with `random_bytes(32)` instead of
+a negative debit credits — both bypass every check the caller wrote. All three refuse negative amounts.
+Top-up credits reject zero; checkout debits and refunds accept zero as a keyed no-op so a free product
+or a 100% coupon can complete without moving the balance. Non-numeric or non-finite debits and refunds
+are rejected. This behaviour is covered by a stub ledger test, not a live database concurrency test.
+The admin "log out all members" action also rotates session tokens with `random_bytes(32)` instead of
 six characters plus the current second.
 
-## 6k. A retry is not a second purchase
+## 6k. Reducing the risk of a second purchase on retry
 
-The buy panel charges on `buyProduct`, and the public API charges on `create-order`; both generated a
-random `trans_id` per request. A response lost to a timeout (or a double tap that outlived the disabled
-button) produced a second charge and a second order. Both flows now accept an optional
-`client_order_id`:
+The buy panel and public API accept an optional `client_order_id`, deriving a deterministic
+transaction ID from the buyer and key. Completed orders can be looked up on retry, and keyed wallet
+debits use the ledger's duplicate check. The panel retains its key after both network **and server**
+errors: an error may be returned while the first request is still processing, so rotating immediately
+could trigger a second charge.
 
-- the storefront sends one key per opened buy panel and reuses it across network retries;
-- the server derives `trans_id = "W" + sha256(buyer_id | key)[0..30]`, looks for that order first and
-  answers with it instead of charging again;
-- a key cannot be replayed for another product or against a cancelled/refunded order;
-- a server-reported failure rotates the panel's key, so a genuine second attempt can succeed.
-
-Requests without a key keep the old behaviour. `tests/order_key_test.php` pins the derivation and the
-wiring in both paths.
+This is not a complete exactly-once guarantee. The key is not persisted across page reloads; a failed
+or still-running request can return an error instead of the eventual order; requests without a key
+retain the legacy behaviour. Failures after a debit require reconciliation, not an automatic new key.
+The database uniqueness constraints and concurrent end-to-end tests remain owner/staging work.
+`tests/order_key_test.php` covers derivation and source wiring, not real concurrent requests.
 
 ## 6l. Deleting an upload is a filesystem operation
 
@@ -314,6 +315,20 @@ silently dropped, so invoices, 2FA/OTP screens and the affiliate pages were inde
 honours `robots` (any value carrying `noindex`) as well, and the account pages that had no switch at
 all — profile, security, change-password, transactions, logs, favourites, API guide — set
 `noindex => true`. `tests/account_pages_test.php` asserts the rendered tag on every one of them.
+
+## 6o. Follow-up verification and boundaries
+
+The registration endpoint now enforces the existing six-character UI minimum and compares the two
+raw password strings strictly. The licence payload and crypto invoice name reject malformed host
+strings; syntactic validation is **not** a hostname allowlist. Configure the web server to reject
+unrecognised Host headers and use a trusted canonical origin for security-sensitive links.
+`tools/preview-data.php` is now CLI-only.
+
+`tests/js/checkout_retry_test.mjs` exercises the panel with a mocked DOM and fetch failures; the full
+gate also runs the existing JavaScript contract test. These are not real-browser or database race tests.
+The full gate on this revision: 321 PHP files linted, 239 files scanned, 38 static pages rendered,
+54 suites, one not run (`payos_service`, no disposable database), zero failures. No live provider
+or licence call was made.
 
 ## 7. Commission and debit bookkeeping
 

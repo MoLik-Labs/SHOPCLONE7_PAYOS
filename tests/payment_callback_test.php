@@ -174,6 +174,17 @@ check_payment('a zero credit is refused', $account->AddCreditsChecked(7, 0, 'bad
 check_payment('a negative refund is refused', $account->RefundCreditsChecked(7, -5, 'bad', 'REFUND_NEG_1') === 'failed');
 check_payment('a negative debit is refused', $account->DebitCreditsChecked(7, -5, 'bad', 'ORDER_NEG_1') === 'failed');
 check_payment('a refused credit moves nothing', abs(DB::$money - 180.0) < 0.001 && count(DB::$ledger) === 3);
+check_payment('a free order records a keyed debit', $account->DebitCreditsChecked(7, 0, 'free order', 'ORDER_FREE_1') === 'debited');
+check_payment('a retry of a free order is a duplicate', $account->DebitCreditsChecked(7, 0, 'free order', 'ORDER_FREE_1') === 'duplicate');
+check_payment('a free order does not change the balance', abs(DB::$money - 180.0) < 0.001 && count(DB::$ledger) === 4);
+check_payment('a non-finite debit is refused', $account->DebitCreditsChecked(7, INF, 'bad', 'ORDER_INF') === 'failed');
+check_payment('a non-numeric debit is refused', $account->DebitCreditsChecked(7, 'bad', 'bad', 'ORDER_BAD') === 'failed');
+check_payment('a free order can be refunded as a keyed no-op', $account->RefundCreditsChecked(7, 0, 'free refund', 'REFUND_FREE_1') === 'credited');
+check_payment('a retried free refund is a duplicate', $account->RefundCreditsChecked(7, 0, 'free refund', 'REFUND_FREE_1') === 'duplicate');
+check_payment('the free refund leaves the wallet untouched', abs(DB::$money - 180.0) < 0.001);
+check_payment('both checkout paths skip a zero-value seller credit',
+    payment_has('ajaxs/client/product.php', 'if($pay > 0 && $CMSNT->site("cong_tien_nguoi_ban") == 1)')
+    && payment_has('api/api.php', 'if($pay > 0 && $CMSNT->site("cong_tien_nguoi_ban") == 1)'));
 
 /* ---- card callback -------------------------------------------------------- */
 check_payment('card callback claims the row with a conditional UPDATE', payment_has('api/callback_card.php', "WHERE `id` = \" . (int) \$row[\"id\"] . \" AND `status` = 'pending'"));

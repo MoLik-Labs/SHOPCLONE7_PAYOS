@@ -575,7 +575,7 @@ if($_REQUEST["action"] == "buyProduct") {
                 if($isInsertOrder) {
                     /* The order exists; the reserved coupon use is now permanent. */
                     orbit_coupon_commit();
-                    if($CMSNT->site("cong_tien_nguoi_ban") == 1) {
+                    if($pay > 0 && $CMSNT->site("cong_tien_nguoi_ban") == 1) {
                         /*
                          * "duplicate" means this transaction already paid the seller (a retried request),
                          * which is not an error. "failed" means the buyer was charged and the seller was

@@ -299,7 +299,12 @@ if(isset($_POST["action"])) {
         /* Hash the bytes the user typed; see orbit_password_matches() for why. */
         $password = isset($_POST["password"]) && is_string($_POST["password"]) ? $_POST["password"] : "";
         $repassword = isset($_POST["repassword"]) && is_string($_POST["repassword"]) ? $_POST["repassword"] : "";
-        if($password != $repassword) {
+        /* The storefront already enforces six characters in its form handler. Enforce it here too:
+           a direct POST must not be able to create a password the UI itself rejects. */
+        if(strlen($password) < 6) {
+            exit(json_encode(["status" => "error", "msg" => __("Mật khẩu cần ít nhất 6 ký tự")]));
+        }
+        if($password !== $repassword) {
             exit(json_encode(["status" => "error", "msg" => __("Xác minh mật khẩu không chính xác")]));
         }
         if(!orbit_recaptcha_ok(isset($_POST["recaptcha"]) ? $_POST["recaptcha"] : "")) {

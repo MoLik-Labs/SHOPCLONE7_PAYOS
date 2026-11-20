@@ -59,7 +59,7 @@ key_is(true, strpos($api, '$existingOrder = $CMSNT->get_row("SELECT * FROM `prod
 key_is(true, strpos($product, 'if($trans_id === "") {') !== false && strpos($api, 'if ($trans_id === "") {') !== false,
     'a request without a key still gets a random id');
 key_is(true, strpos($js, 'client_order_id: orderKey') !== false, 'the buy panel sends its key');
-key_is(true, substr_count($js, 'orderKey = newOrderKey();') >= 2, 'a failed attempt rotates the key so the buyer can retry');
+key_is(1, substr_count($js, 'orderKey = newOrderKey();'), 'an error does not rotate the key while an earlier request may still be processing');
 key_is(true, strpos($product, '(int) $existingOrder["trash"] === 1') !== false, 'a cancelled order cannot be revived by replaying its key');
 key_is(true, strpos($api, '(int) $existingOrder["trash"] === 1') !== false, 'the API refuses to reuse a cancelled order key');
 key_is(true, strpos($product, 'Mã đơn hàng đã được dùng cho sản phẩm khác') !== false,

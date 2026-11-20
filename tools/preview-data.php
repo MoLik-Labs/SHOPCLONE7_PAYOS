@@ -1,4 +1,9 @@
 <?php
+/* Preview fixtures are only used by the CLI builder, never as a web route. */
+if (PHP_SAPI !== "cli" && PHP_SAPI !== "phpdbg") {
+    http_response_code(404);
+    exit;
+}
 /*
  * Sample data + a database stub for the static preview (tools/preview-build.php).
  *

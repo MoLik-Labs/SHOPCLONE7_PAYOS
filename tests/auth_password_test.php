@@ -122,6 +122,8 @@ check_auth('login no longer sanitises the password', strpos($auth, 'check_string
 check_auth('login verifies through the compatibility helper', substr_count($auth, 'orbit_password_matches($password, $getUser["password"])') >= 2);
 check_auth('login upgrades a legacy hash after success', strpos($auth, 'orbit_password_upgrade($getUser["id"], $password);') !== false);
 check_auth('registration hashes the raw password', strpos($auth, '$password = isset($_POST["password"]) && is_string($_POST["password"]) ? $_POST["password"] : "";') !== false);
+check_auth('registration rejects passwords shorter than the UI minimum', strpos($auth, 'if(strlen($password) < 6)') !== false);
+check_auth('the registration form exposes the same six-character minimum', strpos(auth_source('views/client/register.php'), 'minlength="6"') !== false);
 check_auth('a password change verifies the current password with the helper', strpos($auth, 'if(!orbit_password_matches($password, $getUser["password"])) {') !== false);
 check_auth('a password change stores the raw new password', strpos($auth, 'TypePassword($newPassword)') !== false);
 check_auth('the forgot-password reset stores the raw password', strpos($auth, '$password = isset($_POST["newpassword"]) && is_string($_POST["newpassword"]) ? $_POST["newpassword"] : "";') !== false);

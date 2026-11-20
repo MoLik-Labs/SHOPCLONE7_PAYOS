@@ -127,6 +127,11 @@ check('generated salts are 32 hex chars and unique', preg_match('/^[0-9a-f]{32}$
 
 section('transport pinning and bounds');
 
+check('a valid request domain is preserved', licence_request_domain(array('HTTP_HOST' => 'shop.example:443')) === 'shop.example:443');
+check('a malformed Host falls back to SERVER_NAME', licence_request_domain(array('HTTP_HOST' => 'evil.example/path', 'SERVER_NAME' => 'shop.example')) === 'shop.example');
+check('a malformed fallback is refused', licence_request_domain(array('HTTP_HOST' => "bad\r\nHost: evil", 'SERVER_NAME' => 'bad/path')) === '');
+check('an absent request domain is empty', licence_request_domain(array()) === '');
+
 $calls = array();
 $t = fake_transport(array('*' => array('status' => 200, 'body' => active_body())), $calls);
 $cfg = licence_config($env);
