@@ -5,6 +5,7 @@ if(!defined("IN_SITE")) {
 }
 include_once __DIR__ . "/../vendor/autoload.php";
 require_once __DIR__ . "/settings_cache.php";
+require_once __DIR__ . "/sql_count.php";
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . "/../");
 $dotenv->load();
 /* TLS may terminate at a proxy (Render, Cloudflare) while PHP still sees http. */
@@ -361,6 +362,22 @@ class DB
     public function num_rows($sql)
     {
         $this->connect();
+        /*
+         * Pagination totals only need the number of rows. Counting in the database avoids sending
+         * every matching row to PHP; queries whose row count is not a plain COUNT fall back to the
+         * original statement (see libs/sql_count.php).
+         */
+        $countSql = orbit_count_sql($sql);
+        if($countSql !== null) {
+            $result = $this->run_sql($countSql);
+            if(!$result) {
+                return false;
+            }
+            $row = mysqli_fetch_assoc($result);
+            mysqli_free_result($result);
+            $count = $row && isset($row["orbit_count"]) ? (int) $row["orbit_count"] : 0;
+            return $count > 0 ? $count : false;
+        }
         $result = $this->run_sql($sql);
         if(!$result) {
             return false;

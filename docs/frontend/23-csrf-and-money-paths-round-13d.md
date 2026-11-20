@@ -72,6 +72,7 @@ suite was run **20 times** after the fix to confirm it is deterministic.
 | `views/client/nav.php` | the category tree loaded twice, one query per parent per menu | one `SELECT` grouped in PHP; both menus render the same tree |
 | `cron/task.php` | one `products` SELECT per configured product id | one `orbit_lookup_names(..., "code")` |
 | `ajaxs/admin/view.php` (`download_product_die`) | one `products` SELECT per distinct product code | one `products` query, hash lookup |
+| pagination totals (`DB::num_rows()`, 30+ list pages) | ran the page query and read every matching row just to count it | `orbit_count_sql()` rewrites simple selects to one server-side `COUNT(*)`; anything with DISTINCT/GROUP BY/HAVING/LIMIT/UNION/JOIN/subquery/expression keeps the original statement |
 
 `orbit_counts_by_code($table, $codes)` takes the table from a fixed whitelist
 (`product_stock|product_die`) and chunks codes by 500. `orbit_lookup_names()` now also permits the
@@ -138,12 +139,13 @@ helper callers (which may intentionally allow a negative balance).
 | `db_hardening_test.php` | 39 (was 33) | tri-state credit/refund/debit, row lock, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 38 | updated for the third clamp in the web quote |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
+| `count_query_test.php` | 26 (new) | COUNT rewrite: plain scans, aliases, literals containing "ORDER BY"; and every shape that must not be rewritten |
 
 ```
 bash tools/dev/run.sh
-  LINT 306 files, 0 parse errors
-  SCAN 236 files: 0 critical, 0 high, 0 medium, 0 low
-  41 suites, 1 not run (payos_service, no disposable database), 0 failures
+  LINT 308 files, 0 parse errors
+  SCAN 237 files: 0 critical, 0 high, 0 medium, 0 low
+  42 suites, 1 not run (payos_service, no disposable database), 0 failures
 ```
 
 Two consecutive full runs produced identical per-suite counts. An earlier exploratory run reported
