@@ -513,11 +513,32 @@ $pages["styleguide.html"] = array(
         array("module" => "common", "action" => "orbit-styleguide"), $fixtures),
 );
 
+/* 6m. the account pages the sidebar reaches, which had no static review copy before. They render
+   with the same fixture user as purchase-history, so the owner can review the signed-in shell on
+   every tab without installing the shop. */
+$accountPages = array(
+    "security.html" => array("client/security.php", "Bảo mật tài khoản"),
+    "transactions.html" => array("client/transactions.php", "Biến động số dư"),
+    "favorites.html" => array("client/favorites.php", "Sản phẩm yêu thích"),
+    "logs.html" => array("client/logs.php", "Nhật ký hoạt động"),
+);
+foreach ($accountPages as $file => $spec) {
+    $pages[$file] = array(
+        "title" => $spec[1] . " — bản xem trước",
+        "html" => preview_render($root, "views/" . $spec[0], array("login" => "tok"),
+            array("module" => "client", "action" => basename($spec[0], ".php")), $fixtures),
+    );
+}
+
 /* ---------------------------------------------------------------- assembly */
 
 $fix = function ($html) {
     /* The stubs already emit relative asset paths; this only neutralises the demo links. */
     $html = str_replace(array("https://shop.example/", "http://shop.example/", "https://shop.example", "http://shop.example"), "#", $html);
+    /* store_asset_version() is a filemtime: a restored checkout or a fresh copy changes every mtime,
+       which rewrote all 40 pages on every rebuild even when no CSS or JS had changed. The preview is
+       static, so the version only has to distinguish the copied files from a stale cache. */
+    $html = preg_replace('/\?v=\d+/', '?v=preview', $html);
     return $html;
 };
 

@@ -487,6 +487,10 @@ if (!function_exists("preview_fixtures")) {
                 "ip" => "203.0.113.7", "device" => "Chrome · macOS",
                 "create_date" => "2025-11-02 09:14:00", "update_date" => "2026-10-01 18:02:00",
                 "admin" => 0, "banned" => 0, "token_forgot_password" => null, "token" => "tok",
+                /* The security page reads these five directly; a missing key used to warn while the
+                   preview rendered, which the page-render gate treats as a failure. */
+                "status_2fa" => 0, "SecretKey_2fa" => "", "status_otp_mail" => 0,
+                "status_noti_login_to_mail" => 0, "status_view_order" => 1,
                 "ref_price" => 480000, "ref_total_price" => 2150000, "ref_click" => 128, "ref_ck" => 0),
             "admin_user" => array("id" => 1, "username" => "orbit", "email" => "ops@example.com", "money" => 0,
                 "admin" => 1, "banned" => 0, "token_forgot_password" => null, "token" => "admintok"),
