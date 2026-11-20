@@ -513,12 +513,17 @@ function isValidTRC20Address($address)
     }
     return false;
 }
+/**
+ * The current URL. The two bare expressions above were no-ops, and `REQUEST_SCHEME` is not set by
+ * every SAPI (it is absent under PHP-FPM), which made the first call on a page warn. The scheme now
+ * follows orbit_is_https(), so a TLS-terminating proxy is reported correctly.
+ */
 function url()
 {
-    isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] != "off" ? "https" : "http";
-    $_SERVER["SERVER_NAME"];
-    $_SERVER["REQUEST_URI"];
-    return $_SERVER["REQUEST_SCHEME"] . "://" . $_SERVER["SERVER_NAME"] . $_SERVER["REQUEST_URI"];
+    $scheme = orbit_is_https() ? "https" : "http";
+    $host = isset($_SERVER["HTTP_HOST"]) ? (string) $_SERVER["HTTP_HOST"] : (isset($_SERVER["SERVER_NAME"]) ? (string) $_SERVER["SERVER_NAME"] : "localhost");
+    $uri = isset($_SERVER["REQUEST_URI"]) ? (string) $_SERVER["REQUEST_URI"] : "/";
+    return $scheme . "://" . $host . $uri;
 }
 function is_valid_domain_name($domain_name)
 {
@@ -1407,22 +1412,40 @@ function get_url()
     $url .= $_SERVER["REQUEST_URI"];
     return $url;
 }
+/**
+ * Absolute URL for this request's host.
+ *
+ * Built on the same host/scheme resolution as url() so a host that terminates TLS at a proxy does not
+ * emit http:// for links that are about to be pasted into an email or a payment return URL. The old
+ * `localhost` rewrite to a developer's local path is gone: it only ever fired on a real deployment
+ * left on "localhost", where it pointed every link at a directory that does not exist.
+ */
+function orbit_request_origin()
+{
+    if(!empty($_SERVER["HTTP_HOST"])) {
+        $host = (string) $_SERVER["HTTP_HOST"];
+    } elseif(!empty($_SERVER["SERVER_NAME"])) {
+        $host = (string) $_SERVER["SERVER_NAME"];
+    } else {
+        $host = "localhost";
+    }
+    /* HTTP_HOST is attacker-controllable; keep it to a host name, optional port. Anything else (a
+       slash, a query string, a second host) would let a request rewrite our absolute links elsewhere. */
+    if(preg_match('/^[A-Za-z0-9.\-]+(:[0-9]{1,5})?$/', $host) !== 1) {
+        $host = !empty($_SERVER["SERVER_NAME"]) ? (string) $_SERVER["SERVER_NAME"] : "localhost";
+        if(preg_match('/^[A-Za-z0-9.\-]+(:[0-9]{1,5})?$/', $host) !== 1) {
+            $host = "localhost";
+        }
+    }
+    return (orbit_is_https() ? "https" : "http") . "://" . $host;
+}
 function base_url($url = "")
 {
-    global $domain_block;
-    $a = (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] === "on" ? "https" : "http") . "://" . $_SERVER["HTTP_HOST"];
-    if($a == "http://localhost") {
-        $a = "http://localhost/CMSNT.CO/SHOPCLONE7_ENCRYPTION";
-    }
-    return $a . "/" . $url;
+    return orbit_request_origin() . "/" . $url;
 }
 function base_url_admin($url = "")
 {
-    $a = (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] === "on" ? "https" : "http") . "://" . $_SERVER["HTTP_HOST"];
-    if($a == "http://localhost") {
-        $a = "http://localhost/CMSNT.CO/SHOPCLONE7_ENCRYPTION";
-    }
-    return $a . "/?module=admin&action=" . $url;
+    return orbit_request_origin() . "/?module=admin&action=" . $url;
 }
 function TypePassword($password)
 {

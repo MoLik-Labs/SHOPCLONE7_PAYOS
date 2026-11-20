@@ -40,6 +40,11 @@ check_headers('the current URL is built from the proxy-aware scheme',
 check_headers('the current URL falls back when a SAPI omits the host',
     strpos($urlBody, 'HTTP_HOST') !== false && strpos($urlBody, 'SERVER_NAME') !== false);
 
+check_headers('absolute links reject a host header that is not a bare host',
+    strpos($helper, "'/^[A-Za-z0-9.\\-]+(:[0-9]{1,5})?$/'") !== false);
+check_headers('absolute links no longer point at a developer checkout path',
+    strpos($helper, 'CMSNT.CO/SHOPCLONE7_ENCRYPTION') === false);
+
 $start = strpos($helper, 'function orbit_security_headers()');
 $end = strpos($helper, 'function checkPermission', $start);
 $body = $start === false ? '' : substr($helper, $start, $end - $start);

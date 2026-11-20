@@ -208,6 +208,23 @@ works on CLI and on the authenticated HTTP path.
 suites as PHP pages. Every `tests/*.php` now returns 404 unless the SAPI is CLI (or phpdbg), so the
 protection travels with the file instead of depending on server configuration.
 
+## 6e. Mail delivery reports what actually happened
+
+`sendCSM()` returned the string `"Chưa cấu hình SMTP"` when SMTP was off, and every caller treated a
+truthy return as "sent". The campaign worker went further: it set `status = 1` (Sent) unconditionally,
+after passing the campaign's BCC address as the *sender display name* — so the BCC copy was never sent
+and its address appeared in the From header. Mail now:
+
+- returns `false` for every non-send (no SMTP, empty body, bad recipient/sender, missing attachment,
+  PHPMailer exception or rejection) and `true` only for an accepted message;
+- takes the display name separately and adds a validated BCC address with `addBCC()`;
+- attaches a file only when it exists and is non-empty (`addAttachment("")` throws inside PHPMailer and
+  aborted the send, e.g. the order e-mail when the temp file could not be written);
+- catches `Throwable`, so a dead SMTP server cannot turn a checkout into a 500;
+- times out after 20 s instead of PHPMailer's default 300 s.
+
+The campaign worker now records `status = 2` (failed) with a visible reason instead of claiming success.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:

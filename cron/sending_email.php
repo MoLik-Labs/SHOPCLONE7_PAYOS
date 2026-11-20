@@ -50,10 +50,13 @@ foreach ($CMSNT->get_list(" SELECT * FROM `email_campaigns` WHERE `status` = 0 "
             $response = "Không tìm thấy Email người nhận";
             $status = 2;
         } else {
-            $response = sendCSM($email, $camp["cc"], $title, $content_email, $camp["bcc"]);
-            $status = 1;
+            /* The campaign's "cc" is the recipient display name; "bcc" is a real blind-copy address and
+               now travels in the BCC argument instead of being printed as the sender's name. */
+            $response = sendCSM($email, $camp["cc"], $title, $content_email, "", "", (string) $camp["bcc"]);
+            $status = $response === true ? 1 : 2;
         }
-        $CMSNT->update("email_sending", ["status" => $status, "update_gettime" => gettime(), "response" => $response], " `id` = '" . $row["id"] . "' ");
+        $CMSNT->update("email_sending", ["status" => $status, "update_gettime" => gettime(),
+            "response" => is_string($response) ? $response : ($response === true ? "Đã gửi" : "Gửi thất bại")], " `id` = '" . $row["id"] . "' ");
     }
     if(!$CMSNT->get_row(" SELECT * FROM `email_sending` WHERE `camp_id` = '" . $camp["id"] . "' AND `status` = 0  ")) {
         $CMSNT->update("email_campaigns", ["status" => 1, "update_gettime" => gettime()], " `id` = '" . $camp["id"] . "' ");
