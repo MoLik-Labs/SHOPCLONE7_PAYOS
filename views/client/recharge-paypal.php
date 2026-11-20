@@ -181,7 +181,17 @@ echo "                        </div>\n                    </div>\n              
 require_once __DIR__ . "/footer.php";
 echo "\n<script src=\"https://www.paypal.com/sdk/js?client-id=";
 echo $CMSNT->site("paypal_clientId");
-echo "&currency=USD\"></script>\n\n<script>\n(function(\$) {\n    paypal.Buttons({\n\n        // Sets up the transaction when a payment button is clicked\n        createOrder: function(data, actions) {\n            return actions.order.create({\n                purchase_units: [{\n                    amount: {\n                        value: \$('#amount')\n                            .val() // Can reference variables or functions. Example: `value: document.getElementById('...').value`\n                    }\n                }]\n            });\n        },\n\n        // Finalize the transaction after payer approval\n        onApprove: function(data, actions) {\n            return actions.order.capture().then(function(orderData) {\n                \$.ajax({\n                    url: '";
+/*
+ * Bind the payment to this browser session. Without it any completed PayPal charge (from another
+ * shop sharing the merchant account, or an old invoice) could be claimed by whoever submitted its id.
+ * The id is created client-side, so this is not a signature; it proves the charge was started by a
+ * page this account loaded, and it still has to be COMPLETED with the matching amount.
+ */
+$paypalNonce = bin2hex(random_bytes(16));
+$_SESSION["paypal_nonces"] = array_slice(array_merge(array($paypalNonce), isset($_SESSION["paypal_nonces"]) && is_array($_SESSION["paypal_nonces"]) ? $_SESSION["paypal_nonces"] : array()), 0, 5);
+echo "&currency=USD\"></script>\n\n<script>\n(function(\$) {\n    paypal.Buttons({\n\n        // Sets up the transaction when a payment button is clicked\n        createOrder: function(data, actions) {\n            return actions.order.create({\n                purchase_units: [{\n                    amount: {\n                        value: \$('#amount')\n                            .val() // Can reference variables or functions. Example: `value: document.getElementById('...').value`\n                    }\n                ,\n                    custom_id: '";
+echo (int) $getUser["id"] . ":" . $paypalNonce;
+echo "'\n                }]\n            });\n        },\n\n        // Finalize the transaction after payer approval\n        onApprove: function(data, actions) {\n            return actions.order.capture().then(function(orderData) {\n                \$.ajax({\n                    url: '";
 echo BASE_URL("ajaxs/client/update.php");
 echo "',\n                    method: 'POST',\n                    data: {\n                        action: 'confirmPaypal',\n                        token: '";
 echo $getUser["token"];

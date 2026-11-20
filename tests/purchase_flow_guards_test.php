@@ -161,5 +161,22 @@ check_flow('the API guide documents the create-order endpoint that exists',
 check_flow('the API guide no longer advertises a missing buy_product route',
     strpos($guide, 'api/buy_product') === false);
 
+/* ---- PayPal confirmation -------------------------------------------------- */
+$update = (string) file_get_contents($root . '/ajaxs/client/update.php');
+$paypalView = (string) file_get_contents($root . '/views/client/recharge-paypal.php');
+$paypalStart = strpos($update, '"confirmPaypal"');
+$paypal = substr($update, $paypalStart, strpos($update, 'exit(json_encode(["status" => "error", "msg" => __("Invalid data")]))', $paypalStart) - $paypalStart);
+check_flow('a PayPal charge is bound to a nonce issued to this session',
+    strpos($paypal, '$_SESSION["paypal_nonces"]') !== false && strpos($paypal, 'hash_equals((int) $getUser["id"] . ":" . $nonce, $paypalCustom)') !== false);
+check_flow('the nonce is put into the order the page creates',
+    strpos($paypalView, 'custom_id:') !== false && strpos($paypalView, '$paypalNonce') !== false);
+check_flow('the payment amount is validated before it is converted to money',
+    strpos($paypal, 'if($paypalAmount <= 0 || $paypalAmount > 100000 || $paypalRate <= 0)') !== false);
+check_flow('a missing purchase unit is refused instead of read blindly',
+    strpos($paypal, 'isset($order->purchase_units[0])') !== false);
+check_flow('a failed credit removes the invoice row so a retry can succeed',
+    strpos($paypal, '$CMSNT->remove("payment_paypal",') !== false
+    && strpos($paypal, 'chưa cộng được tiền') !== false);
+
 echo "\n" . $checks . " checks, " . $failures . " failed\n";
 exit($failures > 0 ? 1 : 0);

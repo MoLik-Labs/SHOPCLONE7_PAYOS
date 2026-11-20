@@ -283,7 +283,20 @@ upload at 10 MB before reading it into memory.
   client, amount and price) parse the value with `orbit_positive_amount()` and render it with
   `orbit_amount_string()`.
 
-## 13. Tests
+## 13. PayPal confirmation
+
+`confirmPaypal` trusted the order id posted by the browser. Any completed charge under the same
+merchant account — created by another integration, or by an older page — could be claimed by whoever
+submitted its id, and the only guard was the local `payment_paypal` table. The page now issues a
+per-render nonce (last five kept for open tabs) and puts `custom_id = "<user id>:<nonce>"` into the
+order it creates; the handler re-fetches the order from PayPal and accepts it only when the
+`custom_id` matches one of this session's nonces. Amount and rate must be finite and positive, the
+amount capped at 100 000, and a missing `purchase_units[0]` is refused instead of raising.
+
+If the invoice row is written but the credit fails, the row is removed again so a retry can succeed;
+the old code left it in place and answered "already credited" — stranding the money.
+
+## 14. Tests
 
 | Suite | Checks | Covers |
 | --- | --- | --- |
@@ -314,7 +327,7 @@ one failure in `random_user_test.php`: the first version of the helper could ret
 requested when every random probe missed a sparse id space. That was a real helper bug, not test
 noise; the walk-forward fill above fixes it, and the suite passed 20 consecutive runs afterwards.
 
-## 14. Not verified / owner actions
+## 15. Not verified / owner actions
 
 - **No live AJAX or login test.** The sandbox has no MySQL, so the CSRF guard is verified by source
   scan and unit-level token/origin checks, not by a browser session.

@@ -121,12 +121,37 @@ if($_POST["action"] == "confirmPaypal" && isset($_POST["order"])) {
         if($order->status != "COMPLETED") {
             exit(json_encode(["status" => "error", "msg" => __("Đơn hàng không hợp lệ hoặc chưa thanh toán")]));
         }
-        $orderDetail = $order->purchase_units[0];
-        if(0 < $CMSNT->num_rows("SELECT * FROM `payment_paypal` WHERE `trans_id` = '" . $order->id . "' ")) {
+        $orderDetail = isset($order->purchase_units[0]) ? $order->purchase_units[0] : null;
+        if(!$orderDetail || !isset($orderDetail->amount->value) || !is_numeric($orderDetail->amount->value)) {
+            exit(json_encode(["status" => "error", "msg" => __("Đơn hàng không hợp lệ hoặc chưa thanh toán")]));
+        }
+        $paypalAmount = (float) $orderDetail->amount->value;
+        $paypalRate = (float) $CMSNT->site("paypal_rate");
+        /* A non-positive or absurd amount must never mint currency. */
+        if($paypalAmount <= 0 || $paypalAmount > 100000 || $paypalRate <= 0) {
+            exit(json_encode(["status" => "error", "msg" => __("Số tiền thanh toán không hợp lệ")]));
+        }
+        /*
+         * The order id is chosen by the client, so bind it to a nonce this page issued to this
+         * session. Without it any completed charge under the same merchant account could be claimed.
+         */
+        $paypalCustom = isset($orderDetail->custom_id) && is_string($orderDetail->custom_id) ? $orderDetail->custom_id : "";
+        $paypalBound = false;
+        $nonces = isset($_SESSION["paypal_nonces"]) && is_array($_SESSION["paypal_nonces"]) ? $_SESSION["paypal_nonces"] : array();
+        foreach($nonces as $nonce) {
+            if(is_string($nonce) && hash_equals((int) $getUser["id"] . ":" . $nonce, $paypalCustom)) {
+                $paypalBound = true;
+                break;
+            }
+        }
+        if(!$paypalBound) {
+            exit(json_encode(["status" => "error", "msg" => __("Giao dịch không thuộc phiên thanh toán này, vui lòng mở lại trang nạp tiền")]));
+        }
+        if(0 < $CMSNT->num_rows("SELECT * FROM `payment_paypal` WHERE `trans_id` = '" . addslashes((string) $order->id) . "' ")) {
             exit(json_encode(["status" => "error", "msg" => __("Giao dịch này đã được xử lý")]));
         }
-        $price = $CMSNT->site("paypal_rate") * $orderDetail->amount->value;
-        $isInsert = $CMSNT->insert("payment_paypal", ["user_id" => $getUser["id"], "trans_id" => $order->id, "amount" => $orderDetail->amount->value, "price" => $price, "create_date" => gettime(), "create_time" => time()]);
+        $price = $paypalRate * $paypalAmount;
+        $isInsert = $CMSNT->insert("payment_paypal", ["user_id" => $getUser["id"], "trans_id" => $order->id, "amount" => $paypalAmount, "price" => $price, "create_date" => gettime(), "create_time" => time()]);
         if($isInsert) {
             $user = new users();
             $isCong = $user->AddCredits($getUser["id"], $price, __("Nạp tiền tự động qua PayPal") . " - " . $order->id, "TOPUP_PAYPAL_" . $order->id);
@@ -141,7 +166,13 @@ if($_POST["action"] == "confirmPaypal" && isset($_POST["order"])) {
                 sendMessAdmin($my_text);
                 exit(json_encode(["status" => "success", "msg" => __("Nạp tiền thành công")]));
             }
-            exit(json_encode(["status" => "error", "msg" => __("Hóa đơn này đã được cộng tiền rồi")]));
+            /*
+             * The invoice row was written but the credit failed: remove it so the buyer can retry,
+             * and leave a trace. Reporting "already credited" would strand the payment.
+             */
+            $CMSNT->remove("payment_paypal", " `trans_id` = '" . addslashes((string) $order->id) . "' ");
+            $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => (new Mobile_Detect())->getUserAgent(), "createdate" => gettime(), "action" => "[Error] PayPal " . $order->id . " đã ghi nhận nhưng chưa cộng được tiền"]);
+            exit(json_encode(["status" => "error", "msg" => __("Chưa cộng được tiền, vui lòng thử lại hoặc liên hệ hỗ trợ")]));
         }
     } catch (PayPalHttp\HttpException $e) {
         exit(json_encode(["status" => "error", "msg" => $e->getMessage()]));
