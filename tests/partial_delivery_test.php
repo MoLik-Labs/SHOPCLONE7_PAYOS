@@ -144,9 +144,13 @@ echo ($ok ? 'PASS' : 'FAIL') . "  the web order cost uses the delivered quantity
 /* A supplier that answers with a non-list body must not raise a warning for every row. */
 foreach (array('api/api.php', 'ajaxs/client/product.php') as $file) {
     $source = (string) file_get_contents($root . '/' . $file);
-    ++$checks;
+    $checks += 2;
     $ok = substr_count($source, 'foreach ((array) $') >= 8;
     echo ($ok ? 'PASS' : 'FAIL') . "  $file iterates supplier payloads as arrays\n";
+    $failures += $ok ? 0 : 1;
+
+    $ok = substr_count($source, 'if ($isValue >= $amount)') >= 8;
+    echo ($ok ? 'PASS' : 'FAIL') . "  $file never delivers more accounts than were ordered\n";
     $failures += $ok ? 0 : 1;
 }
 

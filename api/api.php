@@ -143,6 +143,10 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 }
                 $api_trans_id = $data["data"]["trans_id"];
                 foreach ((array) $data["data"]["lists"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $account = check_string($account["account"]);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -164,6 +168,10 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 }
                 $api_trans_id = $data["trans_id"];
                 foreach ((array) $data["data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $account = check_string($account);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -184,6 +192,10 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 $response = order_API_1($supplier["domain"], $supplier["api_key"], $api_trans_id);
                 $result = json_decode($response, true);
                 foreach ((array) $result["data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $account = check_string($account["full_info"]);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -201,6 +213,10 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 }
                 $api_trans_id = NULL;
                 foreach ((array) $result["data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $account = check_string($account);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -256,6 +272,10 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 }
                 $api_trans_id = $result["data"]["buy_id"];
                 foreach ((array) $result["data"]["data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $account = check_string($account);
                     list($uid) = explode("|", $account);
                     $isInsertAPI = $CMSNT->insert("product_sold", ["product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);
@@ -312,6 +332,10 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 }
                 $api_trans_id = $data["Data"]["TransId"];
                 foreach ((array) $data["Data"]["Emails"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $isInsertAPI = $CMSNT->insert("product_sold", ["product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $account["Email"], "account" => $account["Email"] . "|" . $account["Password"], "create_gettime" => gettime()]);
                     if ($isInsertAPI) {
                         $isValue++;
@@ -327,6 +351,10 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 }
                 $api_trans_id = $data["data"]["order_code"];
                 foreach ((array) $data["data"]["list_data"] as $account) {
+                    /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                    if ($isValue >= $amount) {
+                        break;
+                    }
                     $isInsertAPI = $CMSNT->insert("product_sold", ["product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => explode("|", $account)[0], "account" => $account, "create_gettime" => gettime()]);
                     if ($isInsertAPI) {
                         $isValue++;
@@ -350,6 +378,10 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 if (!empty($result["success"])) {
                     if (isset($result["data"])) {
                         foreach ((array) $result["data"] as $account) {
+                            /* Over-delivery is not a windfall for the buyer: never accept more than ordered. */
+                            if ($isValue >= $amount) {
+                                break;
+                            }
                             $account = check_string($account["product"]);
                             list($uid) = explode("|", $account);
                             $isInsertAPI = $CMSNT->insert("product_sold", ["product_code" => NULL, "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product["user_id"], "uid" => $uid, "account" => $account, "create_gettime" => gettime()]);

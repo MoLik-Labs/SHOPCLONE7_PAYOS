@@ -199,6 +199,11 @@ two statements to the row that was actually claimed:
 - the losing `DELETE` removed nothing, so the stock count was also wrong;
 - a failed `product_sold` insert left the stock row in place but could be retried into a duplicate.
 
+Supplier loops also stop once the ordered quantity has been delivered. A provider that returns more
+accounts than requested used to have every one inserted into `product_sold`, inflating the delivery
+above what the buyer paid for (and above the `sold` counter the shop reports). Extra rows are now
+ignored; the paid-for quantity is the ceiling.
+
 A failed `product_order` insert after a delivery used to refund the buyer but leave the delivered
 accounts reserved in `product_sold`, invisible to everyone. The refund path now calls
 `orbit_release_sold()`: local accounts go back to stock, supplier accounts cannot be un-bought so an
