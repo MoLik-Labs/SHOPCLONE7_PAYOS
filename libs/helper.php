@@ -879,6 +879,33 @@ function orbit_user_name($names, $id)
     return orbit_lookup_name($names, $id);
 }
 /**
+ * The affiliate commission rate for one referrer, in percent.
+ *
+ * Every purchase and every recharge used to run this twice:
+ *
+ *     $ck = $CMSNT->site("affiliate_ck");
+ *     if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) { … read it again … }
+ *
+ * Two SELECTs per credited transaction, and a cron run that processes 200 bank transfers paid for 400.
+ * A member-specific `ref_ck` wins only when it is non-zero, exactly as before; the answer is memoised
+ * for the request so repeat transactions from the same referrer cost nothing.
+ */
+function orbit_affiliate_rate($refId)
+{
+    global $CMSNT;
+    static $rates = array();
+    $refId = (int) $refId;
+    $fallback = (float) $CMSNT->site("affiliate_ck");
+    if ($refId < 1) {
+        return $fallback;
+    }
+    if (!array_key_exists($refId, $rates)) {
+        $row = $CMSNT->get_row("SELECT `ref_ck` FROM `users` WHERE `id` = " . $refId);
+        $rates[$refId] = ($row && (float) $row["ref_ck"] != 0.0) ? (float) $row["ref_ck"] : $fallback;
+    }
+    return $rates[$refId];
+}
+/**
  * Normalise the `listUser[]` field of "create email campaign".
  *
  * The select posts user ids, but a request is not a select: an array can hold strings, nested arrays,

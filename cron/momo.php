@@ -41,10 +41,7 @@ if($CMSNT->site("momo_status") == 1) {
                     $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua ví MOMO (#" . $tid . " - " . $description . " - " . $amount . ")", $tid);
                     if($isCong) {
                         if($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                            $ck = $CMSNT->site("affiliate_ck");
-                            if(getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                            }
+                            $ck = orbit_affiliate_rate($getUser["ref_id"]);
                             $price = $received * $ck / 100;
                             $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                         }

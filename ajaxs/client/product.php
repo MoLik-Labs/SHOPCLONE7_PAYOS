@@ -479,10 +479,7 @@ if($_REQUEST["action"] == "buyProduct") {
                         }
                     }
                     if($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                        $ck = $CMSNT->site("affiliate_ck");
-                        if(getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                            $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                        }
+                        $ck = orbit_affiliate_rate($getUser["ref_id"]);
                         $price = $pay * $ck / 100;
                         /* Tag the log row with the order so a refund can claw back the exact amount. */
                         $User->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]) . " #" . $trans_id);

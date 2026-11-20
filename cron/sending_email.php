@@ -24,13 +24,14 @@ if($CMSNT->site("smtp_email") == "" || $CMSNT->site("smtp_password") == "") {
 $arrContextOptions = ["ssl" => ["verify_peer" => false, "verify_peer_name" => false]];
 $checkAddon = true;
 foreach ($CMSNT->get_list(" SELECT * FROM `email_campaigns` WHERE `status` = 0 ") as $camp) {
-    foreach ($CMSNT->get_list(" SELECT * FROM `email_sending` WHERE `camp_id` = '" . $camp["id"] . "' AND `status` = 0 ORDER BY id ASC LIMIT 20 ") as $row) {
+    /* One join instead of a users SELECT per queued message. */
+        foreach ($CMSNT->get_list(" SELECT s.*, u.`email` AS `recipient_email` FROM `email_sending` s LEFT JOIN `users` u ON u.`id` = s.`user_id` WHERE s.`camp_id` = '" . $camp["id"] . "' AND s.`status` = 0 ORDER BY s.`id` ASC LIMIT 20 ") as $row) {
         $content = $camp["content"];
         $title = $camp["subject"];
         $content_email = file_get_contents(base_url("libs/mails/notification.php"), false, stream_context_create($arrContextOptions));
         $content_email = str_replace("{title}", $title, $content_email);
         $content_email = str_replace("{content}", $content, $content_email);
-        $email = getRowRealtime("users", $row["user_id"], "email");
+        $email = isset($row["recipient_email"]) ? (string) $row["recipient_email"] : "";
         $response = "Vui lòng kích hoạt Addon này";
         $status = 2;
         if($email == "") {

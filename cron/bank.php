@@ -32,10 +32,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                         $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                         if ($isCong) {
                             if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                $ck = $CMSNT->site("affiliate_ck");
-                                if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                    $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                }
+                                $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                 $price = $received * $ck / 100;
                                 $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                             }
@@ -75,10 +72,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                             $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                             if ($isCong) {
                                 if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                    $ck = $CMSNT->site("affiliate_ck");
-                                    if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                        $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                    }
+                                    $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                     $price = $received * $ck / 100;
                                     $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                 }
@@ -118,10 +112,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                 $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                 if ($isCong) {
                                     if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                        $ck = $CMSNT->site("affiliate_ck");
-                                        if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                            $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                        }
+                                        $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                         $price = $received * $ck / 100;
                                         $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                     }
@@ -161,10 +152,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                     $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                     if ($isCong) {
                                         if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                            $ck = $CMSNT->site("affiliate_ck");
-                                            if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                                $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                            }
+                                            $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                             $price = $received * $ck / 100;
                                             $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                         }
@@ -204,10 +192,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                         $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                         if ($isCong) {
                                             if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                                $ck = $CMSNT->site("affiliate_ck");
-                                                if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                                    $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                                }
+                                                $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                                 $price = $received * $ck / 100;
                                                 $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                             }
@@ -247,10 +232,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                             $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                             if ($isCong) {
                                                 if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                                    $ck = $CMSNT->site("affiliate_ck");
-                                                    if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                                        $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                                    }
+                                                    $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                                     $price = $received * $ck / 100;
                                                     $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                                 }
@@ -290,10 +272,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                                 $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                                 if ($isCong) {
                                                     if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                                        $ck = $CMSNT->site("affiliate_ck");
-                                                        if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                                            $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                                        }
+                                                        $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                                         $price = $received * $ck / 100;
                                                         $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                                     }
@@ -333,10 +312,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                                     $isCong = $user->AddCredits($getUser["id"], $received, "Nạp tiền tự động qua " . $bank["short_name"] . " (#" . $tid . " - " . $description . " - " . $amount . ")", "TOPUP_" . $bank["accountNumber"] . "_" . $tid);
                                                     if ($isCong) {
                                                         if ($CMSNT->site("affiliate_status") == 1 && $getUser["ref_id"] != 0) {
-                                                            $ck = $CMSNT->site("affiliate_ck");
-                                                            if (getRowRealtime("users", $getUser["ref_id"], "ref_ck") != 0) {
-                                                                $ck = getRowRealtime("users", $getUser["ref_id"], "ref_ck");
-                                                            }
+                                                            $ck = orbit_affiliate_rate($getUser["ref_id"]);
                                                             $price = $received * $ck / 100;
                                                             $user->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]));
                                                         }
