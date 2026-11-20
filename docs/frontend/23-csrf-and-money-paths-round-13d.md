@@ -302,6 +302,11 @@ reached. Every deletion now goes through `orbit_delete_upload()`, which only rem
 resolve inside `assets/storage/`. `tests/upload_guard_test.php` fails if the handler ever unlinks a
 database value directly again.
 
+## 6m. The product photo is the LCP
+
+`views/client/product.php` reserved the gallery's 800×600 box but did not tell the browser the image
+is the largest paint. The main `<img>` now carries `fetchpriority="high"` (thumbnails stay `lazy`).
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:

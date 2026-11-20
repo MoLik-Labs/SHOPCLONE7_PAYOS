@@ -299,6 +299,10 @@ check("a signed-in buyer gets the buy button", strpos($html, "data-buy-submit") 
 check("the panel carries the api key for the endpoint", strpos($html, 'data-api-key="APIKEY123"') !== false);
 check("the balance is printed", strpos($html, "Số dư") !== false && strpos($html, "250.000đ") !== false);
 check("quantity bounds come from the product", strpos($html, 'min="1"') !== false && strpos($html, 'max="5"') !== false);
+/* The fixtures carry no product image, so this is a source-level check of the gallery tag. */
+$productSource = (string) file_get_contents(__DIR__ . "/../views/client/product.php");
+check("the largest image is fetched early",
+    strpos($productSource, 'fetchpriority="high"') !== false && strpos($productSource, 'id="gallery-main"') !== false);
 check("every control has a label", strpos($html, 'for="amount"') !== false && strpos($html, 'for="coupon"') !== false);
 
 /* --- product: out of stock ----------------------------------------------- */

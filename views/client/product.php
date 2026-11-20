@@ -140,6 +140,7 @@ store_shell_open($storeShell);
       <div class="product-gallery__stage">
         <img id="gallery-main" src="<?php echo store_e(BASE_URL($storeImages[0])); ?>"
           alt="<?php echo store_e($storeProduct["name"]); ?>" width="800" height="600" decoding="async"
+          fetchpriority="high"
           <?php echo count($storeImages) === 1 ? "" : 'data-gallery-main'; ?>>
         <?php if ($storeDiscount > 0) { ?>
         <span class="product-gallery__badge">-<?php echo (int) $storeDiscount; ?>%</span>
