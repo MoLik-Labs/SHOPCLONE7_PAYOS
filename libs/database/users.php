@@ -12,6 +12,8 @@ class users extends DB
     private $refund_outcome = "failed";
     /* Outcome of the last DebitCreditsChecked() call. */
     private $debit_outcome = "failed";
+    /* Outcome of the last RemoveCommissionChecked() call. */
+    private $commission_outcome = "failed";
     protected $_key = "id";
     public function __construct()
     {
@@ -245,12 +247,68 @@ class users extends DB
     }
     public function RemoveCommission($user_id, $amount, $reason)
     {
-        parent::insert("aff_log", ["sotientruoc" => getUser($user_id, "ref_price"), "sotienthaydoi" => $amount, "sotienhientai" => getUser($user_id, "ref_price") - $amount, "create_gettime" => gettime(), "reason" => $reason, "user_id" => $user_id]);
-        $isRemove = parent::tru("users", "ref_price", $amount, " `id` = '" . $user_id . "' ");
-        if($isRemove) {
-            return true;
+        return $this->RemoveCommissionChecked($user_id, $amount, $reason, true) === "removed";
+    }
+    /**
+     * Take commission out of a referrer's withdrawable balance, or say why not.
+     *
+     * The withdrawal form checked `ref_price >= amount`, then called RemoveCommission() in a second
+     * statement. Two requests started together both passed the check, both wrote an aff_log row and
+     * both debited, leaving a negative commission balance — which the flow then treated as fraud and
+     * banned the member. The check, the log row and the debit now run in one transaction that holds
+     * the user row lock, so the second request sees the reduced balance and reports "insufficient".
+     *
+     * @param bool $allowNegative admin paths may intentionally push the balance below zero
+     * @return string removed|insufficient|failed
+     */
+    public function RemoveCommissionChecked($user_id, $amount, $reason, $allowNegative = false)
+    {
+        $user_id = (int) $user_id;
+        $amount = (float) $amount;
+        $this->commission_outcome = "failed";
+        if($amount <= 0) {
+            $this->commission_outcome = "insufficient";
+            return $this->commission_outcome;
         }
-        return false;
+        $ok = $this->transaction(function () use ($user_id, $amount, $reason, $allowNegative) {
+            $row = $this->get_row("SELECT `ref_price` FROM `users` WHERE `id` = " . $user_id . " FOR UPDATE");
+            $before = $row ? (float) $row["ref_price"] : 0;
+            if(!$allowNegative && $before < $amount) {
+                $this->commission_outcome = "insufficient";
+                return true;
+            }
+            if(!parent::insert("aff_log", ["sotientruoc" => $before, "sotienthaydoi" => $amount, "sotienhientai" => $before - $amount, "create_gettime" => gettime(), "reason" => $reason, "user_id" => $user_id])) {
+                return false;
+            }
+            if(!parent::tru("users", "ref_price", $amount, " `id` = " . $user_id . " ")) {
+                return false;
+            }
+            $this->commission_outcome = "removed";
+            return true;
+        });
+        return $ok === false ? "failed" : $this->commission_outcome;
+    }
+    /**
+     * Put commission back after a withdrawal request could not be recorded.
+     *
+     * The balance was already debited when the `aff_withdraw` insert failed; without this the money
+     * was simply gone. The re-credit and its aff_log row move together.
+     */
+    public function RestoreCommission($user_id, $amount, $reason)
+    {
+        $user_id = (int) $user_id;
+        $amount = (float) $amount;
+        if($amount <= 0) {
+            return false;
+        }
+        return (bool) $this->transaction(function () use ($user_id, $amount, $reason) {
+            $row = $this->get_row("SELECT `ref_price` FROM `users` WHERE `id` = " . $user_id . " FOR UPDATE");
+            $before = $row ? (float) $row["ref_price"] : 0;
+            if(!parent::insert("aff_log", ["sotientruoc" => $before, "sotienthaydoi" => $amount, "sotienhientai" => $before + $amount, "create_gettime" => gettime(), "reason" => $reason, "user_id" => $user_id])) {
+                return false;
+            }
+            return (bool) parent::cong("users", "ref_price", $amount, " `id` = " . $user_id . " ");
+        });
     }
     /**
      * Reverse the commission a purchase credited to the buyer's referrer.

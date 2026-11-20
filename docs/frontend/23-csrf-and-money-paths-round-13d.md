@@ -138,7 +138,33 @@ in the same second both passed the comparison, both debited, and the negative ba
 fraud ban for an innocent buyer. `RemoveCredits()` keeps its boolean contract for the admin and
 helper callers (which may intentionally allow a negative balance).
 
-## 6. Tests
+## 6. Affiliate withdrawal: validated, atomic, reversible
+
+`ajaxs/client/create.php` (`WithdrawCommission`) compared the raw form value with `affiliate_min` and
+with `ref_price`, then debited in a second statement:
+
+- `"abc" < 50000` is **false** in PHP 8 (non-numeric string vs number compares as strings), so a
+  non-number passed both checks and reached the numeric update;
+- two requests started together both passed the balance check and both debited, leaving a negative
+  `ref_price` — which the next line treated as fraud and **banned the member**;
+- if the `aff_withdraw` insert failed after the debit, the commission was simply gone.
+
+Now:
+
+- `orbit_positive_amount()` parses the value (finite, > 0) before any comparison; the min and balance
+  checks are float comparisons; `orbit_amount_string()` renders it without an exponent for SQL and
+  provider requests. The same parser now guards the legacy card (`nap_the`, digits only, ≤ 100 M) and
+  crypto recharge amounts, which had the identical string-comparison hole.
+- `RemoveCommissionChecked()` runs the balance read (`SELECT ref_price … FOR UPDATE`), the `aff_log`
+  row and the debit in one transaction, and returns `removed` / `insufficient` / `failed`.
+  `RemoveCommission()` keeps its boolean contract for other callers.
+- `insufficient` is reported as "your commission balance is not enough"; the fraud ban only runs when
+  the checked debit actually succeeded and the balance is still negative.
+- If the withdrawal row cannot be written, `RestoreCommission()` puts the commission back (log row +
+  credit in one transaction). If that restore also fails, an `[Error]` log row names the amount and
+  trans id, and the member is told to contact support with the reference.
+
+## 7. Tests
 
 | Suite | Checks | Covers |
 | --- | --- | --- |
@@ -147,16 +173,17 @@ helper callers (which may intentionally allow a negative balance).
 | `partial_delivery_test.php` | 30 (new) | proration table, boundaries, ledger key, delivered-vs-requested records |
 | `admin_user_lookup_test.php` | 39 (was 21) | count helpers, whitelist, 500-code chunking, grouped optgroups, batched product/supplier/task pages |
 | `purchase_flow_guards_test.php` | 38 (was 25) | quote clamp, guest quote, delivered quantities, conditional debit, API_20 refunds, failed-insert refund, idempotent admin refund |
-| `db_hardening_test.php` | 39 (was 33) | tri-state credit/refund/debit, row lock, transaction pairing, duplicate audit |
+| `db_hardening_test.php` | 40 (was 33) | tri-state credit/refund/debit, row locks, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 38 | updated for the third clamp in the web quote |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
+| `withdraw_guard_test.php` | 39 (new) | amount parsing (strings, exponents, NAN/INF, injections), withdrawal wiring, commission lock, restore path, legacy card/crypto amounts |
 | `count_query_test.php` | 26 (new) | COUNT rewrite: plain scans, aliases, literals containing "ORDER BY"; and every shape that must not be rewritten |
 
 ```
 bash tools/dev/run.sh
-  LINT 308 files, 0 parse errors
+  LINT 309 files, 0 parse errors
   SCAN 237 files: 0 critical, 0 high, 0 medium, 0 low
-  42 suites, 1 not run (payos_service, no disposable database), 0 failures
+  43 suites, 1 not run (payos_service, no disposable database), 0 failures
 ```
 
 Two consecutive full runs produced identical per-suite counts. An earlier exploratory run reported
@@ -164,7 +191,7 @@ one failure in `random_user_test.php`: the first version of the helper could ret
 requested when every random probe missed a sparse id space. That was a real helper bug, not test
 noise; the walk-forward fill above fixes it, and the suite passed 20 consecutive runs afterwards.
 
-## 7. Not verified / owner actions
+## 8. Not verified / owner actions
 
 - **No live AJAX or login test.** The sandbox has no MySQL, so the CSRF guard is verified by source
   scan and unit-level token/origin checks, not by a browser session.

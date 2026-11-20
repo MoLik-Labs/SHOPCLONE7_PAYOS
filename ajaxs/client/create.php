@@ -63,17 +63,31 @@ if($_POST["action"] == "WithdrawCommission") {
     if(empty($_POST["amount"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập số tiền cần rút")]));
     }
-    if($_POST["amount"] < $CMSNT->site("affiliate_min")) {
+    /*
+     * Validate the number before any comparison. `"abc" < 50000` is false in PHP 8 (the sides are
+     * compared as strings), so the old checks let a non-number through to a SQL update that then
+     * failed with a generic error.
+     */
+    $amountValue = orbit_withdraw_amount($_POST["amount"]);
+    if($amountValue === false) {
+        exit(json_encode(["status" => "error", "msg" => __("Số tiền rút không hợp lệ")]));
+    }
+    if($amountValue < (float) $CMSNT->site("affiliate_min")) {
         exit(json_encode(["status" => "error", "msg" => __("Số tiền rút tối thiểu phải là") . " " . format_currency($CMSNT->site("affiliate_min"))]));
     }
-    if($getUser["ref_price"] < $_POST["amount"]) {
+    if((float) $getUser["ref_price"] < $amountValue) {
         exit(json_encode(["status" => "error", "msg" => __("Số dư hoa hồng khả dụng của bạn không đủ")]));
     }
     $amount = check_string($_POST["amount"]);
     $trans_id = random("123456789QWERTYUIOPASDFGHJKLZXCVBNM", 6);
     $User = new users();
-    $isTru = $User->RemoveCommission($getUser["id"], $amount, __("Withdraw commission balance") . " #" . $trans_id);
-    if($isTru) {
+    /* The debit re-checks the balance under the user row lock: two concurrent withdrawals can no
+       longer both pass the check above and leave a negative commission balance. */
+    $withdrawState = $User->RemoveCommissionChecked($getUser["id"], $amount, __("Withdraw commission balance") . " #" . $trans_id);
+    if($withdrawState === "insufficient") {
+        exit(json_encode(["status" => "error", "msg" => __("Số dư hoa hồng khả dụng của bạn không đủ")]));
+    }
+    if($withdrawState === "removed") {
         if(getRowRealtime("users", $getUser["id"], "ref_price") < 0) {
             $User->Banned($getUser["id"], __("Gian lận khi rút số dư hoa hồng"));
             exit(json_encode(["status" => "error", "msg" => __("Tài khoản của bạn đã bị khóa vì gian lận")]));
@@ -92,7 +106,15 @@ if($_POST["action"] == "WithdrawCommission") {
             sendMessTelegram($my_text, "", $CMSNT->site("affiliate_chat_id_telegram"));
             exit(json_encode(["status" => "success", "msg" => __("Yêu cầu rút tiền được tạo thành công, vui lòng đợi ADMIN xử lý")]));
         }
-        exit(json_encode(["status" => "error", "msg" => "ERROR 1 - " . __("System error")]));
+        /* The commission was already debited; put it back so a failed insert cannot cost the member
+           the money. If the restore itself fails, leave an [Error] the owner can act on. */
+        $restored = $User->RestoreCommission($getUser["id"], $amount, __("[Error] Hoàn lại hoa hồng do không tạo được lệnh rút") . " #" . $trans_id);
+        if(!$restored) {
+            $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => (new Mobile_Detect())->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Không tạo được lệnh rút và chưa hoàn lại được hoa hồng") . " #" . $trans_id . " (" . format_currency($amount) . ")"]);
+        }
+        exit(json_encode(["status" => "error", "msg" => $restored
+            ? __("Không tạo được lệnh rút, hoa hồng đã được hoàn lại. Vui lòng thử lại.")
+            : __("Không tạo được lệnh rút và chưa hoàn lại được hoa hồng. Vui lòng liên hệ hỗ trợ kèm mã lệnh.")]));
     }
     exit(json_encode(["status" => "error", "msg" => "ERROR 2 - " . __("System error")]));
 }
@@ -115,8 +137,10 @@ if($_POST["action"] == "nap_the") {
     if(empty($_POST["amount"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng chọn mệnh giá cần nạp")]));
     }
-    if($_POST["amount"] <= 0) {
-        exit(json_encode(["status" => "error", "msg" => __("Vui lòng chọn mệnh giá cần nạp")]));
+    /* Digits only, and within a sane top-up range: this value goes to the card partner and to SQL. */
+    $cardAmount = orbit_positive_amount($_POST["amount"]);
+    if($cardAmount === false || $cardAmount > 100000000 || $cardAmount != (int) $cardAmount) {
+        exit(json_encode(["status" => "error", "msg" => __("Mệnh giá thẻ không hợp lệ")]));
     }
     if(empty($_POST["serial"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập serial thẻ")]));
@@ -125,7 +149,7 @@ if($_POST["action"] == "nap_the") {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập mã thẻ")]));
     }
     $telco = check_string($_POST["telco"]);
-    $amount = check_string($_POST["amount"]);
+    $amount = (int) $cardAmount;
     $serial = check_string($_POST["serial"]);
     $pin = check_string($_POST["pin"]);
     if(!checkFormatCard($telco, $serial, $pin)["status"]) {
@@ -160,13 +184,18 @@ if($_POST["action"] == "CreateInvoiceCrypto") {
     if(empty($_POST["amount"])) {
         exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập số tiền cần nạp")]));
     }
-    $amount = check_string($_POST["amount"]);
-    if($amount < $CMSNT->site("crypto_min")) {
+    /* Validate before comparing: a non-number is never "less than" a numeric limit in PHP 8. */
+    $cryptoAmountValue = orbit_positive_amount($_POST["amount"]);
+    if($cryptoAmountValue === false) {
+        exit(json_encode(["status" => "error", "msg" => __("Số tiền nạp không hợp lệ")]));
+    }
+    if($cryptoAmountValue < (float) $CMSNT->site("crypto_min")) {
         exit(json_encode(["status" => "error", "msg" => __("Số tiền gửi tối thiểu là:") . " \$" . $CMSNT->site("crypto_min")]));
     }
-    if($CMSNT->site("crypto_max") < $amount) {
+    if((float) $CMSNT->site("crypto_max") < $cryptoAmountValue) {
         exit(json_encode(["status" => "error", "msg" => __("Số tiền gửi tối đa là:") . " \$" . format_cash($CMSNT->site("crypto_max"))]));
     }
+    $amount = orbit_amount_string($cryptoAmountValue);
     if($CMSNT->site("crypto_status") != 1) {
         exit(json_encode(["status" => "error", "msg" => __("Chức năng này đang được bảo trì")]));
     }

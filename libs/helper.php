@@ -1038,6 +1038,58 @@ function orbit_counts_by_code($table, $codes)
     return $counts;
 }
 /**
+ * Parse a withdrawal amount from a form, or return false.
+ *
+ * `"abc" < 50000` is false in PHP 8 — the operands are compared as strings — so a plain comparison
+ * let a non-number through to a numeric SQL update and the member saw a generic error. This accepts
+ * only a finite, positive number and lets the caller do its min/balance checks as floats.
+ *
+ * @param mixed $raw
+ * @return float|false
+ */
+function orbit_withdraw_amount($raw)
+{
+    return orbit_positive_amount($raw);
+}
+/**
+ * A finite, strictly positive number from a form, or false.
+ *
+ * Shared by the legacy recharge forms: `"abc" < 50000` is false in PHP 8, so a raw comparison let a
+ * non-number through to numeric SQL and to a provider request.
+ *
+ * @param mixed $raw
+ * @return float|false
+ */
+function orbit_positive_amount($raw)
+{
+    if (is_int($raw) || is_float($raw)) {
+        $value = (float) $raw;
+    } elseif (is_string($raw) && is_numeric($raw)) {
+        $value = (float) $raw;
+    } else {
+        return false;
+    }
+    if (!is_finite($value) || $value <= 0) {
+        return false;
+    }
+    return $value;
+}
+/**
+ * Render an amount as a plain decimal string for SQL and provider requests.
+ *
+ * `(string) 1e6` is "1.0E+6", which no amount column and no gateway accepts. This keeps uppercase
+ * exponents out and trims the insignificant zeros.
+ */
+function orbit_amount_string($value)
+{
+    $value = (float) $value;
+    if (!is_finite($value)) {
+        return "0";
+    }
+    $text = rtrim(rtrim(sprintf("%.8F", $value), "0"), ".");
+    return $text === "" ? "0" : $text;
+}
+/**
  * What the buyer should pay for a partial delivery, in whole currency units.
  *
  * A supplier occasionally returns fewer accounts than were ordered. The buyer paid `$pay` for

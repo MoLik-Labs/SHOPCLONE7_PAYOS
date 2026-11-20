@@ -63,7 +63,8 @@ check("settings lookups are escaped", strpos($source, 'mysqli_real_escape_string
 
 $users = (string) file_get_contents(__DIR__ . "/../libs/database/users.php");
 check("the ledger and the balance move in one transaction",
-    substr_count($users, 'return $this->transaction(') === 0 && substr_count($users, '$ok = $this->transaction(') === 3);
+    substr_count($users, '$ok = $this->transaction(') === 4
+    && substr_count($users, 'return (bool) $this->transaction(') === 1);
 check("a purchase debit re-checks the balance under the row lock",
     strpos($users, 'if(!$allowNegative && (float) $before < (float) $amount)') !== false
     && strpos($users, '$this->debit_outcome = "insufficient";') !== false);
@@ -74,7 +75,9 @@ check("AddCredits delegates to the tri-state credit path",
 check("RefundCredits delegates to the tri-state refund path",
     substr_count($users, 'RefundCreditsChecked($user_id, $amount, $reason, $transid)') === 1);
 check("the transaction locks the user row before claiming a ledger entry",
-    substr_count($users, "FOR UPDATE") === 3);
+    substr_count($users, "FOR UPDATE") === 5);
+check("a withdrawal locks the commission row in its own transaction",
+    strpos($users, 'SELECT `ref_price` FROM `users` WHERE `id` = " . $user_id . " FOR UPDATE') !== false);
 check("both tri-state helpers declare their outcome property",
     strpos($users, 'private $credit_outcome') !== false && strpos($users, 'private $refund_outcome') !== false);
 check("AddCredits documents the ledger/balance pairing",
