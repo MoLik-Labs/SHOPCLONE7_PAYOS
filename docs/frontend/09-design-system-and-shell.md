@@ -108,7 +108,7 @@ reconciliation and the round-6 leftovers that were closed in the same round.
 ## 7. Where to look first
 
 - `docs/frontend/preview/security.html`, `transactions.html`, `favorites.html`, `logs.html` — the signed-in
-  account tabs, so the shell and the empty/популярные states can be reviewed together with the rest.
+  account tabs, so the shell and both the empty and the populated states can be reviewed with the rest.
 - `docs/frontend/preview/index.html` (built by `php tools/preview-build.php`) — the design system, the sales
   pages and the styleguide as a self-contained, offline folder you can open or zip.
 - `/?module=common&action=orbit-styleguide` (as an admin) — the whole system on one page, in the real shop.
