@@ -33,30 +33,38 @@ if(isset($_POST["SaveCoupon"])) {
     if(empty($_POST["amount"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Số lượng không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
-    $amount = check_string($_POST["amount"]);
-    if($amount <= 0) {
+    /* Same validation as the create form; see the note there. */
+    $amountValue = orbit_positive_amount($_POST["amount"]);
+    if($amountValue === false || $amountValue != (int) $amountValue || $amountValue > 1000000) {
         exit("<script type=\"text/javascript\">if(!alert(\"Số lượng không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
+    $amount = (int) $amountValue;
     if(empty($_POST["discount"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập chiết khấu giảm giá\")){window.history.back().location.reload();}</script>");
     }
-    $discount = check_string($_POST["discount"]);
+    $discountValue = orbit_positive_amount($_POST["discount"]);
+    if($discountValue === false || $discountValue > 100) {
+        exit("<script type=\"text/javascript\">if(!alert(\"Chiết khấu phải nằm trong khoảng 0.01 - 100%\")){window.history.back().location.reload();}</script>");
+    }
+    $discount = orbit_amount_string($discountValue);
     $productIds = orbit_post_id_list(isset($_POST["product_id"]) ? $_POST["product_id"] : array());
     $product_id = $productIds ? json_encode($productIds) : NULL;
     if(empty($_POST["min"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập giá trị đơn hàng tối thiểu\")){window.history.back().location.reload();}</script>");
     }
-    $min = check_string($_POST["min"]);
-    if($min <= 0) {
+    $minValue = orbit_positive_amount($_POST["min"]);
+    if($minValue === false) {
         exit("<script type=\"text/javascript\">if(!alert(\"Giá trị đơn hàng tối thiểu không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
     if(empty($_POST["max"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng nhập giá trị đơn hàng tối đa\")){window.history.back().location.reload();}</script>");
     }
-    $max = check_string($_POST["max"]);
-    if($max <= 0) {
+    $maxValue = orbit_positive_amount($_POST["max"]);
+    if($maxValue === false || $maxValue < $minValue) {
         exit("<script type=\"text/javascript\">if(!alert(\"Giá trị đơn hàng tối đa không hợp lệ\")){window.history.back().location.reload();}</script>");
     }
+    $min = orbit_amount_string($minValue);
+    $max = orbit_amount_string($maxValue);
     $isUpdate = $CMSNT->update("coupons", ["product_id" => $product_id, "amount" => $amount, "discount" => $discount, "update_gettime" => gettime(), "min" => $min, "max" => $max], " `id` = '" . $id . "' ");
     if($isUpdate) {
         $Mobile_Detect = new Mobile_Detect();

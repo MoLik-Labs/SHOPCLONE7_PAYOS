@@ -151,6 +151,11 @@ with `ref_price`, then debited in a second statement:
 
 Now:
 
+The admin coupon forms had the same string comparisons plus an uncapped discount: `discount = 150`
+produced a free order (clamped to the total) and `amount = "abc"` was stored. Both the create and the
+edit form now require a positive integer quantity, a discount in `0.01–100`, and `max ≥ min`, all
+parsed before the comparison.
+
 - `orbit_positive_amount()` parses the value (finite, > 0) before any comparison; the min and balance
   checks are float comparisons; `orbit_amount_string()` renders it without an exponent for SQL and
   provider requests. The same parser now guards the legacy card (`nap_the`, digits only, ≤ 100 M) and
@@ -174,7 +179,7 @@ Now:
 | `admin_user_lookup_test.php` | 39 (was 21) | count helpers, whitelist, 500-code chunking, grouped optgroups, batched product/supplier/task pages |
 | `purchase_flow_guards_test.php` | 38 (was 25) | quote clamp, guest quote, delivered quantities, conditional debit, API_20 refunds, failed-insert refund, idempotent admin refund |
 | `db_hardening_test.php` | 40 (was 33) | tri-state credit/refund/debit, row locks, transaction pairing, duplicate audit |
-| `coupon_claim_test.php` | 38 | updated for the third clamp in the web quote |
+| `coupon_claim_test.php` | 44 | updated for the third clamp in the web quote; coupon admin validation |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
 | `withdraw_guard_test.php` | 39 (new) | amount parsing (strings, exponents, NAN/INF, injections), withdrawal wiring, commission lock, restore path, legacy card/crypto amounts |
 | `count_query_test.php` | 26 (new) | COUNT rewrite: plain scans, aliases, literals containing "ORDER BY"; and every shape that must not be rewritten |

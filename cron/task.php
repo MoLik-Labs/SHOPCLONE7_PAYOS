@@ -41,7 +41,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `automations` ") as $task) {
             $CMSNT->update("product_order", ["trash" => 1], " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
             $CMSNT->remove("product_sold", " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
         } else {
-            foreach (json_decode($task["product_id"], true) as $product) {
+            foreach ((array) json_decode($task["product_id"], true) as $product) {
                 foreach ($CMSNT->get_list(" SELECT * FROM `product_order` WHERE `product_id` = '" . $product . "' AND " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " AND `trash` = 0 ") as $product_order) {
                     $CMSNT->update("product_order", ["trash" => 1], " `trans_id` = '" . $product_order["trans_id"] . "' ");
                     $CMSNT->remove("product_sold", " `trans_id` = '" . $product_order["trans_id"] . "' ");
@@ -54,7 +54,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `automations` ") as $task) {
             $CMSNT->update("product_order", ["trash" => 1], " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
             $CMSNT->update("product_sold", ["account" => __("Tài khoản đã được xóa tự động")], " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
         } else {
-            foreach (json_decode($task["product_id"], true) as $product) {
+            foreach ((array) json_decode($task["product_id"], true) as $product) {
                 foreach ($CMSNT->get_list(" SELECT * FROM `product_order` WHERE `product_id` = '" . $product . "' AND " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " AND `trash` = 0 ") as $product_order) {
                     $CMSNT->update("product_order", ["trash" => 1], " `trans_id` = '" . $product_order["trans_id"] . "' ");
                     $CMSNT->update("product_sold", ["account" => __("Tài khoản đã được xóa tự động")], " `trans_id` = '" . $product_order["trans_id"] . "' ");
@@ -67,7 +67,7 @@ foreach ($CMSNT->get_list(" SELECT * FROM `automations` ") as $task) {
             $CMSNT->remove("product_order", " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
             $CMSNT->remove("product_sold", " " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
         } else {
-            foreach (json_decode($task["product_id"], true) as $product) {
+            foreach ((array) json_decode($task["product_id"], true) as $product) {
                 foreach ($CMSNT->get_list(" SELECT * FROM `product_order` WHERE `product_id` = '" . $product . "' AND " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " AND `trash` = 0 ") as $product_order) {
                     $CMSNT->remove("product_order", " `trans_id` = '" . $product_order["trans_id"] . "' ");
                     $CMSNT->remove("product_sold", " `trans_id` = '" . $product_order["trans_id"] . "' ");

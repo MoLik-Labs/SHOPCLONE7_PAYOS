@@ -204,6 +204,18 @@ check_coupon('the old post-order coupon write is gone from the API', strpos($api
 check_coupon('a 100%+ discount cannot make the payable amount negative (web)', substr_count($product, 'if($money < $discount)') === 3);
 check_coupon('a 100%+ discount cannot make the payable amount negative (API)', substr_count($api, 'if ($money < $discount)') === 2);
 
+/* ---- coupon administration ------------------------------------------------ */
+foreach (array('views/admin/coupons.php' => 'create', 'views/admin/coupon-edit.php' => 'edit') as $page => $label) {
+    $source = coupon_source($page);
+    check_coupon('the ' . $label . ' form validates the amount as a positive integer',
+        strpos($source, 'orbit_positive_amount($_POST["amount"])') !== false
+        && strpos($source, '$amount <= 0') === false);
+    check_coupon('the ' . $label . ' form refuses a discount over 100%',
+        strpos($source, '$discountValue > 100') !== false);
+    check_coupon('the ' . $label . ' form refuses a max below the min',
+        strpos($source, '$maxValue < $minValue') !== false);
+}
+
 /* ---- affiliate clawback --------------------------------------------------- */
 $users = coupon_source('libs/database/users.php');
 $adminUpdate = coupon_source('ajaxs/admin/update.php');
