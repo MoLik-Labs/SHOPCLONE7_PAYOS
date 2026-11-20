@@ -118,6 +118,7 @@ if ($apiAction == "get-balance") { // lấy sô dư
         }
         $api_trans_id = NULL;
         $isValue = 0;
+        $partialMessage = "";
         if ($product["supplier_id"] == 0) {
             foreach ($CMSNT->get_list(" SELECT * FROM `product_stock` WHERE `product_code` = '" . $product["code"] . "' ORDER BY time_check_live DESC LIMIT " . $amount . " ") as $product_stock) {
                 $isInsertSold = $CMSNT->insert("product_sold", ["product_code" => $product_stock["product_code"], "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product_stock["seller"], "uid" => $product_stock["uid"], "account" => $product_stock["account"], "create_gettime" => gettime(), "time_check_live" => $product_stock["time_check_live"]]);
@@ -341,7 +342,10 @@ if ($apiAction == "get-balance") { // lấy sô dư
                 sleep(1);
                 $response = curl_get($supplier["domain"] . "api/getProducts?orderId=" . $api_trans_id . "&userToken=" . $supplier["token"]);
                 $result = json_decode($response, true);
-                if ($result["success"]) {
+                if (!is_array($result)) {
+                    $result = [];
+                }
+                if (!empty($result["success"])) {
                     if (isset($result["data"])) {
                         foreach ($result["data"] as $account) {
                             $account = check_string($account["product"]);
@@ -352,14 +356,45 @@ if ($apiAction == "get-balance") { // lấy sô dư
                             }
                         }
                     } else {
-                        exit(json_encode(["code" => 201, "message" => __($data)]));
+                        /* The supplier accepted the order but returned no accounts: refund, and say
+                           whether the refund actually went through instead of a bare error. */
+                        $isRefunded = $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
+                        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Nhà cung cấp nhận đơn nhưng không trả tài khoản") . " #" . $trans_id]);
+                        exit(json_encode(["code" => 201, "message" => $isRefunded
+                            ? __("Nhà cung cấp không trả được tài khoản, đã hoàn tiền. Vui lòng thử lại sau ít phút.")
+                            : __("Nhà cung cấp không trả được tài khoản và hệ thống chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.")]));
                     }
                 } else {
-                    exit(json_encode(["code" => 201, "message" => __($data["description"])]));
+                    $isRefunded = $User->RefundCredits($getUser["id"], $pay, "[Error] " . __("Hoàn tiền đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "REFUND_" . $trans_id);
+                    $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Nhà cung cấp báo lỗi sau khi đã trừ tiền") . " #" . $trans_id . ": " . (isset($result["description"]) ? $result["description"] : "")]);
+                    exit(json_encode(["code" => 201, "message" => $isRefunded
+                        ? __("Nhà cung cấp báo lỗi, đã hoàn tiền. Vui lòng thử lại sau ít phút.")
+                        : __("Nhà cung cấp báo lỗi và hệ thống chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.")]));
                 }
             }
         }
         if (0 < $isValue) {
+            /*
+             * A supplier can confirm fewer accounts than were ordered. The buyer was charged for the
+             * full quantity, so charge only the delivered share and refund the difference under its
+             * own `PARTIAL_` transid: it can never collide with the full `REFUND_` row, and a retried
+             * request finds the same row ("duplicate" = already refunded) instead of paying twice.
+             */
+            if ($product["supplier_id"] != 0 && $isValue < $amount) {
+                $payDelivered = orbit_prorated_pay($pay, $amount, $isValue);
+                $refund = $pay - $payDelivered;
+                if (0 < $refund) {
+                    $refundState = $User->RefundCreditsChecked($getUser["id"], $refund, "[Error] " . __("Hoàn tiền phần chưa giao") . " #" . $trans_id, "PARTIAL_" . $trans_id);
+                    if ($refundState === "failed") {
+                        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Chưa hoàn được tiền phần chưa giao của đơn hàng") . " #" . $trans_id . " (" . $isValue . "/" . $amount . ")"]);
+                        $partialMessage = __("Chỉ giao được") . " " . $isValue . "/" . $amount . " " . __("sản phẩm; phần còn lại chưa hoàn được tiền, vui lòng liên hệ hỗ trợ.");
+                    } else {
+                        $partialMessage = __("Chỉ giao được") . " " . $isValue . "/" . $amount . " " . __("sản phẩm, đã hoàn tiền phần còn lại.");
+                    }
+                }
+                $pay = $payDelivered;
+                $amount = $isValue;
+            }
             if ($product["supplier_id"] == 0 && $isValue < $amount) {
                 foreach ($CMSNT->get_list(" SELECT * FROM `product_sold` WHERE `trans_id` = '" . $trans_id . "' AND `supplier_id` = 0 ") as $product_sold) {
                     $isInsertStock = $CMSNT->insert("product_stock", ["product_code" => $product_sold["product_code"], "seller" => $product_sold["seller"], "uid" => $product_sold["uid"], "account" => $product_sold["account"], "status" => $product_sold["status"], "create_gettime" => gettime(), "type" => "Back", "time_check_live" => $product_sold["time_check_live"]]);
@@ -438,7 +473,7 @@ if ($apiAction == "get-balance") { // lấy sô dư
                         $my_text = str_replace("{time}", gettime(), $my_text);
                         sendMessAdmin($my_text);
                     }
-                    exit(json_encode(["code" => 200, "message" => __("Tạo đơn hàng thành công!"), "order_id" => $trans_id, "data" => implode(PHP_EOL, $accounts)]));
+                    exit(json_encode(["code" => 200, "message" => __("Tạo đơn hàng thành công!") . ($partialMessage !== "" ? " " . $partialMessage : ""), "order_id" => $trans_id, "data" => implode(PHP_EOL, $accounts)]));
                 } else {
                     exit(json_encode(["code" => 500, "message" => "ERROR 1 - " . __("System error")]));
                 }

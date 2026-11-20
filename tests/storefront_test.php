@@ -322,5 +322,13 @@ check("the second hero action is an outline, not a second primary", strpos($main
 check("no PHP warning or notice reached the page", empty($errors), implode(" | ", $errors));
 check("the render emitted no stray PHP tags", strpos($html, "<?php") === false);
 
+/* --- navigation menu ------------------------------------------------------ */
+$nav = (string) file_get_contents(__DIR__ . "/../views/client/nav.php");
+check("the category tree is read once and grouped in PHP", strpos($nav, '$navCategoryGroups') !== false);
+check("no menu queries categories per parent any more", strpos($nav, "parent_id` = 0 ORDER BY") === false);
+check("both the megamenu and the mobile menu render the grouped tree",
+    substr_count($nav, 'foreach ($navParents as $category)') === 2);
+check("the flat footer menu still lists the categories", strpos($nav, "parent_id` != 0") !== false);
+
 echo "\nstorefront_test: " . $pass . " passed, " . $fail . " failed\n";
 exit($fail > 0 ? 1 : 0);

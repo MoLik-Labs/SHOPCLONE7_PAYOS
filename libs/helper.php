@@ -845,7 +845,7 @@ function orbit_lookup_names($table, $rows, $key, $column = "name")
         "categories" => array("name"),
         "suppliers" => array("domain"),
         "post_category" => array("name"),
-        "products" => array("name"),
+        "products" => array("name", "code"),
     );
     if (!is_array($rows) || !$rows || !isset($allowed[$table]) || !in_array($column, $allowed[$table], true)) {
         return array();
@@ -877,6 +877,112 @@ function orbit_lookup_name($names, $id)
 function orbit_user_name($names, $id)
 {
     return orbit_lookup_name($names, $id);
+}
+/**
+ * A handful of real user ids, for the demo data generator in cron/cron.php.
+ *
+ * The generator used to call `SELECT * FROM users ORDER BY RAND()` once per product — MySQL sorts
+ * the whole user table and PHP fetches one row, repeated for every product on every tick. On a shop
+ * with 200 000 members that is minutes of work for a cosmetic feature. This picks ids through the
+ * primary key instead: a random id probe, then the next existing row. `$count` probes at most, so the
+ * cost is bounded by the count, not by the table.
+ *
+ * @return int[]  distinct ids; empty when the site has no users
+ */
+function orbit_random_user_ids($count = 20)
+{
+    global $CMSNT;
+    $count = (int) $count;
+    if ($count < 1) {
+        $count = 1;
+    }
+    if ($count > 100) {
+        $count = 100;
+    }
+    $max = $CMSNT->get_row("SELECT MAX(`id`) AS `max_id` FROM `users`");
+    $maxId = $max && isset($max["max_id"]) ? (int) $max["max_id"] : 0;
+    $ids = array();
+    if ($maxId > 0) {
+        for ($attempt = 0; $attempt < $count * 3 && count($ids) < $count; ++$attempt) {
+            $probe = random_int(1, $maxId);
+            $row = $CMSNT->get_row("SELECT `id` FROM `users` WHERE `id` >= " . $probe . " ORDER BY `id` ASC LIMIT 1");
+            if ($row && isset($row["id"])) {
+                $ids[(int) $row["id"]] = true;
+            }
+        }
+    }
+    if (!$ids) {
+        $row = $CMSNT->get_row("SELECT `id` FROM `users` ORDER BY `id` ASC LIMIT 1");
+        if ($row && isset($row["id"])) {
+            $ids[(int) $row["id"]] = true;
+        }
+    }
+    return array_keys($ids);
+}
+/**
+ * Per-code row counts for the stock and dead-stock tables, in one query per 500 codes.
+ *
+ * The admin product list printed a live stock count and a dead-stock count for every row, which was
+ * two COUNT queries per product (plus the list query itself). The table name comes from a fixed
+ * whitelist so it can never carry request data.
+ *
+ * @param string $table "product_stock" or "product_die"
+ * @param array  $codes product codes to count
+ * @return array<string,int> code => count; missing codes are absent, not zero
+ */
+function orbit_counts_by_code($table, $codes)
+{
+    if (!in_array($table, array("product_stock", "product_die"), true)) {
+        return array();
+    }
+    $codes = array_values(array_unique(array_filter(array_map("strval", (array) $codes), "strlen")));
+    $counts = array();
+    if (!$codes) {
+        return $counts;
+    }
+    foreach (array_chunk($codes, 500) as $chunk) {
+        $quoted = array();
+        foreach ($chunk as $code) {
+            $quoted[] = "'" . addslashes($code) . "'";
+        }
+        $rows = orbit_db()->get_list(
+            "SELECT `product_code`, COUNT(*) AS `c` FROM `" . $table . "` WHERE `product_code` IN ("
+            . implode(",", $quoted) . ") GROUP BY `product_code`"
+        );
+        foreach ($rows as $row) {
+            $counts[(string) $row["product_code"]] = (int) $row["c"];
+        }
+    }
+    return $counts;
+}
+/**
+ * What the buyer should pay for a partial delivery, in whole currency units.
+ *
+ * A supplier occasionally returns fewer accounts than were ordered. The buyer paid `$pay` for
+ * `$ordered`; charging that full amount for `$delivered` would keep money for goods that were never
+ * handed over. The delivered share is prorated on the order total, not the unit price, so coupon
+ * and member discounts stay proportionally distributed. Returns `$pay` unchanged when the order is
+ * complete (or over-delivered), and 0 when nothing was delivered.
+ */
+function orbit_prorated_pay($pay, $ordered, $delivered)
+{
+    $pay = (int) round((float) $pay);
+    $ordered = (int) $ordered;
+    $delivered = (int) $delivered;
+    if ($pay <= 0 || $ordered <= 0) {
+        return max(0, $pay);
+    }
+    if ($delivered <= 0) {
+        return 0;
+    }
+    if ($delivered >= $ordered) {
+        return $pay;
+    }
+    $share = (int) round($pay * $delivered / $ordered);
+    if ($share < 0) {
+        $share = 0;
+    }
+    return $share > $pay ? $pay : $share;
 }
 /**
  * The affiliate commission rate for one referrer, in percent.

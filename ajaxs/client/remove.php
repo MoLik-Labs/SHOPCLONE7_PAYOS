@@ -5,6 +5,13 @@ require_once __DIR__ . "/../../config.php";
 require_once __DIR__ . "/../../libs/db.php";
 require_once __DIR__ . "/../../libs/lang.php";
 require_once __DIR__ . "/../../libs/helper.php";
+/*
+ * Every caller is a page on this domain (favourites, order detail, the buy modal). The token in the
+ * body is a credential, not an anti-forgery proof: if it ever leaks — a shared screenshot, a pasted
+ * URL — a foreign page could replay it. orbit_require_csrf() accepts the csrf.js header, a
+ * `csrf_token` field, or an Origin/Referer that names this host, and refuses everything else.
+ */
+orbit_require_csrf();
 if($CMSNT->site("status_demo") != 0) {
     $data = json_encode(["status" => "error", "msg" => __("This function cannot be used because this is a demo site")]);
     exit($data);

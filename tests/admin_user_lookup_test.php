@@ -25,9 +25,23 @@ class DB
         'suppliers' => array(9 => 'api.example.com'),
         'post_category' => array(4 => 'Tin tức'),
     );
+    /* code => count, for orbit_counts_by_code(). */
+    public static $codeCounts = array('P1' => 4, 'P2' => 0, "P'3" => 2);
     public function get_list($sql)
     {
         self::$log[] = $sql;
+        if (preg_match('/FROM `(product_stock|product_die)` WHERE `product_code` IN \((.*)\) GROUP BY/', $sql, $m)) {
+            $rows = array();
+            if (preg_match_all("/'((?:[^'\\\\]|\\\\.)*)'/", $m[2], $codes)) {
+                foreach ($codes[1] as $code) {
+                    $code = str_replace(array("\\'", "\\\\"), array("'", "\\"), $code);
+                    if (isset(self::$codeCounts[$code])) {
+                        $rows[] = array('product_code' => $code, 'c' => self::$codeCounts[$code]);
+                    }
+                }
+            }
+            return $rows;
+        }
         if (preg_match('/FROM `([a-z_]+)` WHERE `id` IN \(([0-9,]+)\)/', $sql, $m)) {
             $table = $m[1];
             $wanted = array_map('intval', explode(',', $m[2]));
@@ -165,6 +179,49 @@ foreach ($files as $file) {
     }
 }
 check_lookup('18 admin tables prefetch their usernames', $prefetched === 19 || $prefetched === 18);
+
+/* ---- stock and dead-stock counts ---------------------------------------- */
+DB::$log = array();
+$counts = orbit_counts_by_code('product_stock', array('P1', 'P2', 'P1', ''));
+check_lookup('the count helper returns one entry per matching code',
+    $counts === array('P1' => 4, 'P2' => 0));
+check_lookup('the count helper de-duplicates codes and skips blanks',
+    strpos(DB::$log[0], "'P1','P2'") !== false || strpos(DB::$log[0], "'P1', 'P2'") !== false);
+check_lookup('the count helper quotes a code containing a quote',
+    orbit_counts_by_code('product_stock', array("P'3")) === array("P'3" => 2));
+
+DB::$log = array();
+check_lookup('a table outside the whitelist is refused without a query',
+    orbit_counts_by_code('users', array('x')) === array() && count(DB::$log) === 0);
+DB::$log = array();
+check_lookup('no codes means no query', orbit_counts_by_code('product_die', array()) === array() && count(DB::$log) === 0);
+
+DB::$log = array();
+$many = array();
+for ($i = 0; $i < 501; ++$i) {
+    $many[] = 'C' . $i;
+}
+orbit_counts_by_code('product_die', $many);
+check_lookup('501 codes are split into two bounded queries', count(DB::$log) === 2);
+
+$adminProducts = (string) file_get_contents(__DIR__ . '/../views/admin/products.php');
+check_lookup('the product list batches its live stock counts',
+    strpos($adminProducts, 'orbit_counts_by_code("product_stock"') !== false
+    && strpos($adminProducts, 'getStock($product["code"])') === false);
+check_lookup('the product list batches its dead-stock counts',
+    strpos($adminProducts, 'orbit_counts_by_code("product_die"') !== false
+    && strpos($adminProducts, 'COUNT(id) FROM product_die') === false);
+
+$apiSuppliers = (string) file_get_contents(__DIR__ . '/../views/admin/product-api.php');
+check_lookup('the supplier list counts categories and products in grouped queries',
+    substr_count($apiSuppliers, 'GROUP BY') >= 3
+    && strpos($apiSuppliers, "COUNT(id) FROM `categories` WHERE `supplier_id`") === false
+    && strpos($apiSuppliers, "COUNT(id) FROM `products` WHERE `supplier_id`") === false);
+
+$task = (string) file_get_contents(__DIR__ . '/../cron/task.php');
+check_lookup('the warehouse automation resolves its product codes in one lookup',
+    strpos($task, 'orbit_lookup_names("products", $taskProductRows, "id", "code")') !== false
+    && strpos($task, "SELECT * FROM `products` WHERE `id` = '") === false);
 
 echo "\n" . $checks . " checks, " . $failures . " failed\n";
 exit($failures === 0 ? 0 : 1);

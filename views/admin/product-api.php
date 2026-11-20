@@ -55,6 +55,18 @@ if ($supplierIds) {
     foreach ($CMSNT->get_list("SELECT supplier_id, SUM(pay) AS total_pay, SUM(cost) AS total_cost, COUNT(id) AS total_orders FROM product_order WHERE supplier_id IN (" . implode(",", $supplierIds) . ") GROUP BY supplier_id") as $statsRow) {
         $supplierStats[(int) $statsRow["supplier_id"]] = $statsRow;
     }
+    /* Two counts per supplier row became two grouped queries for the whole page. */
+    $supplierCategoryCounts = [];
+    foreach ($CMSNT->get_list(" SELECT `supplier_id`, COUNT(*) AS `c` FROM `categories` WHERE `supplier_id` IN (" . implode(",", $supplierIds) . ") GROUP BY `supplier_id` ") as $countRow) {
+        $supplierCategoryCounts[(int) $countRow["supplier_id"]] = (int) $countRow["c"];
+    }
+    $supplierProductCounts = [];
+    foreach ($CMSNT->get_list(" SELECT `supplier_id`, COUNT(*) AS `c` FROM `products` WHERE `supplier_id` IN (" . implode(",", $supplierIds) . ") GROUP BY `supplier_id` ") as $countRow) {
+        $supplierProductCounts[(int) $countRow["supplier_id"]] = (int) $countRow["c"];
+    }
+} else {
+    $supplierCategoryCounts = [];
+    $supplierProductCounts = [];
 }
 $doanh_thu = $CMSNT->get_row(" SELECT SUM(pay) FROM product_order WHERE `refund` = 0 AND supplier_id != 0 ")["SUM(pay)"];
 $tien_von = $CMSNT->get_row(" SELECT SUM(cost) FROM product_order WHERE `refund` = 0 AND supplier_id != 0 ")["SUM(cost)"];
@@ -148,9 +160,9 @@ foreach ($listDatatable as $supplier) {
     echo "</span>\n                                        </td>\n                                        <td class=\"text-right\">\n                                            ";
     echo check_string($supplier["price"]);
     echo "                                        </td>\n                                        <td>\n                                            <span class=\"badge bg-outline-warning\">Chuyên mục:\n                                                ";
-    echo format_cash($CMSNT->get_row(" SELECT COUNT(id) FROM `categories` WHERE `supplier_id` = '" . $supplier["id"] . "' ")["COUNT(id)"]);
+    echo format_cash(isset($supplierCategoryCounts[(int) $supplier["id"]]) ? $supplierCategoryCounts[(int) $supplier["id"]] : 0);
     echo "</span><br>\n                                            <span class=\"badge bg-outline-primary\">Sản phẩm:\n                                                ";
-    echo format_cash($CMSNT->get_row(" SELECT COUNT(id) FROM `products` WHERE `supplier_id` = '" . $supplier["id"] . "' ")["COUNT(id)"]);
+    echo format_cash(isset($supplierProductCounts[(int) $supplier["id"]]) ? $supplierProductCounts[(int) $supplier["id"]] : 0);
     echo "</span><br>\n                                            <span class=\"badge bg-outline-info\">Đơn hàng:\n                                                ";
     echo format_cash($don_hang);
     echo "</span><br>\n                                            <span class=\"badge bg-outline-danger\">Doanh thu:\n                                                ";

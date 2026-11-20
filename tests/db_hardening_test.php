@@ -63,9 +63,15 @@ check("settings lookups are escaped", strpos($source, 'mysqli_real_escape_string
 
 $users = (string) file_get_contents(__DIR__ . "/../libs/database/users.php");
 check("the ledger and the balance move in one transaction",
-    substr_count($users, 'return $this->transaction(') === 2 && substr_count($users, '$ok = $this->transaction(') === 1);
+    substr_count($users, 'return $this->transaction(') === 1 && substr_count($users, '$ok = $this->transaction(') === 2);
 check("AddCredits delegates to the tri-state credit path",
     substr_count($users, 'AddCreditsChecked($user_id, $amount, $reason, $transid)') === 1);
+check("RefundCredits delegates to the tri-state refund path",
+    substr_count($users, 'RefundCreditsChecked($user_id, $amount, $reason, $transid)') === 1);
+check("the transaction locks the user row before claiming a ledger entry",
+    substr_count($users, "FOR UPDATE") === 3);
+check("both tri-state helpers declare their outcome property",
+    strpos($users, 'private $credit_outcome') !== false && strpos($users, 'private $refund_outcome') !== false);
 check("AddCredits documents the ledger/balance pairing",
     strpos($users, "Ledger row + balance move together") !== false);
 check("the balance snapshot is read on the transaction's own connection",

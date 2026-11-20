@@ -23,13 +23,23 @@ if($_POST["action"] == "download_product_die") {
     }
     $accounts = "";
     $current_product_code = "";
+    /*
+     * `product_die` stores only the product code, so the export used to look the product up inside
+     * the loop — one query per distinct code (and a warning-free notice for codes with no product).
+     * The table is small; read the names once and the loop becomes a hash lookup.
+     */
+    $productNames = [];
+    foreach ($CMSNT->get_list(" SELECT `code`, `name` FROM `products` ") as $productRow) {
+        $productNames[$productRow["code"]] = $productRow["name"];
+    }
     foreach ($CMSNT->get_list(" SELECT * FROM `product_die` ORDER BY product_code ") as $row) {
         if($row["product_code"] != $current_product_code) {
             if($current_product_code != "") {
                 $accounts .= PHP_EOL;
             }
             $current_product_code = $row["product_code"];
-            $accounts .= PHP_EOL . PHP_EOL . PHP_EOL . "============== " . $CMSNT->get_row(" SELECT * FROM `products` WHERE `code` = '" . $current_product_code . "' ")["name"] . " | Kho Hàng: " . $current_product_code . " ==============" . PHP_EOL;
+            $productName = isset($productNames[$current_product_code]) ? $productNames[$current_product_code] : $current_product_code;
+            $accounts .= PHP_EOL . PHP_EOL . PHP_EOL . "============== " . $productName . " | Kho Hàng: " . $current_product_code . " ==============" . PHP_EOL;
         }
         $accounts .= $row["account"] . PHP_EOL;
     }

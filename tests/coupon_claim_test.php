@@ -201,7 +201,7 @@ check_coupon('only the price quote still calls the read-only checkCoupon (web)',
 check_coupon('the old read-only coupon arithmetic is gone from the API', strpos($api, '$discount_coupon = checkCoupon(') === false);
 check_coupon('the old post-order coupon write is gone from web checkout', strpos($product, 'cong("coupons", "used", 1') === false);
 check_coupon('the old post-order coupon write is gone from the API', strpos($api, 'cong("coupons", "used", 1') === false);
-check_coupon('a 100%+ discount cannot make the payable amount negative (web)', substr_count($product, 'if($money < $discount)') === 2);
+check_coupon('a 100%+ discount cannot make the payable amount negative (web)', substr_count($product, 'if($money < $discount)') === 3);
 check_coupon('a 100%+ discount cannot make the payable amount negative (API)', substr_count($api, 'if ($money < $discount)') === 2);
 
 /* ---- affiliate clawback --------------------------------------------------- */

@@ -212,6 +212,21 @@ echo "</th>\n                                        <th class=\"text-center\">"
 echo __("Thời gian");
 echo "</th>\n                                    </tr>\n                                </thead>\n                                <tbody>\n                                    ";
 $orbitUserNames = orbit_user_names($listDatatable, "user_id");
+/* Live and dead stock for every row on the page, two queries instead of two per product. */
+$orbitSelfStockedCodes = [];
+foreach ($listDatatable as $orbitProductRow) {
+    if ((int) $orbitProductRow["supplier_id"] === 0 && (string) $orbitProductRow["code"] !== "") {
+        $orbitSelfStockedCodes[] = (string) $orbitProductRow["code"];
+    }
+}
+$orbitStockCounts = orbit_counts_by_code("product_stock", $orbitSelfStockedCodes);
+$orbitAllCodes = [];
+foreach ($listDatatable as $orbitProductRow) {
+    if ((string) $orbitProductRow["code"] !== "") {
+        $orbitAllCodes[] = (string) $orbitProductRow["code"];
+    }
+}
+$orbitDieCounts = orbit_counts_by_code("product_die", $orbitAllCodes);
 $orbitCategoryNames = orbit_lookup_names("categories", $listDatatable, "category_id");
 foreach ($listDatatable as $product) {
     echo "                                    <tr>\n                                        <td class=\"text-center\">\n                                            <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                <input type=\"checkbox\" class=\"form-check-input checkbox_product\"\n                                                    data-id=\"";
@@ -276,9 +291,11 @@ foreach ($listDatatable as $product) {
     echo "</b><br>\n                                            Giá vốn: <b style=\"color:blue;\">";
     echo format_currency($product["cost"]);
     echo "</b>\n                                        </td>\n                                        <td>\n                                            <span style=\"color:green;\">Live</span>:\n                                            <b>";
-    echo format_cash($product["supplier_id"] == 0 ? getStock($product["code"]) : $product["api_stock"]);
+    echo format_cash($product["supplier_id"] == 0
+        ? (isset($orbitStockCounts[$product["code"]]) ? $orbitStockCounts[$product["code"]] : 0)
+        : $product["api_stock"]);
     echo "</b><br>\n                                            <span style=\"color:red;\">Die</span>:\n                                            <b>";
-    echo format_cash($CMSNT->get_row(" SELECT COUNT(id) FROM product_die WHERE `product_code` = '" . $product["code"] . "' ")["COUNT(id)"]);
+    echo format_cash(isset($orbitDieCounts[$product["code"]]) ? $orbitDieCounts[$product["code"]] : 0);
     echo "</b><br>\n                                            Đã bán: <b>";
     echo format_cash($product["sold"]);
     echo "</b>\n                                        </td>\n                                        <td class=\"text-center\"><a class=\"text-primary\"\n                                                href=\"";

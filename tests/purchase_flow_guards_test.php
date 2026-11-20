@@ -85,7 +85,7 @@ foreach (array('ajaxs/client/product.php', 'api/api.php') as $file) {
     check_flow($file . ' refunds when a supplier misses its deadline',
         substr_count($source, 'Nhà cung cấp chưa trả đơn kịp, đã hoàn tiền.') === 2);
     check_flow($file . ' does not claim a refund it could not make',
-        substr_count($source, 'chưa hoàn được tiền') === 2);
+        substr_count($source, 'chưa hoàn được tiền') >= 2);
     check_flow($file . ' writes the order attachment outside the document root',
         strpos($source, 'sys_get_temp_dir()') !== false && strpos($source, 'file_put_contents($file_txt_name') !== false);
 }
@@ -99,6 +99,17 @@ foreach (array('ajaxs/client/product.php', 'api/api.php') as $file) {
         strpos($source, 'Chưa cộng được doanh thu đơn hàng') !== false
         && strpos($source, '$sellerCredit === "failed"') !== false);
 }
+
+$quote = (string) file_get_contents($root . '/ajaxs/client/product.php');
+check_flow('the guest price quote applies the tier discount to what the guest would pay',
+    substr_count($quote, '$pay = $money - $discount;') >= 3);
+check_flow('the price quote clamps a discount bigger than the order',
+    strpos($quote, '/* A quote must never come out negative') !== false
+    && strpos($quote, 'if($money < $discount) {') !== false);
+check_flow('the checkout record reflects the delivered quantity, not the requested one',
+    strpos($quote, '$CMSNT->cong("products", "sold", $isValue,') !== false
+    && strpos($quote, '"amount" => $isValue, "money" => $money') !== false
+    && strpos($quote, '"cost" => $product["cost"] * $isValue') !== false);
 
 $apiSold = (string) file_get_contents($root . '/api/api.php');
 check_flow('the API counts delivered units, not requested ones, as sold',

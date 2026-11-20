@@ -21,8 +21,16 @@ foreach ($CMSNT->get_list(" SELECT * FROM `automations` ") as $task) {
                 $isUpdate = $CMSNT->update("product_stock", ["product_code" => $task["other"], "create_gettime" => gettime()], " `id` = '" . $product_stock["id"] . "' ");
             }
         } else {
-            foreach (json_decode($task["product_id"], true) as $product) {
-                if($product_code = $CMSNT->get_row(" SELECT * FROM `products` WHERE `id` = '" . $product . "' ")["code"]) {
+            /* Resolve every configured product code once, instead of one SELECT per product id. */
+            $taskProductIds = json_decode($task["product_id"], true);
+            $taskProductRows = [];
+            foreach ((array) $taskProductIds as $taskProductId) {
+                $taskProductRows[] = ["id" => (int) $taskProductId];
+            }
+            $taskProductCodes = orbit_lookup_names("products", $taskProductRows, "id", "code");
+            foreach ((array) $taskProductIds as $product) {
+                $product_code = isset($taskProductCodes[(int) $product]) ? $taskProductCodes[(int) $product] : "";
+                if($product_code !== "") {
                     $CMSNT->update("product_stock", ["product_code" => $task["other"], "create_gettime" => gettime()], " `product_code` = '" . $product_code . "' AND " . time() . " - UNIX_TIMESTAMP(create_gettime) >= " . $task["schedule"] . " ");
                 }
             }

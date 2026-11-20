@@ -15,6 +15,8 @@ if($CMSNT->site("check_time_cron_cron") < time() && time() - $CMSNT->site("check
 }
 $CMSNT->update("settings", ["value" => time()], " `name` = 'check_time_cron_cron' ");
 if($CMSNT->site("status_tao_gd_ao") == 1) {
+    /* One bounded probe set, reused by both generators below: two or three PK lookups each. */
+    $fakeBuyers = orbit_random_user_ids(20);
     $int_rand = rand(0, $CMSNT->site("toc_do_gd_nap_ao"));
     if($int_rand == $CMSNT->site("toc_do_gd_nap_ao")) {
         $array_amount = explode(PHP_EOL, $CMSNT->site("menh_gia_nap_ao_ngau_nhien"));
@@ -22,19 +24,23 @@ if($CMSNT->site("status_tao_gd_ao") == 1) {
         $amount = $array_amount[rand(0, count($array_amount) - 1)];
         $amount = $amount != 0 ? $amount : 10000;
         $method = $array_method[rand(0, count($array_method) - 1)];
-        $CMSNT->insert("deposit_log", ["user_id" => $CMSNT->get_row("SELECT * FROM `users` ORDER BY RAND() ")["id"], "method" => $method, "amount" => $amount, "received" => $amount, "create_time" => time(), "is_virtual" => 1]);
+        $CMSNT->insert("deposit_log", ["user_id" => $fakeBuyers ? $fakeBuyers[array_rand($fakeBuyers)] : 0, "method" => $method, "amount" => $amount, "received" => $amount, "create_time" => time(), "is_virtual" => 1]);
     }
     $int_rand = rand(0, $CMSNT->site("toc_do_gd_mua_ao"));
     if($int_rand == $CMSNT->site("toc_do_gd_mua_ao")) {
         $amount = rand($CMSNT->site("sl_mua_toi_thieu_gd_ao"), $CMSNT->site("sl_mua_toi_da_gd_ao"));
         $trans_id = random("QWERTYUPASDFGHJKZXCVBNM123456789", 4);
-        foreach ($CMSNT->get_list("SELECT * FROM `products` WHERE `status` = 1 ORDER BY RAND() ") as $product) {
-            if($CMSNT->site("tao_gd_ao_sp_het_hang") == 1) {
-                $stock = $product["supplier_id"] != 0 ? $product["api_stock"] : getStock($product["code"]);
-                if($stock == 0) {
-                }
-            }
-            $CMSNT->insert("order_log", ["buyer" => $CMSNT->get_row("SELECT * FROM `users` ORDER BY RAND() ")["id"], "product_name" => $product["name"], "pay" => $amount * $product["price"], "amount" => $amount, "create_time" => time(), "is_virtual" => 1]);
+        /* The order of the products is irrelevant to the inserts; the RAND() sort was pure cost. */
+        foreach ($CMSNT->get_list("SELECT * FROM `products` WHERE `status` = 1 ") as $fakeIndex => $product) {
+            /*
+             * The `tao_gd_ao_sp_het_hang` option used to guard an empty block: it ran a stock COUNT per
+             * product and then did nothing with the answer. The generator has always written one fake
+             * order per active product, in stock or not; that behaviour is unchanged, and the per-product
+             * query is gone.
+             */
+            /* Reuse the buyers picked above instead of running ORDER BY RAND() on the users table per product. */
+            $fakeBuyer = $fakeBuyers ? $fakeBuyers[$fakeIndex % count($fakeBuyers)] : 0;
+            $CMSNT->insert("order_log", ["buyer" => $fakeBuyer, "product_name" => $product["name"], "pay" => $amount * $product["price"], "amount" => $amount, "create_time" => time(), "is_virtual" => 1]);
         }
     }
 }

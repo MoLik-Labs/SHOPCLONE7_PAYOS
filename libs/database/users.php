@@ -8,6 +8,8 @@ class users extends DB
     protected $_table_name = "users";
     /* Outcome of the last AddCreditsChecked() call: "credited", "duplicate" or "failed". */
     private $credit_outcome = "failed";
+    /* Outcome of the last RefundCreditsChecked() call: "credited", "duplicate" or "failed". */
+    private $refund_outcome = "failed";
     protected $_key = "id";
     public function __construct()
     {
@@ -91,10 +93,15 @@ class users extends DB
             $transid = uniqid() . "_" . mt_rand(0, 9999999);
         }
         $this->credit_outcome = "failed";
-        /* Ledger row + balance move together: a failed balance update must not leave a ledger entry. */
+        /*
+         * Ledger row + balance move together: a failed balance update must not leave a ledger entry.
+         * The balance read also takes the user row lock, so two concurrent claims for the same
+         * transid serialise: the second one sees the first ledger row and reports "duplicate"
+         * instead of crediting twice.
+         */
         $ok = $this->transaction(function () use ($user_id, $amount, $reason, $transid) {
             $user_id = (int) $user_id;
-            $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " ");
+            $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " FOR UPDATE");
             $before = $balance ? $balance["money"] : 0;
             $claim = $this->ledger_claim($user_id, $amount, $reason, $transid, $before);
             if($claim === -1) {
@@ -122,18 +129,41 @@ class users extends DB
     }
     public function RefundCredits($user_id, $amount, $reason, $transid = NULL)
     {
+        return $this->RefundCreditsChecked($user_id, $amount, $reason, $transid) === "credited";
+    }
+    /**
+     * Refund a user and say what actually happened: "credited", "duplicate" or "failed".
+     *
+     * The purchase flow needs the three cases for partial deliveries. A retried request finds its
+     * `PARTIAL_<trans_id>` ledger row already written — that is a successful refund, not a failure.
+     * A SQL failure is the opposite and must be visible to the caller. RefundCredits() keeps its
+     * old boolean contract for the forty-odd existing call sites.
+     */
+    public function RefundCreditsChecked($user_id, $amount, $reason, $transid = NULL)
+    {
         if($transid == NULL) {
             $transid = uniqid() . "_" . mt_rand(0, 9999999);
         }
-        return $this->transaction(function () use ($user_id, $amount, $reason, $transid) {
+        $this->refund_outcome = "failed";
+        $ok = $this->transaction(function () use ($user_id, $amount, $reason, $transid) {
             $user_id = (int) $user_id;
-            $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " ");
+            $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " FOR UPDATE");
             $before = $balance ? $balance["money"] : 0;
-            if($this->ledger_claim($user_id, $amount, $reason, $transid, $before) !== 1) {
+            $claim = $this->ledger_claim($user_id, $amount, $reason, $transid, $before);
+            if($claim === -1) {
                 return false;
             }
-            return (bool) parent::cong("users", "money", $amount, " `id` = " . $user_id . " ");
+            if($claim === 0) {
+                $this->refund_outcome = "duplicate";
+                return true;
+            }
+            if(!(bool) parent::cong("users", "money", $amount, " `id` = " . $user_id . " ")) {
+                return false;
+            }
+            $this->refund_outcome = "credited";
+            return true;
         });
+        return $ok === false ? "failed" : $this->refund_outcome;
     }
     public function RemoveCredits($user_id, $amount, $reason, $transid = NULL)
     {
@@ -142,7 +172,7 @@ class users extends DB
         }
         return $this->transaction(function () use ($user_id, $amount, $reason, $transid) {
             $user_id = (int) $user_id;
-            $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " ");
+            $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " FOR UPDATE");
             $before = $balance ? $balance["money"] : 0;
             if($this->ledger_claim($user_id, -$amount, $reason, $transid, $before) !== 1) {
                 return false;

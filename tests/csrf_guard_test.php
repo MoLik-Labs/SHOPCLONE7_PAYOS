@@ -138,10 +138,48 @@ check_csrf('a guarded action passes with its token', true);
 $root = dirname(__DIR__);
 foreach (array('ajaxs/admin/create.php', 'ajaxs/admin/update.php', 'ajaxs/admin/remove.php',
                'ajaxs/admin/view.php', 'ajaxs/client/auth.php', 'ajaxs/client/create.php',
-               'ajaxs/client/view.php') as $file) {
+               'ajaxs/client/view.php', 'ajaxs/client/update.php', 'ajaxs/client/remove.php') as $file) {
     $source = (string) file_get_contents($root . '/' . $file);
     check_csrf($file . ' calls the guard', strpos($source, 'orbit_require_csrf(') !== false);
 }
+/*
+ * The remaining browser endpoints must not be bare either. payOS and GachtheFast carry their own
+ * per-session token; product.php cannot use this guard because another shop calls it server to
+ * server (buy_API_SHOPCLONE7), and it already requires the buyer's unguessable api_key — the same
+ * shape of protection, different mechanism. Everything else must call orbit_require_csrf().
+ */
+$ownToken = array(
+    'ajaxs/client/payos.php' => 'payos_csrf',
+    'ajaxs/client/gtf.php' => 'gtf_csrf',
+    'ajaxs/admin/gtf.php' => 'gtf_csrf',
+);
+foreach ($ownToken as $file => $marker) {
+    $source = (string) file_get_contents($root . '/' . $file);
+    check_csrf($file . ' checks its own CSRF token', strpos($source, $marker) !== false && strpos($source, 'hash_equals(') !== false);
+}
+$productSource = (string) file_get_contents($root . '/ajaxs/client/product.php');
+check_csrf('product.php still requires the buyer api_key', strpos($productSource, '$_REQUEST["api_key"]') !== false);
+check_csrf('a reseller still purchases through product.php server to server',
+    strpos((string) file_get_contents($root . '/libs/suppliers.php'), 'ajaxs/client/product.php') !== false);
+
+$unguardedAjax = array();
+foreach (array_merge(glob($root . '/ajaxs/client/*.php'), glob($root . '/ajaxs/admin/*.php')) as $file) {
+    $name = str_replace($root . '/', '', $file);
+    $source = (string) file_get_contents($file);
+    if (substr($name, -13) === 'callback.php') {
+        continue;
+    }
+    $guarded = strpos($source, 'orbit_require_csrf(') !== false
+        || strpos($source, "_csrf']") !== false
+        || isset($ownToken[$name])
+        || $name === 'ajaxs/client/product.php';
+    if (!$guarded) {
+        $unguardedAjax[] = $name;
+    }
+}
+check_csrf('every ajax endpoint is guarded, carries its own token, or requires an api_key' .
+    ($unguardedAjax ? ' (' . implode(', ', $unguardedAjax) . ')' : ''), $unguardedAjax === array());
+
 $authSource = (string) file_get_contents($root . '/ajaxs/client/auth.php');
 check_csrf('login and reset actions stay reachable before a session exists',
     strpos($authSource, '"Login", "Register", "ForgotPassword", "Verify2FA", "VerifyOTP", "ChangePassword"') !== false);

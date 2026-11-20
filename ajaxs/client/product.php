@@ -98,6 +98,7 @@ if($_REQUEST["action"] == "buyProduct") {
         }
         $api_trans_id = NULL;
         $isValue = 0;
+        $partialMessage = "";
         if($product["supplier_id"] == 0) {
             $order_by = "ORDER BY id ASC";
             if($product["order_by"] == 1) {
@@ -453,6 +454,27 @@ if($_REQUEST["action"] == "buyProduct") {
             }
         }
         if(0 < $isValue) {
+            /*
+             * A supplier can confirm fewer accounts than were ordered. The buyer was charged for the
+             * full quantity, so charge only the delivered share and refund the difference under its
+             * own `PARTIAL_` transid: it can never collide with the full `REFUND_` row, and a retried
+             * request finds the same row ("duplicate" = already refunded) instead of paying twice.
+             */
+            if($product["supplier_id"] != 0 && $isValue < $amount) {
+                $payDelivered = orbit_prorated_pay($pay, $amount, $isValue);
+                $refund = $pay - $payDelivered;
+                if(0 < $refund) {
+                    $refundState = $User->RefundCreditsChecked($getUser["id"], $refund, "[Error] " . __("Hoàn tiền phần chưa giao") . " #" . $trans_id, "PARTIAL_" . $trans_id);
+                    if($refundState === "failed") {
+                        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Chưa hoàn được tiền phần chưa giao của đơn hàng") . " #" . $trans_id . " (" . $isValue . "/" . $amount . ")"]);
+                        $partialMessage = __("Chỉ giao được") . " " . $isValue . "/" . $amount . " " . __("sản phẩm; phần còn lại chưa hoàn được tiền, vui lòng liên hệ hỗ trợ.");
+                    } else {
+                        $partialMessage = __("Chỉ giao được") . " " . $isValue . "/" . $amount . " " . __("sản phẩm, đã hoàn tiền phần còn lại.");
+                    }
+                }
+                $pay = $payDelivered;
+                $amount = $isValue;
+            }
             if($product["supplier_id"] == 0 && $isValue < $amount) {
                 foreach ($CMSNT->get_list(" SELECT * FROM `product_sold` WHERE `trans_id` = '" . $trans_id . "' AND `supplier_id` = 0 ") as $product_sold) {
                     $isInsertStock = $CMSNT->insert("product_stock", ["product_code" => $product_sold["product_code"], "seller" => $product_sold["seller"], "uid" => $product_sold["uid"], "account" => $product_sold["account"], "status" => $product_sold["status"], "create_gettime" => gettime(), "type" => "Back", "time_check_live" => $product_sold["time_check_live"]]);
@@ -463,7 +485,7 @@ if($_REQUEST["action"] == "buyProduct") {
                 $User->RefundCredits($getUser["id"], $pay, "Hoàn tiền đơn hàng mua tài khoản #" . $trans_id, "REFUND_" . $trans_id);
                 exit(json_encode(["status" => "error", "msg" => __("Số lượng còn lại trong hệ thống không đủ")]));
             } else {
-                $isInsertOrder = $CMSNT->insert("product_order", ["trans_id" => $trans_id, "api_transid" => $api_trans_id, "supplier_id" => $product["supplier_id"], "product_id" => $product["id"], "product_name" => $product["name"], "buyer" => $getUser["id"], "seller" => $product["user_id"], "amount" => $amount, "money" => $money, "pay" => $pay, "cost" => $product["cost"] * $amount, "create_gettime" => gettime(), "update_gettime" => gettime(), "trash" => 0, "status_view_order" => $getUser["status_view_order"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent()]);
+                $isInsertOrder = $CMSNT->insert("product_order", ["trans_id" => $trans_id, "api_transid" => $api_trans_id, "supplier_id" => $product["supplier_id"], "product_id" => $product["id"], "product_name" => $product["name"], "buyer" => $getUser["id"], "seller" => $product["user_id"], "amount" => $isValue, "money" => $money, "pay" => $pay, "cost" => $product["cost"] * $isValue, "create_gettime" => gettime(), "update_gettime" => gettime(), "trash" => 0, "status_view_order" => $getUser["status_view_order"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent()]);
                 if($isInsertOrder) {
                     /* The order exists; the reserved coupon use is now permanent. */
                     orbit_coupon_commit();
@@ -484,7 +506,7 @@ if($_REQUEST["action"] == "buyProduct") {
                         /* Tag the log row with the order so a refund can claw back the exact amount. */
                         $User->AddCommission($getUser["ref_id"], $getUser["id"], $price, __("Hoa hồng thành viên " . $getUser["username"]) . " #" . $trans_id);
                     }
-                    $CMSNT->cong("products", "sold", $amount, " `id` = '" . $product["id"] . "' ");
+                    $CMSNT->cong("products", "sold", $isValue, " `id` = '" . $product["id"] . "' ");
                     $accounts = [];
                     $file_txt_email = "";
                     foreach ($CMSNT->get_list("SELECT * FROM `product_sold` WHERE `trans_id` = '" . $trans_id . "' ") as $account_sold) {
@@ -492,7 +514,7 @@ if($_REQUEST["action"] == "buyProduct") {
                         $file_txt_email .= PHP_EOL . htmlspecialchars_decode($account_sold["account"]);
                     }
                     $CMSNT->update("users", ["time_request" => time()], " `id` = '" . $getUser["id"] . "' ");
-                    $CMSNT->insert("order_log", ["buyer" => $getUser["id"], "product_name" => $product["name"], "pay" => $pay, "amount" => $amount, "create_time" => time(), "is_virtual" => 0]);
+                    $CMSNT->insert("order_log", ["buyer" => $getUser["id"], "product_name" => $product["name"], "pay" => $pay, "amount" => $isValue, "create_time" => time(), "is_virtual" => 0]);
                     if($CMSNT->site("email_temp_subject_buy_order") != "") {
                         $content = $CMSNT->site("email_temp_content_buy_order");
                         $content = str_replace("{domain}", $_SERVER["SERVER_NAME"], $content);
@@ -538,7 +560,7 @@ if($_REQUEST["action"] == "buyProduct") {
                         $my_text = str_replace("{time}", gettime(), $my_text);
                         sendMessAdmin($my_text);
                     }
-                    exit(json_encode(["status" => "success", "msg" => __("Tạo đơn hàng thành công!"), "trans_id" => $trans_id, "data" => $accounts]));
+                    exit(json_encode(["status" => "success", "msg" => __("Tạo đơn hàng thành công!") . ($partialMessage !== "" ? " " . $partialMessage : ""), "trans_id" => $trans_id, "data" => $accounts]));
                 } else {
                     exit(json_encode(["status" => "error", "msg" => "ERROR 1 - " . __("System error")]));
                 }
@@ -587,7 +609,14 @@ if($_REQUEST["action"] == "buyProduct") {
             }
         } else {
             $discount = $money * getDiscount($amount, $product["id"]) / 100;
+            /* The guest quote used to show the discount but keep `pay` at the full price. */
+            $pay = $money - $discount;
         }
+        /* A quote must never come out negative, whatever percentage the settings or a coupon add up to. */
+        if($money < $discount) {
+            $discount = $money;
+        }
+        $pay = $money - $discount;
         exit(json_encode(["status" => "success", "money" => format_currency($money), "discount" => format_currency($discount), "discount_number" => $discount, "pay" => format_currency($pay)]));
     }
     exit(json_encode(["status" => "error", "msg" => __("Request does not exist")]));
