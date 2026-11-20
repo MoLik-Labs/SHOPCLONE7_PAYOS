@@ -567,7 +567,19 @@ if($_REQUEST["action"] == "buyProduct") {
                     }
                     exit(json_encode(["status" => "success", "msg" => __("Tạo đơn hàng thành công!") . ($partialMessage !== "" ? " " . $partialMessage : ""), "trans_id" => $trans_id, "data" => $accounts]));
                 } else {
-                    exit(json_encode(["status" => "error", "msg" => "ERROR 1 - " . __("System error")]));
+                    /*
+                     * The buyer has already paid and the accounts are reserved, but the order row could
+                     * not be written. Without this the money was simply gone. Refund under the order's
+                     * own key; `failed` leaves an [Error] line the owner can act on, `duplicate` means
+                     * a retry already refunded it.
+                     */
+                    $refundState = $User->RefundCreditsChecked($getUser["id"], $pay, "[Error] " . __("Hoàn tiền do không tạo được đơn hàng") . " #" . $trans_id, "REFUND_" . $trans_id);
+                    if ($refundState === "failed") {
+                        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Không tạo được đơn hàng và chưa hoàn được tiền") . " #" . $trans_id . " (" . format_currency($pay) . ")"]);
+                    }
+                    exit(json_encode(["status" => "error", "msg" => $refundState === "failed"
+                        ? __("Không tạo được đơn hàng và chưa hoàn được tiền. Vui lòng liên hệ hỗ trợ kèm mã đơn.") . " #" . $trans_id
+                        : __("Không tạo được đơn hàng, đã hoàn tiền. Vui lòng thử lại.")]));
                 }
             }
         } else {

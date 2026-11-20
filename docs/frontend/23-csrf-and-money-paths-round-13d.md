@@ -103,6 +103,17 @@ whether the refund succeeded. A null/unparseable supplier response no longer rai
 
 Also fixed in the same file pair:
 
+- **A failed order insert refunded nothing.** If `product_order` could not be written after the debit,
+  both checkouts exited with "System error" and kept the money. The failure path now refunds under
+  `REFUND_<trans_id>` (tri-state, so a retry is a no-op) and the response says whether the refund
+  actually went through.
+- **The admin refund is idempotent.** `ajaxs/admin/update.php` treated a second refund of the same
+  order as an error and stopped, so an order whose refund had already moved (double click, or a retry
+  after a lost response) could never be closed. `duplicate` now closes the order too, only `failed`
+  stops, and a failed seller clawback writes an `[Error]` row instead of disappearing. The refund no
+  longer zeroes `pay`/`cost`/`money`: every report filters `refund = 0`, so zeroing destroyed the
+  record of what the customer paid.
+
 - `total_payment` (the price quote) applied the tier discount but returned the undiscounted `pay` for
   guests, and could return a negative `pay` when discounts exceeded the order. It is now clamped to
   `[0, $money]` in all branches.
@@ -135,7 +146,7 @@ helper callers (which may intentionally allow a negative balance).
 | `random_user_test.php` | 20 (new) | bounded user-id probing, sparse ids, and cron wiring |
 | `partial_delivery_test.php` | 30 (new) | proration table, boundaries, ledger key, delivered-vs-requested records |
 | `admin_user_lookup_test.php` | 39 (was 21) | count helpers, whitelist, 500-code chunking, grouped optgroups, batched product/supplier/task pages |
-| `purchase_flow_guards_test.php` | 33 (was 25) | quote clamp, guest quote, delivered quantities, conditional debit, API_20 refunds |
+| `purchase_flow_guards_test.php` | 38 (was 25) | quote clamp, guest quote, delivered quantities, conditional debit, API_20 refunds, failed-insert refund, idempotent admin refund |
 | `db_hardening_test.php` | 39 (was 33) | tri-state credit/refund/debit, row lock, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 38 | updated for the third clamp in the web quote |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |

@@ -128,6 +128,20 @@ check_flow('the API_20 path refunds a supplier error reported after the charge',
 check_flow('an unparseable supplier response is treated as an empty array',
     strpos($api, 'if (!is_array($result)) {') !== false);
 
+$adminUpdate = (string) file_get_contents($root . '/ajaxs/admin/update.php');
+check_flow('an admin refund is idempotent and closes the order on a retry',
+    strpos($adminUpdate, '$refundState !== "failed"') !== false
+    && strpos($adminUpdate, '$refundState === "duplicate"') !== false
+    && strpos($adminUpdate, 'RemoveCredits($product_order["buyer"]') === false);
+check_flow('an admin refund keeps the historical order amounts',
+    strpos($adminUpdate, '"refund" => 1, "trash" => 1, "pay" => 0') === false);
+check_flow('a failed seller clawback is logged, not swallowed',
+    strpos($adminUpdate, 'Chưa thu hồi được doanh thu của đơn hoàn tiền') !== false);
+check_flow('an order row that cannot be written is refunded (web)',
+    strpos($quote, 'Hoàn tiền do không tạo được đơn hàng') !== false);
+check_flow('an order row that cannot be written is refunded (API)',
+    strpos($api, 'Hoàn tiền do không tạo được đơn hàng') !== false);
+
 $apiSold = (string) file_get_contents($root . '/api/api.php');
 check_flow('the API counts delivered units, not requested ones, as sold',
     strpos($apiSold, '$CMSNT->cong("products", "sold", $isValue,') !== false

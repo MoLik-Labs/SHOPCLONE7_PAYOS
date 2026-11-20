@@ -103,11 +103,21 @@ if($_POST["action"] == "refundOrder") {
         exit(json_encode(["status" => "error", "msg" => __("Đơn hàng này đã được hoàn tiền rồi")]));
     }
     $User = new users();
-    $isRefund = $User->RefundCredits($product_order["buyer"], $product_order["pay"], __("Hoàn tiền đơn hàng") . " #" . $product_order["trans_id"], "REFUND_ORDER_" . $product_order["trans_id"]);
-    if($isRefund) {
-        $CMSNT->update("product_order", ["refund" => 1, "trash" => 1, "pay" => 0, "cost" => 0, "money" => 0], " `id` = '" . $id . "' ");
+    $refundState = $User->RefundCreditsChecked($product_order["buyer"], $product_order["pay"], __("Hoàn tiền đơn hàng") . " #" . $product_order["trans_id"], "REFUND_ORDER_" . $product_order["trans_id"]);
+    /*
+     * "duplicate" means this order's refund was already moved (a second click, or a retry after the
+     * response was lost) — the buyer has the money, so the order still has to be closed. Only
+     * "failed" stops here. The historical amounts stay on the row: every report filters
+     * `refund = 0`, so zeroing them only destroyed the record of what the customer actually paid.
+     */
+    if($refundState !== "failed") {
+        $CMSNT->update("product_order", ["refund" => 1, "trash" => 1], " `id` = '" . $id . "' ");
         if($CMSNT->site("cong_tien_nguoi_ban") == 1) {
-            $User->RemoveCredits($product_order["seller"], $product_order["pay"], __("Thu hồi hoàn tiền đơn hàng") . " #" . $product_order["trans_id"], "TAKE_REFUND_ORDER_" . $product_order["trans_id"]);
+            $isSellerTaken = $User->RemoveCredits($product_order["seller"], $product_order["pay"], __("Thu hồi hoàn tiền đơn hàng") . " #" . $product_order["trans_id"], "TAKE_REFUND_ORDER_" . $product_order["trans_id"]);
+            if(!$isSellerTaken) {
+                /* The seller keeps money the shop refunded; leave it visible instead of silent. */
+                $CMSNT->insert("logs", ["user_id" => $product_order["seller"], "ip" => myip(), "device" => (new Mobile_Detect())->getUserAgent(), "createdate" => gettime(), "action" => "[Error] " . __("Chưa thu hồi được doanh thu của đơn hoàn tiền") . " #" . $product_order["trans_id"] . " (" . format_currency($product_order["pay"]) . ")"]);
+            }
         }
         $user = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $product_order["buyer"] . "' ");
         if($user["ref_id"] != 0) {
@@ -122,9 +132,11 @@ if($_POST["action"] == "refundOrder") {
         }
         $Mobile_Detect = new Mobile_Detect();
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Hoàn tiền đơn hàng") . " (" . $product_order["trans_id"] . ")"]);
-        exit(json_encode(["status" => "success", "msg" => __("Hoàn tiền đơn hàng thành công!")]));
+        exit(json_encode(["status" => "success", "msg" => $refundState === "duplicate"
+            ? __("Đơn hàng này đã được hoàn tiền trước đó; đã đóng đơn.")
+            : __("Hoàn tiền đơn hàng thành công!")]));
     }
-    exit(json_encode(["status" => "error", "msg" => __("Đơn hàng này đã được hoàn tiền rồi")]));
+    exit(json_encode(["status" => "error", "msg" => __("Chưa hoàn được tiền, vui lòng thử lại.")]));
 }
 if($_POST["action"] == "update_stt_table_product") {
     if(!checkPermission($getUser["admin"], "edit_product")) {
