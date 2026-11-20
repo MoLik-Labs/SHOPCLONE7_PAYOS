@@ -202,6 +202,10 @@ check_payment('squadco stops writing an invoice before the credit', payment_lack
 check_payment('bank webhook credits through the tri-state path', payment_has('api/webhook_web2m.php', 'AddCreditsChecked('));
 check_payment('bank webhook no longer skips a retry after a failed credit', payment_lacks('api/webhook_web2m.php', 'num_rows(" SELECT * FROM `payment_bank`'));
 check_payment('bank webhook backfills the invoice row for a duplicate delivery', payment_has('api/webhook_web2m.php', 'INSERT INTO `payment_bank`'));
+check_payment('bank webhook refuses a body that is not {data: [...]}', payment_has('api/webhook_web2m.php', '!isset($result["data"]) || !is_array($result["data"])'));
+check_payment('bank webhook parses the amount instead of trusting a quoted string', payment_has('api/webhook_web2m.php', 'orbit_gateway_amount(isset($data["amount"])'));
+check_payment('bank webhook bounds the batch it walks', payment_has('api/webhook_web2m.php', 'array_slice($result["data"], 0, 200)'));
+check_payment('bank webhook refuses a body over 1 MB', payment_has('api/webhook_web2m.php', 'strlen($receivedData) > 1048576'));
 
 /* ---- card top-up form ----------------------------------------------------- */
 check_payment('daily card block compares completed, not the old misspelling', payment_lacks('ajaxs/client/create.php', "'complted'"));

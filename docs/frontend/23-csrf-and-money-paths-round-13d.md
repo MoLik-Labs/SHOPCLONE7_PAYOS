@@ -296,7 +296,15 @@ amount capped at 100 000, and a missing `purchase_units[0]` is refused instead o
 If the invoice row is written but the credit fails, the row is removed again so a retry can succeed;
 the old code left it in place and answered "already credited" — stranding the money.
 
-## 14. Tests
+## 14. Legacy bank webhook
+
+`api/webhook_web2m.php` decoded the body and walked `$result["data"]` without checking its shape, read
+`amount` as a quoted string (so `abc` compared as 0 and `1.500.000` was credited as 1.5), and had no
+bound on the batch. It now refuses a body over 1 MB, requires `{data: [...]}`, caps the batch at 200,
+guards every key, parses the amount with `orbit_gateway_amount()` and compares it numerically. The
+credit-first/tri-state path is unchanged.
+
+## 15. Tests
 
 | Suite | Checks | Covers |
 | --- | --- | --- |
@@ -327,7 +335,7 @@ one failure in `random_user_test.php`: the first version of the helper could ret
 requested when every random probe missed a sparse id space. That was a real helper bug, not test
 noise; the walk-forward fill above fixes it, and the suite passed 20 consecutive runs afterwards.
 
-## 15. Not verified / owner actions
+## 16. Not verified / owner actions
 
 - **No live AJAX or login test.** The sandbox has no MySQL, so the CSRF guard is verified by source
   scan and unit-level token/origin checks, not by a browser session.
