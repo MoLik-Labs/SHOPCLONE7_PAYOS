@@ -93,6 +93,13 @@ class users extends DB
      */
     public function AddCreditsChecked($user_id, $amount, $reason, $transid = NULL)
     {
+        /* A zero or negative "credit" is a debit in disguise. Callers compute the amount from posted
+           values and provider responses; refusing here keeps one bad caller from moving money the
+           wrong way through a method whose name promises the opposite. */
+        if((float) $amount <= 0) {
+            $this->credit_outcome = "failed";
+            return "failed";
+        }
         if($transid == NULL) {
             $transid = uniqid() . "_" . mt_rand(0, 9999999);
         }
@@ -145,6 +152,10 @@ class users extends DB
      */
     public function RefundCreditsChecked($user_id, $amount, $reason, $transid = NULL)
     {
+        if((float) $amount <= 0) {
+            $this->refund_outcome = "failed";
+            return "failed";
+        }
         if($transid == NULL) {
             $transid = uniqid() . "_" . mt_rand(0, 9999999);
         }
@@ -190,6 +201,10 @@ class users extends DB
     }
     private function debit_credits($user_id, $amount, $reason, $transid, $allowNegative)
     {
+        if((float) $amount <= 0) {
+            $this->debit_outcome = "failed";
+            return "failed";
+        }
         if($transid == NULL) {
             $transid = uniqid() . "_" . mt_rand(0, 9999999);
         }

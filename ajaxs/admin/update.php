@@ -289,7 +289,9 @@ if($_POST["action"] == "logoutALL") {
         exit(json_encode(["status" => "error", "msg" => "Bạn không có quyền sử dụng tính năng này"]));
     }
     foreach ($CMSNT->get_list(" SELECT * FROM `users` WHERE `admin` = 0 ") as $row) {
-        $CMSNT->update("users", ["token" => md5(random("QWERTYUIOPASDFGHJKLZXCVBNM", 6) . time())], " `id` = '" . $row["id"] . "' ");
+        /* A session token must not be derivable: six characters plus the current second is a
+           dictionary an attacker can walk. The CSPRNG costs nothing here. */
+        $CMSNT->update("users", ["token" => bin2hex(random_bytes(32))], " `id` = '" . $row["id"] . "' ");
     }
     $Mobile_Detect = new Mobile_Detect();
     $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Log out all members on the system")]);

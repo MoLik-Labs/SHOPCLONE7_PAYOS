@@ -167,6 +167,14 @@ check_payment('AddCredits() keeps its boolean contract on success', $account->Ad
 check_payment('AddCredits() is false for a duplicate, never a second credit', $account->AddCredits(7, 5, 'legacy call', 'TOPUP_TEST_0004') === false);
 check_payment('the legacy wrapper moved the balance once', abs(DB::$money - 180.0) < 0.001);
 
+/* A negative or zero "credit" must never move money the other way. */
+DB::$money = 180.0;
+check_payment('a negative credit is refused', $account->AddCreditsChecked(7, -50, 'bad', 'TOPUP_NEG_1') === 'failed');
+check_payment('a zero credit is refused', $account->AddCreditsChecked(7, 0, 'bad', 'TOPUP_ZERO_1') === 'failed');
+check_payment('a negative refund is refused', $account->RefundCreditsChecked(7, -5, 'bad', 'REFUND_NEG_1') === 'failed');
+check_payment('a negative debit is refused', $account->DebitCreditsChecked(7, -5, 'bad', 'ORDER_NEG_1') === 'failed');
+check_payment('a refused credit moves nothing', abs(DB::$money - 180.0) < 0.001 && count(DB::$ledger) === 3);
+
 /* ---- card callback -------------------------------------------------------- */
 check_payment('card callback claims the row with a conditional UPDATE', payment_has('api/callback_card.php', "WHERE `id` = \" . (int) \$row[\"id\"] . \" AND `status` = 'pending'"));
 check_payment('card callback refuses to credit a lost claim', payment_has('api/callback_card.php', 'if($CMSNT->affectedRows() !== 1)'));

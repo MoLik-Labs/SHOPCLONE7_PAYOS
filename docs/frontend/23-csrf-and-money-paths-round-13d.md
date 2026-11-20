@@ -268,6 +268,15 @@ then raised a warning on null. `orbit_recaptcha_ok()` posts the secret in the bo
 gives up after 8 s, and fails closed on every error (network, JSON, missing secret). The preview's
 invoice countdown now reads `orbit_now()`, so a rebuild stays byte-identical.
 
+## 6j. A credit that cannot be a debit
+
+`AddCreditsChecked()`, `RefundCreditsChecked()` and the debit path are called with amounts computed
+from posted forms and provider responses. A negative "credit" is a debit under the opposite name, and
+a negative debit credits — both bypass every check the caller wrote. All three now refuse an amount at
+or below zero and report `failed`, so no single bad caller can move money the wrong way. The admin
+"log out all members" action also rotates session tokens with `random_bytes(32)` instead of
+six characters plus the current second.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:
