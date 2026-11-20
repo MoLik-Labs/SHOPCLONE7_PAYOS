@@ -304,6 +304,11 @@ bound on the batch. It now refuses a body over 1 MB, requires `{data: [...]}`, c
 guards every key, parses the amount with `orbit_gateway_amount()` and compares it numerically. The
 credit-first/tri-state path is unchanged.
 
+SquadCo read `$body["Body"]` and its `amount`/`email` keys without checking the decoded shape; Perfect
+Money concatenated six `$_POST` fields into the signature string without requiring them to exist. Both
+now validate the shape first, and SquadCo parses its minor-unit amount with `orbit_gateway_amount()`
+instead of string arithmetic.
+
 ## 15. Tests
 
 | Suite | Checks | Covers |

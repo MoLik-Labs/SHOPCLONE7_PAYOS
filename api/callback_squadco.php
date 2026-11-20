@@ -20,19 +20,37 @@ if(!hash_equals(strtoupper(hash_hmac("sha512", $input, $CMSNT->site("squadco_Sec
     exit("Xác minh webhook thất bại");
 }
 $body = json_decode($input, true);
+/* The HMAC covers the raw body, so a well-formed signature from Squad still has to carry the shape
+   this handler reads; anything else is refused instead of reaching an undefined index. */
+if(!is_array($body) || !isset($body["Body"]) || !is_array($body["Body"])) {
+    exit("Dữ liệu không hợp lệ");
+}
 $body = $body["Body"];
-$amount = floor(check_string($body["amount"]) / 100);
+/* Squad sends the minor unit (kobo). Parse it as an amount: 0, "", "abc" and negatives are not a
+   payment, and the invoice lookup below must never run with a value 0 would match. */
+$rawAmount = orbit_gateway_amount(isset($body["amount"]) ? $body["amount"] : null);
+if($rawAmount === false || $rawAmount <= 0) {
+    exit("số tiền không hợp lệ");
+}
+$amount = floor($rawAmount / 100);
+if($amount <= 0) {
+    exit("số tiền không hợp lệ");
+}
 if(isset($body["currency"]) && $body["currency"] != $CMSNT->site("squadco_currency_code")) {
     exit("Currency không hợp lệ");
 }
-$transactionRef = check_string($body["transaction_ref"]);
+$transactionRef = isset($body["transaction_ref"]) ? check_string($body["transaction_ref"]) : "";
 if($transactionRef === "") {
     exit("transaction_ref empty");
 }
 if($CMSNT->get_row(" SELECT * FROM `payment_squadco` WHERE `transaction_ref` = '" . $transactionRef . "' AND `amount` = '" . $amount . "' ")) {
     exit("Đơn này xử lý rồi");
 }
-if(!($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `email` = '" . check_string($body["email"]) . "' "))) {
+$email = isset($body["email"]) ? check_string($body["email"]) : "";
+if($email === "") {
+    exit("Email user không tồn tại trong hệ thống");
+}
+if(!($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `email` = '" . $email . "' "))) {
     exit("Email user không tồn tại trong hệ thống");
 }
 $rate = (float) $CMSNT->site("squadco_rate");

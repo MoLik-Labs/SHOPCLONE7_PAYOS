@@ -12,6 +12,14 @@ require_active_legacy_payment($CMSNT, 'perfectmoney_status', 'perfectmoney_pass'
 $Mobile_Detect = new Mobile_Detect();
 if($_SERVER["REQUEST_METHOD"] == "POST") {
     $perfectmoney_pass = $CMSNT->site("perfectmoney_pass");
+    /* Every field the signature is built from must be present as a string; a missing key used to be
+       concatenated as an empty value and raise a warning before the hash could even be compared. */
+    foreach (array("PAYMENT_ID", "PAYEE_ACCOUNT", "PAYMENT_AMOUNT", "PAYMENT_UNITS", "PAYMENT_BATCH_NUM", "PAYER_ACCOUNT") as $field) {
+        if(!isset($_POST[$field]) || !is_string($_POST[$field])) {
+            http_response_code(400);
+            exit("Dữ liệu không hợp lệ");
+        }
+    }
     $string = $_POST["PAYMENT_ID"] . ":" . $_POST["PAYEE_ACCOUNT"] . ":" . $_POST["PAYMENT_AMOUNT"] . ":" . $_POST["PAYMENT_UNITS"] . ":" . $_POST["PAYMENT_BATCH_NUM"] . ":" . $_POST["PAYER_ACCOUNT"] . ":" . strtoupper(md5($perfectmoney_pass)) . ":" . $_POST["TIMESTAMPGMT"];
     $hash = strtoupper(md5($string));
     if(isset($_POST['V2_HASH']) && is_string($_POST['V2_HASH']) && hash_equals($hash, $_POST["V2_HASH"])) {
