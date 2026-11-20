@@ -1573,9 +1573,24 @@ function myip()
     }
     return $remote;
 }
+/**
+ * Escape a value for a query or for HTML output.
+ *
+ * Non-string input is not a string. `check_string($_POST["x"])` with `x[]=…` used to reach
+ * addslashes()/htmlspecialchars() with an array, which is a TypeError in PHP 8 — every handler that
+ * trusted the cast answered a crafted form with a 500. Scalars keep their previous meaning; an array,
+ * an object, null or a bool becomes the empty string, so the handler sees "missing" instead of dying.
+ * Booleans were never a meaningful credential or setting, and `true` used to become "1".
+ */
 function check_string($data)
 {
-    return trim(htmlspecialchars(addslashes($data)));
+    if(is_string($data)) {
+        return trim(htmlspecialchars(addslashes($data)));
+    }
+    if(is_int($data) || is_float($data)) {
+        return trim(htmlspecialchars(addslashes((string) $data)));
+    }
+    return "";
 }
 /**
  * A quantity that may be interpolated into SQL without quotes (LIMIT, arithmetic, stock checks).

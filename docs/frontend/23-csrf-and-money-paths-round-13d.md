@@ -240,6 +240,15 @@ The invoice status poller (`loadStatusInvoice`) now holds `trans_id` to the same
 instead of the raw column. The scanner also stopped treating comments as code, so a comment that
 mentions `echo` no longer reads as an XSS finding.
 
+## 6g. An array is not a string
+
+`field[]=x` is a valid form post. `check_string()` passed whatever it received to
+`addslashes()`/`htmlspecialchars()`, so an array raised a `TypeError` on PHP 8 and the handler
+answered 500 before it could validate anything — a one-line way to make any endpoint fail. Non-string,
+non-numeric values now become `""`, which the surrounding `empty()`/`==` checks already handle. Scalars
+keep the exact legacy escaping (including the `\&#039;` shape `htmlspecialchars(addslashes(...))`
+produces), so no stored value changes. `tests/check_string_test.php` pins all of it.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:
