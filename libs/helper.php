@@ -1692,13 +1692,60 @@ function random($string, $int)
     }
     return $result;
 }
+/**
+ * Whether this request arrived over TLS, including when TLS terminates at a proxy.
+ *
+ * `$_SERVER["HTTPS"]` alone is empty behind Render/Cloudflare, so the auth cookie was issued without
+ * Secure on exactly the hosts that only speak HTTPS. APP_URL is a fallback for a misconfigured proxy.
+ */
+function orbit_is_https()
+{
+    if(!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off") {
+        return true;
+    }
+    if(isset($_SERVER["HTTP_X_FORWARDED_PROTO"]) && strtolower((string) $_SERVER["HTTP_X_FORWARDED_PROTO"]) === "https") {
+        return true;
+    }
+    if(isset($_SERVER["SERVER_PORT"]) && (int) $_SERVER["SERVER_PORT"] === 443) {
+        return true;
+    }
+    return stripos((string) ($_ENV["APP_URL"] ?? ""), "https://") === 0;
+}
 function set_auth_cookie($token, $expires)
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
         session_regenerate_id(true);
     }
-    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || stripos($_ENV['APP_URL'] ?? '', 'https://') === 0;
+    $secure = orbit_is_https();
     return setcookie('token', $token, ['expires' => (int) $expires, 'path' => '/', 'secure' => $secure, 'httponly' => true, 'samesite' => 'Lax']);
+}
+/**
+ * Drop the signed-in session completely.
+ *
+ * Logging out only destroyed the session server-side; the auth cookie was removed with the legacy
+ * three-argument setcookie() (no SameSite / Secure) and $_SESSION["login"] was left in memory until
+ * PHP's shutdown. Delete the cookie with the attributes it was created with, clear the array, expire
+ * the session cookie and destroy the session.
+ */
+function orbit_logout()
+{
+    if(isset($_SESSION["login"])) {
+        unset($_SESSION["login"]);
+    }
+    $_SESSION = array();
+    if(ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), "", array(
+            "expires" => time() - 42000,
+            "path" => $params["path"] ? $params["path"] : "/",
+            "domain" => $params["domain"],
+            "secure" => !empty($params["secure"]),
+            "httponly" => !empty($params["httponly"]),
+            "samesite" => "Lax",
+        ));
+    }
+    setcookie("token", "", array("expires" => time() - 42000, "path" => "/", "secure" => orbit_is_https(), "httponly" => true, "samesite" => "Lax"));
+    session_destroy();
 }
 function redirect($url)
 {

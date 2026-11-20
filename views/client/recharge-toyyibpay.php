@@ -38,9 +38,10 @@ if(!empty($_GET["BillCode"])) {
     $BillCode = check_string($_GET["BillCode"]);
     $where .= " AND `BillCode` = \"" . $BillCode . "\" ";
 }
-if(!empty($_GET["amount"])) {
-    $amount = check_string($_GET["amount"]);
-    $where .= " AND `amount` = " . $amount . " ";
+/* Parse, then interpolate: `check_string("1 OR 1=1")` is not numeric and used to reach the query verbatim. */
+$orbitFilterAmount = isset($_GET["amount"]) ? orbit_positive_amount($_GET["amount"]) : false;
+if($orbitFilterAmount !== false) {
+    $where .= " AND `amount` = " . orbit_amount_string($orbitFilterAmount) . " ";
 }
 if(!empty($_GET["billName"])) {
     $billName = check_string($_GET["billName"]);

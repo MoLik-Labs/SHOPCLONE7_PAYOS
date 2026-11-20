@@ -68,9 +68,10 @@ if(isset($_POST["SaveSettings"])) {
         $transaction_ref = check_string($_GET["transaction_ref"]);
         $where .= " AND `transaction_ref` LIKE \"%" . $transaction_ref . "%\" ";
     }
-    if(!empty($_GET["amount"])) {
-        $amount = check_string($_GET["amount"]);
-        $where .= " AND `amount` = " . $amount . " ";
+    /* Parse, then interpolate: `check_string("1 OR 1=1")` is not numeric and used to reach the query verbatim. */
+    $orbitFilterAmount = isset($_GET["amount"]) ? orbit_positive_amount($_GET["amount"]) : false;
+    if($orbitFilterAmount !== false) {
+        $where .= " AND `amount` = " . orbit_amount_string($orbitFilterAmount) . " ";
     }
     if(!empty($_GET["create_gettime"])) {
         $create_gettime = check_string($_GET["create_gettime"]);

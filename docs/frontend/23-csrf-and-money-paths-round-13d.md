@@ -260,7 +260,30 @@ updates the row, then deletes the old file. Product galleries store the real bas
 record an image whose move failed. The stock importer now checks `is_uploaded_file()` and caps the
 upload at 10 MB before reading it into memory.
 
-## 12. Tests
+## 12. Sign-in, recovery and recharge filters
+
+- **Account lockout.** `limit_block_client_login` was compared with `<=`, so its default of `0`
+  banned an account on the first wrong password. Nothing reset `login_attempts` on success, so a
+  member who mistyped twice stayed one mistake from a ban forever. `0` now disables the counter, and
+  all three sign-in paths (password, 2FA, e-mail OTP) reset it.
+- **Forgot password.** "This email does not exist" made the form an account-enumeration oracle, and
+  the 60-second rate limit answered differently from a normal request. Both now return the same
+  neutral "if the address exists, a message will arrive" response; a registered address gets the
+  mail, an unregistered one gets nothing. The duplicated demo-site guard was removed.
+- **Logout.** The views destroyed the session but deleted the auth cookie with the legacy
+  three-argument call (no SameSite/Secure) and left `$_SESSION["login"]` populated. `orbit_logout()`
+  clears the array, expires both cookies with the attributes they were created with, and destroys the
+  session.
+- **Cookie security flag.** `set_auth_cookie()` only inspected `$_SERVER["HTTPS"]`; behind the TLS
+  proxy the site runs on, that is empty, so the cookie was issued without `Secure`. `orbit_is_https()`
+  also honours `X-Forwarded-Proto`, port 443 and `APP_URL`.
+- **SQL injection in the recharge lists (16 sites).** Filters did
+  `$where .= " AND `amount` = " . check_string($_GET["amount"])` — `addslashes()` escapes quotes, so
+  `1 OR 1=1` reached the unquoted numeric comparison untouched. All twelve list views (admin and
+  client, amount and price) parse the value with `orbit_positive_amount()` and render it with
+  `orbit_amount_string()`.
+
+## 13. Tests
 
 | Suite | Checks | Covers |
 | --- | --- | --- |
@@ -272,17 +295,18 @@ upload at 10 MB before reading it into memory.
 | `db_hardening_test.php` | 47 (was 33) | tri-state credit/refund/debit, row locks, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 44 | updated for the third clamp in the web quote; coupon admin validation |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
+| `auth_guard_test.php` | 18 (new) | lockout semantics, reset on success, enumeration, logout |
 | `upload_guard_test.php` | 27 (new) | upload store/delete guards, type-following extension, form wiring |
 | `security_headers_test.php` | 11 (new) | header names, ordering before output, layout wiring |
 | `stock_claim_test.php` | 20 (new) | exactly-once stock claim and return, rollback on failed insert, release after a failed order insert |
-| `amount_guard_test.php` | 59 (new) | amount parsing (strings, exponents, NAN/INF, injections), withdrawal wiring, commission lock, restore path, legacy card/crypto amounts |
+| `amount_guard_test.php` | 61 (new) | amount parsing (strings, exponents, NAN/INF, injections), withdrawal wiring, commission lock, restore path, legacy card/crypto amounts |
 | `count_query_test.php` | 26 (new) | COUNT rewrite: plain scans, aliases, literals containing "ORDER BY"; and every shape that must not be rewritten |
 
 ```
 bash tools/dev/run.sh
   LINT 312 files, 0 parse errors
   SCAN 237 files: 0 critical, 0 high, 0 medium, 0 low
-  46 suites, 1 not run (payos_service, no disposable database), 0 failures
+  47 suites, 1 not run (payos_service, no disposable database), 0 failures
 ```
 
 Two consecutive full runs produced identical per-suite counts. An earlier exploratory run reported
@@ -290,7 +314,7 @@ one failure in `random_user_test.php`: the first version of the helper could ret
 requested when every random probe missed a sparse id space. That was a real helper bug, not test
 noise; the walk-forward fill above fixes it, and the suite passed 20 consecutive runs afterwards.
 
-## 13. Not verified / owner actions
+## 14. Not verified / owner actions
 
 - **No live AJAX or login test.** The sandbox has no MySQL, so the CSRF guard is verified by source
   scan and unit-level token/origin checks, not by a browser session.

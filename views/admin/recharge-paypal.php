@@ -69,13 +69,15 @@ if(isset($_POST["SaveSettings"])) {
         $trans_id = check_string($_GET["trans_id"]);
         $where .= " AND `trans_id` LIKE \"%" . $trans_id . "%\" ";
     }
-    if(!empty($_GET["amount"])) {
-        $amount = check_string($_GET["amount"]);
-        $where .= " AND `amount` = " . $amount . " ";
+    /* Parse, then interpolate: `check_string("1 OR 1=1")` is not numeric and used to reach the query verbatim. */
+    $orbitFilterAmount = isset($_GET["amount"]) ? orbit_positive_amount($_GET["amount"]) : false;
+    if($orbitFilterAmount !== false) {
+        $where .= " AND `amount` = " . orbit_amount_string($orbitFilterAmount) . " ";
     }
-    if(!empty($_GET["price"])) {
-        $price = check_string($_GET["price"]);
-        $where .= " AND `price` = " . $price . " ";
+    /* Parse, then interpolate: `check_string("1 OR 1=1")` is not numeric and used to reach the query verbatim. */
+    $orbitFilterPrice = isset($_GET["price"]) ? orbit_positive_amount($_GET["price"]) : false;
+    if($orbitFilterPrice !== false) {
+        $where .= " AND `price` = " . orbit_amount_string($orbitFilterPrice) . " ";
     }
     if(!empty($_GET["time"])) {
         $time = check_string($_GET["time"]);

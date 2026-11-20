@@ -131,6 +131,26 @@ check_withdraw('NAN and INF are refused',
 check_withdraw('a string larger than PHP_INT_MAX is still finite',
     orbit_withdraw_amount('1e308') === 1.0E+308);
 
+/* ---- recharge list filters ------------------------------------------------ */
+$rechargeViews = glob(__DIR__ . '/../views/*/recharge-*.php');
+$unquoted = array();
+$parsed = array();
+foreach ($rechargeViews as $file) {
+    $source = (string) file_get_contents($file);
+    $name = basename(dirname($file)) . '/' . basename($file);
+    if (preg_match('/`(?:amount|price)` = " \. \$/', $source)) {
+        $unquoted[] = $name;
+    }
+    if (strpos($source, 'orbit_positive_amount($_GET["amount"])') !== false
+        || strpos($source, 'orbit_positive_amount($_GET["price"])') !== false) {
+        $parsed[] = $name;
+    }
+}
+check_withdraw('no recharge list interpolates a request value unquoted',
+    $unquoted === array(), implode(', ', $unquoted));
+check_withdraw('the recharge lists that filter by amount parse it first',
+    count($parsed) === 12, (string) count($parsed));
+
 /* ---- source wiring -------------------------------------------------------- */
 $root = dirname(__DIR__);
 $create = (string) file_get_contents($root . '/ajaxs/client/create.php');

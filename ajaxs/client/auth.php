@@ -76,7 +76,9 @@ if(isset($_POST["action"])) {
                 } else {
                     $CMSNT->insert("failed_attempts", ["ip_address" => $ip_address, "attempts" => 1, "type" => "Login", "create_gettime" => gettime()]);
                 }
-                if($CMSNT->site("limit_block_client_login") <= $getUser["login_attempts"]) {
+                /* 0 means "no limit": the old comparison banned an account on its first wrong password. */
+                $maxClientAttempts = (int) $CMSNT->site("limit_block_client_login");
+                if($maxClientAttempts > 0 && $maxClientAttempts <= (int) $getUser["login_attempts"]) {
                     $User = new users();
                     $User->Banned($getUser["id"], __("Đăng nhập thất bại nhiều lần"));
                     exit(json_encode(["status" => "error", "msg" => __("Tài khoản của bạn đã bị tạm khoá do đang nhập sai nhiều lần")]));
@@ -99,7 +101,9 @@ if(isset($_POST["action"])) {
             } else {
                 $CMSNT->insert("failed_attempts", ["ip_address" => $ip_address, "attempts" => 1, "type" => "Login", "create_gettime" => gettime()]);
             }
-            if($CMSNT->site("limit_block_client_login") <= $getUser["login_attempts"]) {
+            /* 0 means "no limit": the old comparison banned an account on its first wrong password. */
+                $maxClientAttempts = (int) $CMSNT->site("limit_block_client_login");
+                if($maxClientAttempts > 0 && $maxClientAttempts <= (int) $getUser["login_attempts"]) {
                 $User = new users();
                 $User->Banned($getUser["id"], __("Đăng nhập thất bại nhiều lần"));
                 exit(json_encode(["status" => "error", "msg" => __("Tài khoản của bạn đã bị tạm khoá do đang nhập sai nhiều lần")]));
@@ -144,7 +148,7 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "verify", "url" => base_url("?action=verify_2fa&token=" . $token_2fa), "msg" => __("Vui lòng xác minh 2FA để hoàn tất quá trình đăng nhập")]));
         }
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Warning] " . __("Thực hiện đăng nhập vào website")]);
-        $CMSNT->update("users", ["token_2fa" => NULL, "limit_2fa" => 0, "token_otp_mail" => NULL, "limit_otp_mail" => 0, "otp_mail" => NULL, "ip" => myip(), "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
+        $CMSNT->update("users", ["token_2fa" => NULL, "limit_2fa" => 0, "token_otp_mail" => NULL, "limit_otp_mail" => 0, "otp_mail" => NULL, "ip" => myip(), "login_attempts" => 0, "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
         if($getUser["status_noti_login_to_mail"] == 1 && $CMSNT->site("email_temp_subject_warning_login") != "") {
             $content = $CMSNT->site("email_temp_content_warning_login");
             $content = str_replace("{domain}", $_SERVER["SERVER_NAME"], $content);
@@ -211,7 +215,7 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "error", "msg" => __("Mã xác minh không chính xác")]));
         }
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Warning] " . __("Xác thực 2FA thành công - đã đăng nhập vào website")]);
-        $CMSNT->update("users", ["token_2fa" => NULL, "limit_2fa" => 0, "ip" => myip(), "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
+        $CMSNT->update("users", ["token_2fa" => NULL, "limit_2fa" => 0, "ip" => myip(), "login_attempts" => 0, "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
         if($getUser["status_noti_login_to_mail"] == 1 && $CMSNT->site("email_temp_subject_warning_login") != "") {
             $content = $CMSNT->site("email_temp_content_warning_login");
             $content = str_replace("{domain}", $_SERVER["SERVER_NAME"], $content);
@@ -275,7 +279,7 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "error", "msg" => __("OTP không chính xác")]));
         }
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Warning] " . __("Xác thực OTP thành công - đã đăng nhập vào website")]);
-        $CMSNT->update("users", ["token_otp_mail" => NULL, "limit_otp_mail" => 0, "otp_mail" => NULL, "ip" => myip(), "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
+        $CMSNT->update("users", ["token_otp_mail" => NULL, "limit_otp_mail" => 0, "otp_mail" => NULL, "ip" => myip(), "login_attempts" => 0, "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
         if($getUser["status_noti_login_to_mail"] == 1 && $CMSNT->site("email_temp_subject_warning_login") != "") {
             $content = $CMSNT->site("email_temp_content_warning_login");
             $content = str_replace("{domain}", $_SERVER["SERVER_NAME"], $content);
@@ -416,20 +420,24 @@ if(isset($_POST["action"])) {
         if($CMSNT->site("status_demo") != 0) {
             exit(json_encode(["status" => "error", "msg" => __("Chức năng này không thể sử dụng trên website demo")]));
         }
-        if($CMSNT->site("status_demo") != 0) {
-            exit(json_encode(["status" => "error", "msg" => __("Chức năng này không thể sử dụng trên website demo")]));
-        }
         if(!$CMSNT->site("smtp_password")) {
             exit(json_encode(["status" => "error", "msg" => __("Website chưa được cấu hình SMTP, vui lòng liên hệ Admin")]));
         }
         if(empty($_POST["email"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập địa chỉ Email")]));
         }
-        if(!($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `email` = '" . check_string($_POST["email"]) . "' "))) {
-            exit(json_encode(["status" => "error", "msg" => __("Địa chỉ Email này không tồn tại trong hệ thống")]));
+        /*
+         * Do not reveal whether an address is registered: that answer let anyone turn the form into
+         * an account-enumeration oracle. The response is the same either way; a registered address
+         * gets the mail, an unregistered one simply gets nothing.
+         */
+        $forgotUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `email` = '" . check_string($_POST["email"]) . "' ");
+        if(!$forgotUser) {
+            exit(json_encode(["status" => "success", "msg" => __("Nếu địa chỉ Email tồn tại trong hệ thống, bạn sẽ nhận được thư đặt lại mật khẩu trong ít phút.")]));
         }
-        if(time() - $getUser["time_forgot_password"] < 60) {
-            exit(json_encode(["status" => "error", "msg" => __("Vui lòng thử lại trong ít phút")]));
+        $getUser = $forgotUser;
+        if(time() - (int) $getUser["time_forgot_password"] < 60) {
+            exit(json_encode(["status" => "success", "msg" => __("Nếu địa chỉ Email tồn tại trong hệ thống, bạn sẽ nhận được thư đặt lại mật khẩu trong ít phút.")]));
         }
         $token = md5(random("QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 6) . time()) . md5(random("QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 55));
         if($CMSNT->site("email_temp_subject_forgot_password") != "") {
