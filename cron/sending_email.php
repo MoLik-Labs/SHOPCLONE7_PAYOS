@@ -21,15 +21,27 @@ if($CMSNT->site("smtp_status") != 1) {
 if($CMSNT->site("smtp_email") == "" || $CMSNT->site("smtp_password") == "") {
     exit("Vui lòng cấu hình SMTP");
 }
-$arrContextOptions = ["ssl" => ["verify_peer" => false, "verify_peer_name" => false]];
 $checkAddon = true;
+/*
+ * The template is a local file. It used to be fetched over HTTP from this same server with TLS
+ * verification disabled — for every recipient — so an unreachable public URL (Docker, a proxy,
+ * maintenance mode) rendered an empty e-mail, and N messages paid N round trips to ourselves.
+ * Rendering it once, in-process, keeps the same output and cannot fail for network reasons.
+ */
+$emailTemplate = "";
+if (is_file(__DIR__ . "/../libs/mails/notification.php")) {
+    $emailTemplate = (function () {
+        ob_start();
+        include __DIR__ . "/../libs/mails/notification.php";
+        return (string) ob_get_clean();
+    })();
+}
 foreach ($CMSNT->get_list(" SELECT * FROM `email_campaigns` WHERE `status` = 0 ") as $camp) {
     /* One join instead of a users SELECT per queued message. */
         foreach ($CMSNT->get_list(" SELECT s.*, u.`email` AS `recipient_email` FROM `email_sending` s LEFT JOIN `users` u ON u.`id` = s.`user_id` WHERE s.`camp_id` = '" . $camp["id"] . "' AND s.`status` = 0 ORDER BY s.`id` ASC LIMIT 20 ") as $row) {
         $content = $camp["content"];
         $title = $camp["subject"];
-        $content_email = file_get_contents(base_url("libs/mails/notification.php"), false, stream_context_create($arrContextOptions));
-        $content_email = str_replace("{title}", $title, $content_email);
+        $content_email = str_replace("{title}", $title, $emailTemplate);
         $content_email = str_replace("{content}", $content, $content_email);
         $email = isset($row["recipient_email"]) ? (string) $row["recipient_email"] : "";
         $response = "Vui lòng kích hoạt Addon này";

@@ -190,6 +190,13 @@ check_campaign('both create paths call the helper', strpos($add, 'orbit_campaign
 check_campaign('no view still races on the newest campaign id', strpos($add, 'ORDER BY id DESC LIMIT 1') === false && strpos($list, 'ORDER BY id DESC LIMIT 1') === false);
 check_campaign('no view still loops a get_row per posted user', !preg_match('/foreach\s*\(\s*\$_POST\["listUser"\]/', $add) && !preg_match('/foreach\s*\(\s*\$_POST\["listUser"\]/', $list));
 
+$cron = file_get_contents(__DIR__ . '/../cron/sending_email.php');
+check_campaign('the campaign cron renders the template once, not over HTTP per recipient',
+    strpos($cron, 'file_get_contents(base_url("libs/mails/notification.php")') === false
+    && substr_count($cron, 'include __DIR__ . "/../libs/mails/notification.php"') === 1);
+check_campaign('the e-mail template may be included as well as fetched',
+    strpos(file_get_contents(__DIR__ . '/../libs/mails/notification.php'), 'if (!defined("IN_SITE"))') !== false);
+
 $dbSource = file_get_contents(__DIR__ . '/../libs/db.php');
 check_campaign('the database layer exposes insertId()', strpos($dbSource, 'public function insertId()') !== false);
 check_campaign('UPDATE writes NULL as NULL, not as the string \'NULL\'', strpos($dbSource, 'if ($value === NULL)') !== false && strpos($dbSource, 'return "NULL";') !== false);

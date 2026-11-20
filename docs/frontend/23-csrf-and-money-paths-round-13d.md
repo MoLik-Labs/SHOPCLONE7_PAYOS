@@ -190,6 +190,18 @@ the log line. `views/admin/logs.php` echoed `action` without escaping, so a valu
 with `edit_currency` became HTML in every other admin's log page. The table now escapes on output (the
 client log page already did), and the four producers store the escaped value.
 
+## 6c. Cron self-requests
+
+`cron/sending_email.php` fetched `libs/mails/notification.php` over HTTP from the shop's own public
+URL — once per recipient — with TLS verification disabled. On a deployment whose public URL is not
+reachable from the container (Docker, a proxy, maintenance mode) every mail rendered empty, and every
+message paid a round trip to itself. The template is now rendered once per run, in-process.
+
+`cron/momo.php` ended with `curl_get(base_url("cron/cron.php"))`. The cron guard refuses an
+unauthenticated HTTP request, so on CLI that call could only time out; the token was not forwarded even
+when MoMo itself had been invoked with one. It now includes `cron/cron.php` in the same request, which
+works on CLI and on the authenticated HTTP path.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:

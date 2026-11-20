@@ -62,6 +62,12 @@ if($CMSNT->site("momo_status") == 1) {
         }
     }
 }
-curl_get(base_url("cron/cron.php"));
+/*
+ * This called cron/cron.php over HTTP from the same server. The cron guard refuses an unauthenticated
+ * HTTP call, and on CLI the request did not carry CRON_TOKEN either — the call could only ever time
+ * out (10 s) or be rejected. Including it keeps the intent (run the shared cron after MoMo) and works
+ * in both the CLI and the token-authenticated HTTP path, because it is the same request.
+ */
+require __DIR__ . "/cron.php";
 
 ?>

@@ -104,6 +104,12 @@ check_cron('every legacy cron file calls the guard' . ($unguarded ? ' (missing: 
 check_cron('both GTF workers keep their own token guard', $workerGuarded === 2);
 check_cron('the guard is used before the cron work starts', strpos(file_get_contents(__DIR__ . '/../cron/bank.php'), 'orbit_cron_allowed()') < strpos(file_get_contents(__DIR__ . '/../cron/bank.php'), 'api.sieuthicode.net'));
 check_cron('the documentation tells operators to set CRON_TOKEN', strpos(file_get_contents(__DIR__ . '/../.env.example'), 'CRON_TOKEN') !== false);
+$momo = file_get_contents(__DIR__ . '/../cron/momo.php');
+check_cron('the MoMo cron no longer calls the shared cron over HTTP from inside itself',
+    strpos($momo, 'curl_get(base_url("cron/cron.php"))') === false
+    && strpos($momo, 'require __DIR__ . "/cron.php"') !== false);
+check_cron('the shared cron can be included without redefining IN_SITE',
+    strpos(file_get_contents(__DIR__ . '/../cron/cron.php'), 'if (!defined("IN_SITE"))') !== false);
 
 echo "\n" . $checks . " checks, " . $failures . " failed\n";
 exit($failures === 0 ? 0 : 1);
