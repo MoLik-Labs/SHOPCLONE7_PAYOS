@@ -70,6 +70,7 @@ it pins.
 | `purchase_flow_guards_test.php` | delivered-vs-requested quantities, partial refund wiring, conditional debit, API_20 refunds, quote clamp |
 | `partial_delivery_test.php` | proration arithmetic (full/partial/over-delivery, rounding, hostile numbers) and both checkout wirings |
 | `random_user_test.php` | bounded PK probing for demo buyers, sparse/empty id spaces, deterministic fill, cron wiring |
+| `stock_claim_test.php` | local stock is delivered exactly once (claim by delete, rollback on a failed sold insert), and both checkouts use the helper |
 | `amount_guard_test.php` | withdrawal and gateway amount parsing (strings, exponents, NAN/INF), atomic commission debit, restore on a failed insert, legacy card/crypto amounts |
 | `count_query_test.php` | the `num_rows()` COUNT rewrite: plain scans rewritten, DISTINCT/GROUP BY/LIMIT/JOIN/subquery/expression untouched |
 | `settings_cache_test.php`, `lang_cache_test.php` | one settings load and one language load per request; cache invalidation |

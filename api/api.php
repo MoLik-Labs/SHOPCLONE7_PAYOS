@@ -125,10 +125,8 @@ if ($apiAction == "get-balance") { // lấy sô dư
         $partialMessage = "";
         if ($product["supplier_id"] == 0) {
             foreach ($CMSNT->get_list(" SELECT * FROM `product_stock` WHERE `product_code` = '" . $product["code"] . "' ORDER BY time_check_live DESC LIMIT " . $amount . " ") as $product_stock) {
-                $isInsertSold = $CMSNT->insert("product_sold", ["product_code" => $product_stock["product_code"], "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product_stock["seller"], "uid" => $product_stock["uid"], "account" => $product_stock["account"], "create_gettime" => gettime(), "time_check_live" => $product_stock["time_check_live"]]);
-                if ($isInsertSold) {
+                if(orbit_deliver_stock($CMSNT, $product_stock, ["product_code" => $product_stock["product_code"], "supplier_id" => $product["supplier_id"], "trans_id" => $trans_id, "buyer" => $getUser["id"], "seller" => $product_stock["seller"], "uid" => $product_stock["uid"], "account" => $product_stock["account"], "create_gettime" => gettime(), "time_check_live" => $product_stock["time_check_live"]])) {
                     $isValue++;
-                    $CMSNT->remove("product_stock", " `id` = '" . $product_stock["id"] . "' ");
                 }
             }
         } else {
@@ -401,10 +399,7 @@ if ($apiAction == "get-balance") { // lấy sô dư
             }
             if ($product["supplier_id"] == 0 && $isValue < $amount) {
                 foreach ($CMSNT->get_list(" SELECT * FROM `product_sold` WHERE `trans_id` = '" . $trans_id . "' AND `supplier_id` = 0 ") as $product_sold) {
-                    $isInsertStock = $CMSNT->insert("product_stock", ["product_code" => $product_sold["product_code"], "seller" => $product_sold["seller"], "uid" => $product_sold["uid"], "account" => $product_sold["account"], "status" => $product_sold["status"], "create_gettime" => gettime(), "type" => "Back", "time_check_live" => $product_sold["time_check_live"]]);
-                    if ($isInsertStock) {
-                        $CMSNT->remove("product_sold", " `id` = '" . $product_sold["id"] . "' ");
-                    }
+                    orbit_return_stock($CMSNT, $product_sold, ["product_code" => $product_sold["product_code"], "seller" => $product_sold["seller"], "uid" => $product_sold["uid"], "account" => $product_sold["account"], "status" => $product_sold["status"], "create_gettime" => gettime(), "type" => "Back", "time_check_live" => $product_sold["time_check_live"]]);
                 }
                 $User->RefundCredits($getUser["id"], $pay, "Hoàn tiền đơn hàng mua tài khoản #" . $trans_id, "REFUND_" . $trans_id);
                 exit(json_encode(["code" => 201, "message" => __("Số lượng còn lại trong hệ thống không đủ")]));

@@ -188,7 +188,24 @@ Three more unlocked read-then-write sequences were left in the money layer:
   the debt reduced but the wallet untouched. `users::SettleDebit()` reads both under one row lock,
   pays `min(money, debit)`, and commits the ledger row with both updates or none of them.
 
-## 8. Tests
+## 8. Local stock is claimed, not copied
+
+The local-stock branch of both checkouts (`ajaxs/client/product.php`, `api/api.php`) selected up to
+`amount` stock rows, inserted a `product_sold` row and then deleted the stock row. Nothing tied the
+two statements to the row that was actually claimed:
+
+- two buyers checking out together both selected the same row (the `SELECT … LIMIT` ran before
+  either delete) and both received the same account;
+- the losing `DELETE` removed nothing, so the stock count was also wrong;
+- a failed `product_sold` insert left the stock row in place but could be retried into a duplicate.
+
+`orbit_deliver_stock()` now deletes the stock row inside a transaction and only inserts the sold
+record when that `DELETE` affected exactly one row; a failed insert rolls the delete back. The mirror
+operation, `orbit_return_stock()`, claims the sold row the same way before re-inserting it into
+stock, so a repeated refund cleanup cannot duplicate an account. `stock_claim_test.php` exercises
+both helpers against an in-memory database and checks that both checkout paths use them.
+
+## 9. Tests
 
 | Suite | Checks | Covers |
 | --- | --- | --- |
@@ -200,14 +217,15 @@ Three more unlocked read-then-write sequences were left in the money layer:
 | `db_hardening_test.php` | 47 (was 33) | tri-state credit/refund/debit, row locks, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 44 | updated for the third clamp in the web quote; coupon admin validation |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
+| `stock_claim_test.php` | 14 (new) | exactly-once stock claim and return, rollback on failed insert |
 | `amount_guard_test.php` | 59 (new) | amount parsing (strings, exponents, NAN/INF, injections), withdrawal wiring, commission lock, restore path, legacy card/crypto amounts |
 | `count_query_test.php` | 26 (new) | COUNT rewrite: plain scans, aliases, literals containing "ORDER BY"; and every shape that must not be rewritten |
 
 ```
 bash tools/dev/run.sh
-  LINT 309 files, 0 parse errors
+  LINT 310 files, 0 parse errors
   SCAN 237 files: 0 critical, 0 high, 0 medium, 0 low
-  43 suites, 1 not run (payos_service, no disposable database), 0 failures
+  44 suites, 1 not run (payos_service, no disposable database), 0 failures
 ```
 
 Two consecutive full runs produced identical per-suite counts. An earlier exploratory run reported
@@ -215,7 +233,7 @@ one failure in `random_user_test.php`: the first version of the helper could ret
 requested when every random probe missed a sparse id space. That was a real helper bug, not test
 noise; the walk-forward fill above fixes it, and the suite passed 20 consecutive runs afterwards.
 
-## 9. Not verified / owner actions
+## 10. Not verified / owner actions
 
 - **No live AJAX or login test.** The sandbox has no MySQL, so the CSRF guard is verified by source
   scan and unit-level token/origin checks, not by a browser session.

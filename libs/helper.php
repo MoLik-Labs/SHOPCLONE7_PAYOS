@@ -1059,6 +1059,54 @@ function orbit_positive_amount($raw)
     return $value;
 }
 /**
+ * Deliver one locally stocked account exactly once.
+ *
+ * The checkout loop inserted into `product_sold` and then removed the stock row in a second
+ * statement. Two buyers checking out at the same time both selected the same stock row (the
+ * SELECT ... LIMIT ran before either delete), both got the account, and the second delete removed
+ * nothing. The claim is now a delete inside a transaction: only the request whose DELETE affects a
+ * row may insert the sold record, and a failed insert rolls the stock row back into place.
+ *
+ * @param DB $db
+ * @param array $stockRow one row from `product_stock`
+ * @param array $sold data for the `product_sold` row
+ * @return bool true when this request delivered the account
+ */
+function orbit_deliver_stock($db, $stockRow, array $sold)
+{
+    if(!is_array($stockRow) || empty($stockRow["id"])) {
+        return false;
+    }
+    return (bool) $db->transaction(function () use ($db, $stockRow, $sold) {
+        $isDelete = $db->query("DELETE FROM `product_stock` WHERE `id` = " . (int) $stockRow["id"]);
+        if(!$isDelete || $db->affectedRows() !== 1) {
+            return false;
+        }
+        return (bool) $db->insert("product_sold", $sold);
+    });
+}
+/**
+ * Move a sold row back into stock exactly once (the reverse of orbit_deliver_stock).
+ *
+ * @param DB $db
+ * @param array $soldRow one row from `product_sold`
+ * @param array $stock data for the `product_stock` row
+ * @return bool true when this request returned the account to stock
+ */
+function orbit_return_stock($db, $soldRow, array $stock)
+{
+    if(!is_array($soldRow) || empty($soldRow["id"])) {
+        return false;
+    }
+    return (bool) $db->transaction(function () use ($db, $soldRow, $stock) {
+        $isDelete = $db->query("DELETE FROM `product_sold` WHERE `id` = " . (int) $soldRow["id"]);
+        if(!$isDelete || $db->affectedRows() !== 1) {
+            return false;
+        }
+        return (bool) $db->insert("product_stock", $stock);
+    });
+}
+/**
  * A finite, strictly positive bank/MoMo amount, or false.
  *
  * These values arrive from a third-party gateway as strings such as "1,500,000". `check_string()`
