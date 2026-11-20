@@ -22,6 +22,7 @@ $storeShell = array(
     "title" => __("Thay đổi mật khẩu") . " | " . $CMSNT->site("title"),
     "desc" => $CMSNT->site("description"),
     "nav" => store_nav_default($CMSNT),
+    "noindex" => true,
     "body_class" => "page-account",
 );
 store_shell_open($storeShell);

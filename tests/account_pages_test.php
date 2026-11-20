@@ -464,12 +464,19 @@ function assert_clean($label, $html)
     check($label . " — skip link", strpos($html, 'class="skip-link"') !== false);
 }
 
+/** Account, history and invoice pages must never be indexed. */
+function assert_private($label, $html)
+{
+    check($label . " — not indexed", strpos($html, 'name="robots" content="noindex') !== false);
+}
+
 /* ------------------------------------------------------------------ favourites */
 
 echo "\nfavourites\n";
 $page = render_view("views/client/favorites.php", array("action" => "favorites"), array("login" => "tok-lan"), array("token" => "tok-lan"));
 $html = $page["html"];
 assert_clean("favourites", $html);
+assert_private("favourites", $html);
 check("the saved product is printed", strpos($html, "Netflix Premium 1 tháng") !== false
     && strpos($html, "Spotify Premium") !== false);
 check("stock comes from the batched query (4 and 0)", strpos($html, "Còn 4") !== false
@@ -489,6 +496,7 @@ $GLOBALS["CMSNT"]->sql = array();
 $page = render_view("views/client/transactions.php", array("action" => "transactions"), array("login" => "tok-lan"), array("token" => "tok-lan"));
 $html = $page["html"];
 assert_clean("transactions", $html);
+assert_private("transactions", $html);
 check("both ledger rows are printed", strpos($html, "Nạp tiền qua payOS") !== false
     && strpos($html, "Mua Netflix Premium") !== false);
 check("a credit and a debit are distinguishable in words, not only colour",
@@ -514,6 +522,7 @@ echo "\nlogs\n";
 $page = render_view("views/client/logs.php", array("action" => "logs"), array("login" => "tok-lan"), array("token" => "tok-lan"));
 $html = $page["html"];
 assert_clean("logs", $html);
+assert_private("logs", $html);
 check("the activities are printed with their device", strpos($html, "Đăng nhập") !== false
     && strpos($html, "Firefox on Linux") !== false);
 check("the log explains what it records", strpos($html, "Các thao tác đã thực hiện trên tài khoản") !== false);
@@ -524,6 +533,7 @@ echo "\nchange password\n";
 $page = render_view("views/client/change-password.php", array("action" => "change-password"), array("login" => "tok-lan"), array("token" => "tok-lan"));
 $html = $page["html"];
 assert_clean("change password", $html);
+assert_private("change password", $html);
 check("the form keeps the legacy action and fields", strpos($html, "data-password-form") !== false
     && strpos($html, 'name="newpassword"') !== false && strpos($html, 'name="renewpassword"') !== false
     && strpos($html, 'name="password"') !== false);
@@ -538,6 +548,7 @@ echo "\nsecurity\n";
 $page = render_view("views/client/security.php", array("action" => "security"), array("login" => "tok-lan"), array("token" => "tok-lan"));
 $html = $page["html"];
 assert_clean("security", $html);
+assert_private("security", $html);
 check("all three switches are present with a visible track",
     substr_count($html, 'class="switch__track"') === 4);
 check("the QR is a local data URI, never a remote request", strpos($html, "data:image/svg+xml") !== false);
@@ -631,6 +642,7 @@ echo "\naffiliate programme\n";
 $page = render_view("views/client/affiliates.php", array("action" => "affiliates"),
     array("login" => "tok-lan"), array("token" => "tok-lan"));
 assert_clean("affiliates", $page["html"]);
+assert_private("affiliates", $page["html"]);
 check("affiliates shows the commission balance", strpos($page["html"], "250.000đ") !== false);
 check("affiliates shows the referral rate", strpos($page["html"], "25%") !== false);
 check("affiliates prints a referral link for this account", strpos($page["html"], "aff=7") !== false);
@@ -641,6 +653,7 @@ check("affiliates does not print the account token", strpos($page["html"], "tok-
 $page = render_view("views/client/affiliate-history.php", array("action" => "affiliate-history"),
     array("login" => "tok-lan"), array("token" => "tok-lan"));
 assert_clean("affiliate history", $page["html"]);
+assert_private("affiliate history", $page["html"]);
 check("commission rows show the change", strpos($page["html"], "96.000đ") !== false);
 check("commission rows show the balance after", strpos($page["html"], "250.000đ") !== false);
 check("the history explains what a row is", strpos($page["html"], "số dư trước và sau") !== false);
@@ -648,6 +661,7 @@ check("the history explains what a row is", strpos($page["html"], "số dư trư
 $page = render_view("views/client/affiliate-withdraw.php", array("action" => "affiliate-withdraw"),
     array("login" => "tok-lan"), array("token" => "tok-lan"));
 assert_clean("affiliate withdraw", $page["html"]);
+assert_private("affiliate withdraw", $page["html"]);
 check("withdraw lists the configured banks", strpos($page["html"], "TPBank") !== false);
 check("withdraw states the minimum", strpos($page["html"], "100.000đ") !== false);
 check("withdraw sends a CSRF token", strpos($page["html"], 'name="csrf_token"') !== false);
@@ -701,6 +715,7 @@ echo "\nlegacy USDT invoice\n";
 $page = render_view("views/client/payment.php",
     array("action" => "payment", "trans_id" => "INV7Q2M9X"), array(), array());
 assert_clean("invoice", $page["html"]);
+assert_private("invoice", $page["html"]);
 check("invoice does not redirect a real id", $page["redirect"] === null);
 check("invoice shows the amount", strpos($page["html"], "19.84") !== false);
 check("invoice shows the receiving address", strpos($page["html"], "TXk9PreviewAddress") !== false);
@@ -722,6 +737,7 @@ echo "\nAPI guide\n";
 $page = render_view("views/client/document-api.php", array("action" => "document-api"),
     array("login" => "tok-lan"), array());
 assert_clean("api guide", $page["html"]);
+assert_private("api guide", $page["html"]);
 check("api guide does not redirect while the owner keeps the API on", $page["redirect"] === null);
 check("api guide shows the customer's own key", strpos($page["html"], "0123456789abcdef0123456789abcdef") !== false);
 check("api guide builds endpoints from the key",

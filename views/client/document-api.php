@@ -56,6 +56,7 @@ $storeShell = array(
     "title" => __("Tài liệu tích hợp API") . " | " . $CMSNT->site("title"),
     "desc" => __("Khoá API và các điểm cuối để tích hợp shop vào hệ thống của bạn."),
     "nav" => store_nav_default($CMSNT),
+    "noindex" => true,
     "body_class" => "page-account",
 );
 store_shell_open($storeShell);

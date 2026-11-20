@@ -59,6 +59,7 @@ $storeShell = array(
     "title" => __("Sản phẩm yêu thích") . " | " . $CMSNT->site("title"),
     "desc" => $CMSNT->site("description"),
     "nav" => store_nav_default($CMSNT),
+    "noindex" => true,
     "body_class" => "page-account",
 );
 store_shell_open($storeShell);

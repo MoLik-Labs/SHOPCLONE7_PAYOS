@@ -307,6 +307,14 @@ database value directly again.
 `views/client/product.php` reserved the gallery's 800×600 box but did not tell the browser the image
 is the largest paint. The main `<img>` now carries `fetchpriority="high"` (thumbnails stay `lazy`).
 
+## 6n. Private pages that ask not to be indexed
+
+The shell only read `noindex`, while six pages passed `"robots" => "noindex, nofollow"` — the tag was
+silently dropped, so invoices, 2FA/OTP screens and the affiliate pages were indexable. The shell now
+honours `robots` (any value carrying `noindex`) as well, and the account pages that had no switch at
+all — profile, security, change-password, transactions, logs, favourites, API guide — set
+`noindex => true`. `tests/account_pages_test.php` asserts the rendered tag on every one of them.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:

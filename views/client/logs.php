@@ -37,6 +37,7 @@ $storeShell = array(
     "title" => __("Nhật ký hoạt động") . " | " . $CMSNT->site("title"),
     "desc" => $CMSNT->site("description"),
     "nav" => store_nav_default($CMSNT),
+    "noindex" => true,
     "body_class" => "page-account",
 );
 store_shell_open($storeShell);

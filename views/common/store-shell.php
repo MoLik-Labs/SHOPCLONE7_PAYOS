@@ -231,6 +231,9 @@ if (!function_exists("store_shell_config")) {
             "head" => "",
             "scripts" => "",
             "noindex" => false,
+            /* Pages written before the switch was named describe the tag directly. Honour both:
+               "robots" => "noindex, nofollow" used to be accepted and silently ignored. */
+            "robots" => "",
             "body_class" => "",
             "main_class" => "container section",
             "brand_html" => "",
@@ -253,6 +256,9 @@ if (!function_exists("store_shell_config")) {
         }
         if ($defaults["theme_color"] === "") {
             $defaults["theme_color"] = "#fbf9f4";
+        }
+        if ($defaults["robots"] !== "" && empty($defaults["noindex"])) {
+            $defaults["noindex"] = stripos((string) $defaults["robots"], "noindex") !== false;
         }
         if ($defaults["recharge_href"] === "") {
             $methods = store_payment_methods($cmsnt);

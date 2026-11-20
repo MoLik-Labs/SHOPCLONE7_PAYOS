@@ -29,6 +29,7 @@ $storeShell = array(
     "title" => __("Tài khoản") . " | " . $CMSNT->site("title"),
     "desc" => $CMSNT->site("description"),
     "nav" => store_nav_default($CMSNT, $storeMethods),
+    "noindex" => true,
     "body_class" => "page-account",
 );
 store_shell_open($storeShell);
