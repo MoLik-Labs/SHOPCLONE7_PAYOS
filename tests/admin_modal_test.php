@@ -75,6 +75,12 @@ check_modal('a failed refund puts the row back so it can be retried',
 check_modal('the modal keeps its own permission check',
     strpos($withdraw, 'checkPermission($getUser["admin"], "edit_withdraw_affiliate")') !== false);
 
+/* ---- the admin guard ------------------------------------------------------- */
+$adminGuard = (string) file_get_contents($root . '/models/is_admin.php');
+check_modal('the session token reaches SQL escaped, like every other token lookup',
+    strpos($adminGuard, 'check_string($_SESSION["admin_login"])') !== false
+    && strpos($adminGuard, '= \'" . $_SESSION["admin_login"] . "\'') === false);
+
 /* ---- log rows are escaped on output ---------------------------------------- */
 $adminLogs = (string) file_get_contents($root . '/views/admin/logs.php');
 $clientLogs = (string) file_get_contents($root . '/views/client/logs.php');

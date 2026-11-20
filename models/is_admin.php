@@ -15,7 +15,9 @@ if(isset($_COOKIE["token"])) {
 if(!isset($_SESSION["admin_login"])) {
     redirect(base_url("client/login"));
 } else {
-    $getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `token` = '" . $_SESSION["admin_login"] . "'  ");
+    /* Quoted like every other token lookup: the session is server-side, but one unescaped literal in
+       a SQL string is exactly how an injection survives a later refactor. */
+    $getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `token` = '" . check_string($_SESSION["admin_login"]) . "'  ");
     if(!$getUser) {
         redirect(base_url("client/login"));
     }

@@ -316,6 +316,10 @@ upload at 10 MB before reading it into memory.
   client, amount and price) parse the value with `orbit_positive_amount()` and render it with
   `orbit_amount_string()`.
 
+The admin guard now reads the session token with `check_string()` like every other token lookup. It
+was the one place where a server-side value was concatenated into SQL raw; the value cannot be chosen
+by the request today, but that is one refactor away from being wrong.
+
 ## 13. PayPal confirmation
 
 `confirmPaypal` trusted the order id posted by the browser. Any completed charge under the same
