@@ -28,11 +28,11 @@ if(isset($_POST["AddLang"])) {
     $isInsert = $CMSNT->insert("languages", ["icon" => $icon, "lang" => check_string($_POST["lang"]), "status" => check_string($_POST["status"])]);
     if($isInsert) {
         $Mobile_Detect = new Mobile_Detect();
-        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thêm ngôn ngữ") . " (" . $_POST["lang"] . ")."]);
+        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thêm ngôn ngữ") . " (" . check_string($_POST["lang"]) . ")."]);
         $my_text = $CMSNT->site("noti_action");
         $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
         $my_text = str_replace("{username}", $getUser["username"], $my_text);
-        $my_text = str_replace("{action}", __("Thêm ngôn ngữ") . " (" . $_POST["lang"] . ").", $my_text);
+        $my_text = str_replace("{action}", __("Thêm ngôn ngữ") . " (" . check_string($_POST["lang"]) . ").", $my_text);
         $my_text = str_replace("{ip}", myip(), $my_text);
         $my_text = str_replace("{time}", gettime(), $my_text);
         sendMessAdmin($my_text);

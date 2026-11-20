@@ -182,6 +182,14 @@ usage limit), and then updated `aff_withdraw` using the coupon id — so a craft
 cancel an unrelated withdrawal, without the `edit_withdraw_affiliate` permission and without paying the
 member. The handler is gone: the modal is read-only, like the button it renders.
 
+## 6b. Stored HTML in the activity log
+
+Four admin create/update handlers (currency, language, bank config, bank edit) wrote the raw request
+value into the `logs.action` string — they escaped the value for the row they were saving but not for
+the log line. `views/admin/logs.php` echoed `action` without escaping, so a value supplied by an admin
+with `edit_currency` became HTML in every other admin's log page. The table now escapes on output (the
+client log page already did), and the four producers store the escaped value.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:

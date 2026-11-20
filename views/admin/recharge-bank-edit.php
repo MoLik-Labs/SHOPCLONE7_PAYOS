@@ -42,11 +42,11 @@ if(isset($_POST["LuuNganHang"])) {
     $isUpdate = $CMSNT->update("banks", ["short_name" => check_string($_POST["short_name"]), "accountNumber" => check_string($_POST["accountNumber"]), "status" => check_string($_POST["status"]), "token" => check_string(removeSpaces($_POST["token"])), "password" => check_string($_POST["password"]), "accountName" => check_string($_POST["accountName"])], " `id` = '" . $id . "' ");
     if($isUpdate) {
         $Mobile_Detect = new Mobile_Detect();
-        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Cập nhật thông tin ngân hàng") . " (" . $_POST["short_name"] . " - " . $_POST["accountNumber"] . ")."]);
+        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Cập nhật thông tin ngân hàng") . " (" . check_string($_POST["short_name"]) . " - " . check_string($_POST["accountNumber"]) . ")."]);
         $my_text = $CMSNT->site("noti_action");
         $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
         $my_text = str_replace("{username}", $getUser["username"], $my_text);
-        $my_text = str_replace("{action}", __("Cập nhật thông tin ngân hàng") . " (" . $_POST["short_name"] . " - " . $_POST["accountNumber"] . ").", $my_text);
+        $my_text = str_replace("{action}", __("Cập nhật thông tin ngân hàng") . " (" . check_string($_POST["short_name"]) . " - " . check_string($_POST["accountNumber"]) . ").", $my_text);
         $my_text = str_replace("{ip}", myip(), $my_text);
         $my_text = str_replace("{time}", gettime(), $my_text);
         sendMessAdmin($my_text);

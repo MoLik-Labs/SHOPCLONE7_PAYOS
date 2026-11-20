@@ -171,7 +171,10 @@ foreach ($listDatatable as $row) {
     echo "                                                [ID ";
     echo $row["user_id"];
     echo "]</a>\n                                        </td>\n                                        <td>";
-    echo $row["action"];
+    /* Log actions embed reason/name fields from the request. Most forms call check_string(), but a
+       few (currency/language/bank create) write the raw value; escaping here makes every row safe
+       without having to audit each producer again. */
+    echo htmlspecialchars((string) $row["action"], ENT_QUOTES, "UTF-8");
     echo "</td>\n                                        <td><span class=\"badge bg-light text-dark\" data-toggle=\"tooltip\" data-placement=\"bottom\"\n                                                title=\"";
     echo timeAgo(strtotime($row["createdate"]));
     echo "\">";

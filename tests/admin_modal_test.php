@@ -11,6 +11,9 @@
  * The withdrawal handler itself refunded before it wrote the row, and read `status` without a lock:
  * two concurrent submits both passed "not cancelled yet" and refunded twice.
  *
+ * The log table had the mirror-image problem: `views/admin/logs.php` printed `$row["action"]` raw, and
+ * four producers built that string from an unescaped request value — stored HTML in the admin panel.
+ *
  * These are source-level checks; the handlers need a database and an HTTP request to execute.
  */
 
@@ -71,6 +74,26 @@ check_modal('a failed refund puts the row back so it can be retried',
     strpos($withdraw, 'Hoàn tiền thất bại, đơn rút được giữ nguyên') !== false);
 check_modal('the modal keeps its own permission check',
     strpos($withdraw, 'checkPermission($getUser["admin"], "edit_withdraw_affiliate")') !== false);
+
+/* ---- log rows are escaped on output ---------------------------------------- */
+$adminLogs = (string) file_get_contents($root . '/views/admin/logs.php');
+$clientLogs = (string) file_get_contents($root . '/views/client/logs.php');
+check_modal('the admin log table escapes the action it prints',
+    strpos($adminLogs, 'htmlspecialchars((string) $row["action"], ENT_QUOTES, "UTF-8")') !== false
+    && strpos($adminLogs, 'echo $row["action"];') === false);
+check_modal('the client log table escapes the action it prints',
+    strpos($clientLogs, 'store_e($row["action"])') !== false);
+/* Four producers wrote the raw request value into the log line; the render fix covers them, and the
+   producers no longer store unescaped HTML either. */
+foreach (array('currency-list', 'language-list', 'recharge-bank-config', 'recharge-bank-edit') as $view) {
+    $source = (string) file_get_contents($root . '/views/admin/' . $view . '.php');
+    if (preg_match_all('/insert\("logs".*?\n/', $source, $matches)) {
+        foreach ($matches[0] as $line) {
+            check_modal($view . ' escapes the request value it writes to the log',
+                strpos($line, '$_POST[') === false || strpos($line, 'check_string($_POST[') !== false);
+        }
+    }
+}
 
 echo "\n" . $checks . " checks, " . $failures . " failed\n";
 exit($failures > 0 ? 1 : 0);

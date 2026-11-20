@@ -23,11 +23,11 @@ if(isset($_POST["AddCurrency"])) {
     $isInsert = $CMSNT->insert("currencies", ["name" => check_string($_POST["name"]), "code" => check_string($_POST["code"]), "symbol_left" => !empty($_POST["symbol_left"]) ? check_string($_POST["symbol_left"]) : NULL, "symbol_right" => !empty($_POST["symbol_right"]) ? check_string($_POST["symbol_right"]) : NULL, "rate" => !empty($_POST["rate"]) ? check_string($_POST["rate"]) : 0, "decimal_currency" => !empty($_POST["decimal_currency"]) ? check_string($_POST["decimal_currency"]) : 0, "seperator" => !empty($_POST["seperator"]) ? check_string($_POST["seperator"]) : "dot", "display" => check_string($_POST["display"])]);
     if($isInsert) {
         $Mobile_Detect = new Mobile_Detect();
-        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thêm tiền tệ") . " (" . $_POST["name"] . ")."]);
+        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Thêm tiền tệ") . " (" . check_string($_POST["name"]) . ")."]);
         $my_text = $CMSNT->site("noti_action");
         $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);
         $my_text = str_replace("{username}", $getUser["username"], $my_text);
-        $my_text = str_replace("{action}", __("Thêm tiền tệ") . " (" . $_POST["name"] . ").", $my_text);
+        $my_text = str_replace("{action}", __("Thêm tiền tệ") . " (" . check_string($_POST["name"]) . ").", $my_text);
         $my_text = str_replace("{ip}", myip(), $my_text);
         $my_text = str_replace("{time}", gettime(), $my_text);
         sendMessAdmin($my_text);
