@@ -277,6 +277,22 @@ or below zero and report `failed`, so no single bad caller can move money the wr
 "log out all members" action also rotates session tokens with `random_bytes(32)` instead of
 six characters plus the current second.
 
+## 6k. A retry is not a second purchase
+
+The buy panel charges on `buyProduct`, and the public API charges on `create-order`; both generated a
+random `trans_id` per request. A response lost to a timeout (or a double tap that outlived the disabled
+button) produced a second charge and a second order. Both flows now accept an optional
+`client_order_id`:
+
+- the storefront sends one key per opened buy panel and reuses it across network retries;
+- the server derives `trans_id = "W" + sha256(buyer_id | key)[0..30]`, looks for that order first and
+  answers with it instead of charging again;
+- a key cannot be replayed for another product or against a cancelled/refunded order;
+- a server-reported failure rotates the panel's key, so a genuine second attempt can succeed.
+
+Requests without a key keep the old behaviour. `tests/order_key_test.php` pins the derivation and the
+wiring in both paths.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:

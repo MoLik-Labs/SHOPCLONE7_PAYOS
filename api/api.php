@@ -81,6 +81,34 @@ if ($apiAction == "get-balance") { // lấy sô dư
     if ($maxQuantity > 0 && $amount > $maxQuantity) {
         exit(json_encode(["code" => 201, "message" => __("Số lượng cần mua tối đa là") . " " . format_cash($maxQuantity)]));
     }
+    /*
+     * Optional idempotency key. A client whose connection drops after the debit can retry with the
+     * same key and receive the order it already paid for, instead of paying twice. The key is
+     * namespaced by the buyer and hashed, so it can never name another customer's order.
+     */
+    $clientOrderKey = isset($_GET["client_order_id"]) && is_string($_GET["client_order_id"])
+        ? trim($_GET["client_order_id"]) : "";
+    $trans_id = "";
+    if ($clientOrderKey !== "") {
+        if (preg_match('/^[A-Za-z0-9-]{8,64}$/', $clientOrderKey) !== 1) {
+            exit(json_encode(["code" => 201, "message" => __("Mã đơn hàng không hợp lệ")]));
+        }
+        $trans_id = orbit_order_id($getUser["id"], $clientOrderKey);
+        $existingOrder = $CMSNT->get_row("SELECT * FROM `product_order` WHERE `trans_id` = '" . addslashes($trans_id) . "' AND `buyer` = " . (int) $getUser["id"] . " ");
+        if ($existingOrder) {
+            if ((string) $existingOrder["product_id"] !== (string) $product["id"]) {
+                exit(json_encode(["code" => 201, "message" => __("Mã đơn hàng đã được dùng cho sản phẩm khác")]));
+            }
+            if ((int) $existingOrder["trash"] === 1) {
+                exit(json_encode(["code" => 201, "message" => __("Đơn hàng trước đã được huỷ hoặc hoàn tiền, hãy dùng mã đơn hàng mới.")]));
+            }
+            $delivered = array();
+            foreach ($CMSNT->get_list("SELECT `account` FROM `product_sold` WHERE `trans_id` = '" . addslashes($trans_id) . "' AND `buyer` = " . (int) $getUser["id"] . " ORDER BY `id` ASC") as $soldRow) {
+                $delivered[] = preg_replace("/\r/", "", $soldRow["account"]);
+            }
+            exit(json_encode(["code" => 200, "message" => __("Đơn hàng này đã được tạo trước đó."), "order_id" => $trans_id, "data" => implode(PHP_EOL, $delivered)]));
+        }
+    }
     if ($product["supplier_id"] == 0) {
         if ($CMSNT->get_row(" SELECT COUNT(id) FROM `product_stock` WHERE `product_code` = '" . $product["code"] . "' ")["COUNT(id)"] < $amount) {
             exit(json_encode(["code" => 201, "message" => __("Số lượng còn lại trong hệ thống không đủ")]));
@@ -93,7 +121,9 @@ if ($apiAction == "get-balance") { // lấy sô dư
             exit(json_encode(["code" => 201, "message" => __("Sản phẩm này đang bảo trì, không thể mua hàng vào lúc này")]));
         }
     }
-    $trans_id = random("QWERTYUOPASDFGHJKZXCVBNM123456789", 3) . uniqid();
+    if ($trans_id === "") {
+        $trans_id = random("QWERTYUOPASDFGHJKZXCVBNM123456789", 3) . uniqid();
+    }
     $price = orbit_unit_price($product);
     $money = $amount * $price;
     if ($getUser["discount"] == 0) {

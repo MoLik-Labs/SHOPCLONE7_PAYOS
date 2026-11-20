@@ -30,6 +30,32 @@ if($_REQUEST["action"] == "buyProduct") {
     if($getUser["banned"] != 0) {
         exit(json_encode(["status" => "error", "msg" => __("Tài khoản của bạn đã bị cấm")]));
     }
+    /*
+     * Idempotent checkout. The storefront sends one key per opened buy panel; a retry after a lost
+     * response arrives with the same key, finds the order it already created and answers success
+     * instead of charging again. Checked before the purchase throttle, which would otherwise reject
+     * the retry with "too fast".
+     */
+    $clientOrderKey = isset($_REQUEST["client_order_id"]) && is_string($_REQUEST["client_order_id"])
+        ? trim($_REQUEST["client_order_id"]) : "";
+    $trans_id = "";
+    if($clientOrderKey !== "") {
+        if(preg_match('/^[A-Za-z0-9-]{8,64}$/', $clientOrderKey) !== 1) {
+            exit(json_encode(["status" => "error", "msg" => __("Mã đơn hàng không hợp lệ")]));
+        }
+        $trans_id = orbit_order_id($getUser["id"], $clientOrderKey);
+        $existingOrder = $CMSNT->get_row("SELECT * FROM `product_order` WHERE `trans_id` = '" . addslashes($trans_id) . "' AND `buyer` = " . (int) $getUser["id"] . " ");
+        if($existingOrder) {
+            if(isset($_REQUEST["id"]) && (string) $existingOrder["product_id"] !== (string) check_string($_REQUEST["id"])) {
+                exit(json_encode(["status" => "error", "msg" => __("Mã đơn hàng đã được dùng cho sản phẩm khác")]));
+            }
+            if((int) $existingOrder["trash"] === 1) {
+                /* The order was refunded or deleted: never reuse its trans_id for a second charge. */
+                exit(json_encode(["status" => "error", "msg" => __("Đơn hàng trước đã được huỷ hoặc hoàn tiền, vui lòng mở lại trang để mua lại.")]));
+            }
+            exit(json_encode(["status" => "success", "msg" => __("Đơn hàng này đã được tạo trước đó."), "trans_id" => $trans_id, "data" => []]));
+        }
+    }
     if(time() - $getUser["time_request"] < $CMSNT->site("thoi_gian_mua_cach_nhau")) {
         exit(json_encode(["status" => "error", "msg" => __("Thao tác quá nhanh, vui lòng chờ")]));
     }
@@ -68,7 +94,9 @@ if($_REQUEST["action"] == "buyProduct") {
     } elseif(!($supplier = $CMSNT->get_row(" SELECT * FROM `suppliers` WHERE `id` = '" . $product["supplier_id"] . "' AND `status` = 1 "))) {
         exit(json_encode(["status" => "error", "msg" => __("Sản phẩm này đang bảo trì, không thể mua hàng vào lúc này")]));
     }
-    $trans_id = random("QWERTYUOPASDFGHJKZXCVBNM123456789", 4) . uniqid();
+    if($trans_id === "") {
+        $trans_id = random("QWERTYUOPASDFGHJKZXCVBNM123456789", 4) . uniqid();
+    }
     $price = orbit_unit_price($product);
     $money = $amount * $price;
     if($getUser["discount"] == 0) {

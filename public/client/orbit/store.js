@@ -316,6 +316,27 @@
     if (!submit) {
       return;
     }
+    /* One key per opened panel. A retry after a lost response reuses it, so the server returns the
+       order it already created instead of charging again; a server-reported failure rotates it so
+       the user can genuinely try again. */
+    function newOrderKey() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+      var bytes = new Uint8Array(16);
+      if (window.crypto && window.crypto.getRandomValues) {
+        window.crypto.getRandomValues(bytes);
+      } else {
+        for (var i = 0; i < bytes.length; i += 1) {
+          bytes[i] = Math.floor(Math.random() * 256);
+        }
+      }
+      return Array.prototype.map.call(bytes, function (b) {
+        return ("0" + b.toString(16)).slice(-2);
+      }).join("");
+    }
+    var orderKey = newOrderKey();
+
     submit.addEventListener("click", function () {
       if (!token || !apiKey) {
         setStatus(statusEl, "Phiên đăng nhập đã hết. Vui lòng đăng nhập lại.", "error");
@@ -329,6 +350,7 @@
         id: productId,
         amount: amount,
         coupon: couponInput ? couponInput.value : "",
+        client_order_id: orderKey,
         api_key: apiKey
       }).then(function (data) {
         if (data.status === "success") {
@@ -345,6 +367,7 @@
           statusEl.classList.add("is-ok");
           submit.textContent = "Đã thanh toán";
         } else {
+          orderKey = newOrderKey();
           setStatus(statusEl, data.msg || "Thanh toán thất bại.", "error");
           submit.disabled = false;
         }

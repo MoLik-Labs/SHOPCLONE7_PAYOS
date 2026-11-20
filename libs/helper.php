@@ -1603,6 +1603,17 @@ function check_string($data)
  *
  * @return int|false
  */
+/**
+ * Deterministic order id for a client-supplied idempotency key.
+ *
+ * A checkout whose response is lost (timeout, closed tab, flaky mobile network) can be retried with
+ * the same key and must not charge the buyer twice. The key is namespaced by the buyer so two
+ * customers cannot collide, and hashed so an attacker cannot choose a trans_id another order uses.
+ */
+function orbit_order_id($user_id, $client_key)
+{
+    return "W" . substr(hash("sha256", (int) $user_id . "|" . (string) $client_key), 0, 30);
+}
 function order_quantity($value)
 {
     if (!is_int($value) && !is_string($value)) {
