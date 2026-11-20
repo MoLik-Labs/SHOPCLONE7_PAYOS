@@ -24,12 +24,10 @@ if(isset($_POST["submit"])) {
     }
     $url_icon = NULL;
     if(check_img("icon")) {
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 4);
-        $uploads_dir = "assets/storage/images/icon" . $rand . ".png";
-        $tmp_name = $_FILES["icon"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $url_icon = $uploads_dir;
+        /* The extension follows the bytes, not a hard-coded ".png". */
+        $stored = orbit_store_image($_FILES["icon"], "icon", "images");
+        if($stored !== false) {
+            $url_icon = $stored;
         }
     }
     $isInsert = $CMSNT->insert("post_category", ["icon" => $url_icon, "name" => check_string($_POST["name"]), "slug" => create_slug(check_string($_POST["name"])), "content" => isset($_POST["content"]) ? base64_encode($_POST["content"]) : NULL, "status" => check_string($_POST["status"]), "create_gettime" => gettime()]);

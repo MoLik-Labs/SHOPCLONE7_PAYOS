@@ -28,13 +28,11 @@ if(isset($_POST["save"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"" . __("This function cannot be used because this is a demo site") . "\")){window.history.back().location.reload();}</script>");
     }
     if(check_img("icon")) {
-        unlink($row["icon"]);
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 3);
-        $uploads_dir = "assets/storage/images/icon_gateway" . $rand . ".png";
-        $tmp_name = $_FILES["icon"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $CMSNT->update("payment_manual", ["icon" => "assets/storage/images/icon_gateway" . $rand . ".png"], " `id` = '" . $id . "' ");
+        $stored = orbit_store_image($_FILES["icon"], "icon_gateway", "images");
+        if($stored !== false) {
+            $CMSNT->update("payment_manual", ["icon" => $stored], " `id` = '" . $id . "' ");
+            /* The row now points at the new file; only then is the previous one removed. */
+            orbit_delete_upload($row["icon"]);
         }
     }
     $isUpdate = $CMSNT->update("payment_manual", ["title" => check_string($_POST["title"]), "description" => check_string($_POST["description"]), "slug" => check_string($_POST["slug"]), "content" => isset($_POST["content"]) ? base64_encode($_POST["content"]) : NULL, "display" => check_string($_POST["display"]), "update_gettime" => gettime()], " `id` = '" . $id . "' ");

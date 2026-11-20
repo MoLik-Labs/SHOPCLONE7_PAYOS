@@ -1871,6 +1871,86 @@ function check_img($img)
 {
     return isset($_FILES[$img]) && valid_image_upload($_FILES[$img]);
 }
+/**
+ * The extension that matches the bytes of a validated image upload.
+ *
+ * Every admin form stored its upload as `.png` no matter what it was: a JPEG saved as `image.png` is
+ * then served as `image/png`, and with `nosniff` a browser may refuse to render it. The extension now
+ * comes from getimagesize(), the same call valid_image_upload() already made.
+ *
+ * @param array $file one entry of $_FILES
+ * @return string|false png|jpg|gif
+ */
+function orbit_image_extension(array $file)
+{
+    if(!valid_image_upload($file)) {
+        return false;
+    }
+    $info = @getimagesize($file["tmp_name"]);
+    $map = array(IMAGETYPE_PNG => "png", IMAGETYPE_JPEG => "jpg", IMAGETYPE_GIF => "gif");
+    return isset($map[$info[2]]) ? $map[$info[2]] : false;
+}
+/**
+ * Store a validated image upload under `assets/storage/` and return its site-relative path.
+ *
+ * The path is absolute when moving the file (a relative one depends on the caller's working
+ * directory — the sitemap bug), the extension matches the real type, and the file is stored before
+ * the caller removes the one it replaces, so a failed upload never leaves a setting pointing at a
+ * deleted file.
+ *
+ * @param array $file one entry of $_FILES
+ * @param string $prefix filename prefix such as "logo_light_"
+ * @param string $subdir directory under assets/storage, e.g. "images" or "flags"
+ * @return string|false "assets/storage/<subdir>/<name>"
+ */
+function orbit_store_image(array $file, $prefix, $subdir = "images")
+{
+    /* Arguments first: a bad prefix or directory must be refused before any filesystem work. */
+    $prefix = preg_replace('/[^A-Za-z0-9_\-]/', '', (string) $prefix);
+    $subdir = trim((string) $subdir, "/");
+    if($prefix === "" || !preg_match('/^[A-Za-z0-9_\-]+(\/[A-Za-z0-9_\-]+)*$/D', $subdir)) {
+        return false;
+    }
+    $extension = orbit_image_extension($file);
+    if($extension === false) {
+        return false;
+    }
+    $root = dirname(__DIR__) . "/assets/storage/" . $subdir;
+    if(!is_dir($root) && !@mkdir($root, 0755, true)) {
+        error_log("[orbit] could not create the upload directory " . $root);
+        return false;
+    }
+    $name = $prefix . random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 4) . "." . $extension;
+    if(!move_uploaded_file($file["tmp_name"], $root . "/" . $name)) {
+        error_log("[orbit] could not store the upload " . $name);
+        return false;
+    }
+    @chmod($root . "/" . $name, 0644);
+    return "assets/storage/" . $subdir . "/" . $name;
+}
+/**
+ * Delete a previously stored upload, but only inside `assets/storage/`.
+ *
+ * The forms called `unlink($row["icon"])` with whatever the database held (or "" for an unset
+ * setting, which warns), and a crafted value could point anywhere the PHP user can write. Only
+ * paths that resolve inside the upload directory are removed, and a missing file is not an error.
+ *
+ * @param string $relativePath value as stored in the database
+ * @return bool
+ */
+function orbit_delete_upload($relativePath)
+{
+    $relativePath = (string) $relativePath;
+    if($relativePath === "" || strpos($relativePath, "assets/storage/") !== 0) {
+        return false;
+    }
+    $base = realpath(dirname(__DIR__) . "/assets/storage");
+    $target = realpath(dirname(__DIR__) . "/" . $relativePath);
+    if($base === false || $target === false || strpos($target, $base . DIRECTORY_SEPARATOR) !== 0) {
+        return false;
+    }
+    return @unlink($target);
+}
 function valid_image_upload(array $file)
 {
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !isset($file['name'], $file['tmp_name']) || !is_string($file['name']) || !is_string($file['tmp_name'])) {

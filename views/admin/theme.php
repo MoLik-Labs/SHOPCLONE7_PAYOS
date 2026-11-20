@@ -18,73 +18,59 @@ if(isset($_POST["SaveSettings"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"" . __("This function cannot be used because this is a demo site") . "\")){window.history.back().location.reload();}</script>");
     }
     if(check_img("logo_light")) {
-        unlink($CMSNT->site("logo_light"));
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 3);
-        $uploads_dir = "assets/storage/images/logo_light_" . $rand . ".png";
-        $tmp_name = $_FILES["logo_light"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $CMSNT->update("settings", ["value" => $uploads_dir], " `name` = 'logo_light' ");
+        /* Store the new file first: a failed upload must not leave the setting pointing at a deleted path. */
+        $stored = orbit_store_image($_FILES["logo_light"], "logo_light_");
+        if($stored !== false) {
+            orbit_delete_upload($CMSNT->site("logo_light"));
+            $CMSNT->update("settings", ["value" => $stored], " `name` = 'logo_light' ");
         }
     }
     if(check_img("logo_dark")) {
-        unlink($CMSNT->site("logo_dark"));
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 3);
-        $uploads_dir = "assets/storage/images/logo_dark_" . $rand . ".png";
-        $tmp_name = $_FILES["logo_dark"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $CMSNT->update("settings", ["value" => $uploads_dir], " `name` = 'logo_dark' ");
+        /* Store the new file first: a failed upload must not leave the setting pointing at a deleted path. */
+        $stored = orbit_store_image($_FILES["logo_dark"], "logo_dark_");
+        if($stored !== false) {
+            orbit_delete_upload($CMSNT->site("logo_dark"));
+            $CMSNT->update("settings", ["value" => $stored], " `name` = 'logo_dark' ");
         }
     }
     if(check_img("favicon")) {
-        unlink($CMSNT->site("favicon"));
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 3);
-        $uploads_dir = "assets/storage/images/favicon_" . $rand . ".png";
-        $tmp_name = $_FILES["favicon"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $CMSNT->update("settings", ["value" => $uploads_dir], " `name` = 'favicon' ");
+        /* Store the new file first: a failed upload must not leave the setting pointing at a deleted path. */
+        $stored = orbit_store_image($_FILES["favicon"], "favicon_");
+        if($stored !== false) {
+            orbit_delete_upload($CMSNT->site("favicon"));
+            $CMSNT->update("settings", ["value" => $stored], " `name` = 'favicon' ");
         }
     }
     if(check_img("image")) {
-        unlink($CMSNT->site("image"));
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 3);
-        $uploads_dir = "assets/storage/images/image_" . $rand . ".png";
-        $tmp_name = $_FILES["image"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $CMSNT->update("settings", ["value" => $uploads_dir], " `name` = 'image' ");
+        /* Store the new file first: a failed upload must not leave the setting pointing at a deleted path. */
+        $stored = orbit_store_image($_FILES["image"], "image_");
+        if($stored !== false) {
+            orbit_delete_upload($CMSNT->site("image"));
+            $CMSNT->update("settings", ["value" => $stored], " `name` = 'image' ");
         }
     }
     if(check_img("default_product_image")) {
-        unlink($CMSNT->site("default_product_image"));
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 3);
-        $uploads_dir = "assets/storage/images/default_product_image" . $rand . ".png";
-        $tmp_name = $_FILES["default_product_image"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $CMSNT->update("settings", ["value" => $uploads_dir], " `name` = 'default_product_image' ");
+        /* Store the new file first: a failed upload must not leave the setting pointing at a deleted path. */
+        $stored = orbit_store_image($_FILES["default_product_image"], "default_product_image");
+        if($stored !== false) {
+            orbit_delete_upload($CMSNT->site("default_product_image"));
+            $CMSNT->update("settings", ["value" => $stored], " `name` = 'default_product_image' ");
         }
     }
     if(check_img("banner_singer")) {
-        unlink($CMSNT->site("banner_singer"));
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 3);
-        $uploads_dir = "assets/storage/images/banner_singer" . $rand . ".png";
-        $tmp_name = $_FILES["banner_singer"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $CMSNT->update("settings", ["value" => $uploads_dir], " `name` = 'banner_singer' ");
+        /* Store the new file first: a failed upload must not leave the setting pointing at a deleted path. */
+        $stored = orbit_store_image($_FILES["banner_singer"], "banner_singer");
+        if($stored !== false) {
+            orbit_delete_upload($CMSNT->site("banner_singer"));
+            $CMSNT->update("settings", ["value" => $stored], " `name` = 'banner_singer' ");
         }
     }
     if(check_img("avatar")) {
-        unlink($CMSNT->site("avatar"));
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 3);
-        $uploads_dir = "assets/storage/images/avatar" . $rand . ".png";
-        $tmp_name = $_FILES["avatar"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $CMSNT->update("settings", ["value" => $uploads_dir], " `name` = 'avatar' ");
+        /* Store the new file first: a failed upload must not leave the setting pointing at a deleted path. */
+        $stored = orbit_store_image($_FILES["avatar"], "avatar");
+        if($stored !== false) {
+            orbit_delete_upload($CMSNT->site("avatar"));
+            $CMSNT->update("settings", ["value" => $stored], " `name` = 'avatar' ");
         }
     }
     $my_text = $CMSNT->site("noti_action");

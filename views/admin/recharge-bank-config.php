@@ -45,12 +45,9 @@ if(isset($_POST["SaveSettings"])) {
         }
         $url_image = "";
         if(check_img("image")) {
-            $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 3);
-            $uploads_dir = "assets/storage/images/bank/" . $rand . ".png";
-            $tmp_name = $_FILES["image"]["tmp_name"];
-            $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-            if($addlogo) {
-                $url_image = "assets/storage/images/bank/" . $rand . ".png";
+            $stored = orbit_store_image($_FILES["image"], "bank_", "images/bank");
+            if($stored !== false) {
+                $url_image = $stored;
             }
         }
         $isInsert = $CMSNT->insert("banks", ["image" => $url_image, "short_name" => check_string($_POST["short_name"]), "accountNumber" => check_string($_POST["accountNumber"]), "token" => check_string(removeSpaces($_POST["token"])), "password" => check_string($_POST["password"]), "accountName" => check_string($_POST["accountName"])]);

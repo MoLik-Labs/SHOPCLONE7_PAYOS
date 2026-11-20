@@ -241,7 +241,26 @@ Every rendered page now sends `X-Content-Type-Options: nosniff`, `X-Frame-Option
 templates still carry inline handlers, and a policy that is not actually enforced would be worse
 than none. Uploads under `assets/storage/` remain non-executable at the web-server level.
 
-## 11. Tests
+## 11. Admin uploads
+
+Every upload form had the same three defects:
+
+1. the stored filename was always `.png`, whatever the bytes were — a JPEG served as `image/png` is
+   exactly what `nosniff` refuses to render;
+2. the previous file was `unlink()`ed *before* the new upload was moved, so a failed upload left the
+   record pointing at a deleted path (and `unlink("")` warned for unset settings);
+3. `move_uploaded_file()` used a path relative to the caller's working directory.
+
+`orbit_store_image()` now validates the bytes (`getimagesize()` type must match the extension),
+derives the extension from the type, refuses a prefix or subdirectory with anything but
+`[A-Za-z0-9_-]`, writes to an absolute path under `assets/storage/`, chmods the result `0644`, and
+returns the site-relative path. `orbit_delete_upload()` only removes paths that resolve inside
+`assets/storage/`, so a crafted database value cannot unlink anything else. Every form stores first,
+updates the row, then deletes the old file. Product galleries store the real basename and refuse to
+record an image whose move failed. The stock importer now checks `is_uploaded_file()` and caps the
+upload at 10 MB before reading it into memory.
+
+## 12. Tests
 
 | Suite | Checks | Covers |
 | --- | --- | --- |
@@ -253,6 +272,7 @@ than none. Uploads under `assets/storage/` remain non-executable at the web-serv
 | `db_hardening_test.php` | 47 (was 33) | tri-state credit/refund/debit, row locks, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 44 | updated for the third clamp in the web quote; coupon admin validation |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
+| `upload_guard_test.php` | 27 (new) | upload store/delete guards, type-following extension, form wiring |
 | `security_headers_test.php` | 11 (new) | header names, ordering before output, layout wiring |
 | `stock_claim_test.php` | 20 (new) | exactly-once stock claim and return, rollback on failed insert, release after a failed order insert |
 | `amount_guard_test.php` | 59 (new) | amount parsing (strings, exponents, NAN/INF, injections), withdrawal wiring, commission lock, restore path, legacy card/crypto amounts |
@@ -260,9 +280,9 @@ than none. Uploads under `assets/storage/` remain non-executable at the web-serv
 
 ```
 bash tools/dev/run.sh
-  LINT 311 files, 0 parse errors
+  LINT 312 files, 0 parse errors
   SCAN 237 files: 0 critical, 0 high, 0 medium, 0 low
-  45 suites, 1 not run (payos_service, no disposable database), 0 failures
+  46 suites, 1 not run (payos_service, no disposable database), 0 failures
 ```
 
 Two consecutive full runs produced identical per-suite counts. An earlier exploratory run reported
@@ -270,7 +290,7 @@ one failure in `random_user_test.php`: the first version of the helper could ret
 requested when every random probe missed a sparse id space. That was a real helper bug, not test
 noise; the walk-forward fill above fixes it, and the suite passed 20 consecutive runs afterwards.
 
-## 12. Not verified / owner actions
+## 13. Not verified / owner actions
 
 - **No live AJAX or login test.** The sandbox has no MySQL, so the CSRF guard is verified by source
   scan and unit-level token/origin checks, not by a browser session.

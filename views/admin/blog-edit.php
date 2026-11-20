@@ -33,13 +33,11 @@ if(isset($_POST["Save"])) {
         exit("<script type=\"text/javascript\">if(!alert(\"" . __("Tiêu đề bài viết đã tồn tại trong hệ thống.") . "\")){window.history.back().location.reload();}</script>");
     }
     if(check_img("image")) {
-        unlink($row["image"]);
-        $rand = random("0123456789QWERTYUIOPASDGHJKLZXCVBNM", 4);
-        $uploads_dir = "assets/storage/images/blog" . $rand . ".png";
-        $tmp_name = $_FILES["image"]["tmp_name"];
-        $addlogo = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addlogo) {
-            $CMSNT->update("posts", ["image" => $uploads_dir], " `id` = '" . $row["id"] . "' ");
+        $stored = orbit_store_image($_FILES["image"], "blog", "images");
+        if($stored !== false) {
+            $CMSNT->update("posts", ["image" => $stored], " `id` = '" . $row["id"] . "' ");
+            /* The row now points at the new file; only then is the previous one removed. */
+            orbit_delete_upload($row["image"]);
         }
     }
     $isInsert = $CMSNT->update("posts", ["title" => check_string($_POST["title"]), "slug" => check_string($_POST["slug"]), "content" => isset($_POST["content"]) ? base64_encode($_POST["content"]) : NULL, "status" => check_string($_POST["status"])], " `id` = '" . $row["id"] . "' ");

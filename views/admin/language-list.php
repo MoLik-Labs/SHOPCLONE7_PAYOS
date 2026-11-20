@@ -22,15 +22,8 @@ if(isset($_POST["AddLang"])) {
     }
     $icon = "";
     if(check_img("icon")) {
-        $rand = check_string($_POST["lang"]);
-        $uploads_dir = "assets/storage/flags/flag_" . $rand . ".png";
-        $tmp_name = $_FILES["icon"]["tmp_name"];
-        $addIcon = move_uploaded_file($tmp_name, $uploads_dir);
-        if($addIcon) {
-            $icon = "assets/storage/flags/flag_" . $rand . ".png";
-        } else {
-            $icon = "";
-        }
+        $stored = orbit_store_image($_FILES["icon"], "flag_" . check_string($_POST["lang"]) . "_", "flags");
+        $icon = $stored !== false ? $stored : "";
     }
     $isInsert = $CMSNT->insert("languages", ["icon" => $icon, "lang" => check_string($_POST["lang"]), "status" => check_string($_POST["status"])]);
     if($isInsert) {

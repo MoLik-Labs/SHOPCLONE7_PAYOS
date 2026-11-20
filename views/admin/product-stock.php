@@ -137,15 +137,21 @@ if(isset($_POST["RemoveAccounts"])) {
         });
     }
     if($_POST["type"] == "txt") {
-        $file_name = $_FILES["files_txt"]["name"];
-        $file_tmp = $_FILES["files_txt"]["tmp_name"];
-        $file_extension = pathinfo($file_name, PATHINFO_EXTENSION);
-        if(strtolower($file_extension) == "txt") {
-            $fileContent = file_get_contents($file_tmp);
-            $list = explode(PHP_EOL, check_string($fileContent));
-        } else {
+        /*
+         * Read the uploaded temp file, not whatever path happens to be in the request, and cap the
+         * size: file_get_contents() on an unvalidated 2 GB "txt" would exhaust the worker's memory.
+         */
+        $file = isset($_FILES["files_txt"]) && is_array($_FILES["files_txt"]) ? $_FILES["files_txt"] : null;
+        $fileError = $file === null ? UPLOAD_ERR_NO_FILE : (isset($file["error"]) ? $file["error"] : UPLOAD_ERR_NO_FILE);
+        if($file === null || $fileError !== UPLOAD_ERR_OK
+            || !isset($file["tmp_name"], $file["name"])
+            || !is_uploaded_file($file["tmp_name"])
+            || filesize($file["tmp_name"]) > 10 * 1024 * 1024
+            || strtolower(pathinfo((string) $file["name"], PATHINFO_EXTENSION)) != "txt") {
             exit("<script type=\"text/javascript\">if(!alert(\"Vui lòng chọn file có định dạng .txt\")){window.history.back().location.reload();}</script>");
         }
+        $fileContent = file_get_contents($file["tmp_name"]);
+        $list = explode(PHP_EOL, check_string((string) $fileContent));
     }
     /* Pre-load the uids already in stock for the whole import, so the per-row SELECT disappears.
        A file of 5 000 accounts used to make 5 000–10 000 round trips. */
