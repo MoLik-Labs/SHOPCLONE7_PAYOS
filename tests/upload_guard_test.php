@@ -112,6 +112,13 @@ check_upload('no view calls unlink() on a database value',
 check_upload('every upload form stores through orbit_store_image()',
     $missingPrefix === array(), implode(', ', $missingPrefix));
 
+/* The admin AJAX remove handler deleted "../../<db value>" directly, outside the storage fence. */
+$removeHandler = (string) file_get_contents($root . '/ajaxs/admin/remove.php');
+check_upload('the admin remove handler never unlinks a raw database path',
+    preg_match('/\bunlink\s*\(/', $removeHandler) !== 0 ? false : true);
+check_upload('the admin remove handler deletes through orbit_delete_upload()',
+    substr_count($removeHandler, 'orbit_delete_upload(') >= 8);
+
 /* The old file is removed only after the new one is stored and saved. */
 foreach (array('blog-edit.php', 'category-edit.php', 'blog-category-edit.php', 'recharge-bank-edit.php', 'recharge-manual-edit.php') as $name) {
     $source = $views[$name];

@@ -293,6 +293,15 @@ button) produced a second charge and a second order. Both flows now accept an op
 Requests without a key keep the old behaviour. `tests/order_key_test.php` pins the derivation and the
 wiring in both paths.
 
+## 6l. Deleting an upload is a filesystem operation
+
+`ajaxs/admin/remove.php` still called `unlink("../../" . $row["icon"])` on values read from the
+database. A stored path such as `../../../../config.php` resolved outside the checkout, and a missing
+file raised a warning; the prefix also assumed a working directory that depends on how the handler was
+reached. Every deletion now goes through `orbit_delete_upload()`, which only removes files that
+resolve inside `assets/storage/`. `tests/upload_guard_test.php` fails if the handler ever unlinks a
+database value directly again.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:

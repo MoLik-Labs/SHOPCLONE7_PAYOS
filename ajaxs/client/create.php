@@ -171,7 +171,12 @@ if($_POST["action"] == "nap_the") {
             $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "Thực hiện nạp thẻ Serial: " . $serial . " - Pin: " . $pin]);
             exit(json_encode(["status" => "success", "msg" => __("Đẩy thẻ lên thành công, vui lòng chờ xử lý thẻ trong giây lát!")]));
         }
-        exit(json_encode(["status" => "error", "msg" => __("Nạp thẻ thất bại, vui lòng liên hệ Admin")]));
+        /* The partner already accepted the card (status 99) but the row could not be written: without
+           a trace the customer's top-up would vanish. The PIN is never logged. */
+        $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(),
+            "createdate" => gettime(), "action" => "[Error] " . __("Nhà cung cấp đã nhận thẻ nhưng chưa lưu được")
+                . " - " . $trans_id . " - " . $telco . " - " . format_cash($amount)]);
+        exit(json_encode(["status" => "error", "msg" => __("Nạp thẻ thất bại, vui lòng liên hệ Admin") . " (" . $trans_id . ")"]));
     }
     exit(json_encode(["status" => "error", "msg" => $data["data"]["msg"]]));
 }
