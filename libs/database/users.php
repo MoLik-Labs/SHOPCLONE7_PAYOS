@@ -10,6 +10,8 @@ class users extends DB
     private $credit_outcome = "failed";
     /* Outcome of the last RefundCreditsChecked() call: "credited", "duplicate" or "failed". */
     private $refund_outcome = "failed";
+    /* Outcome of the last DebitCreditsChecked() call. */
+    private $debit_outcome = "failed";
     protected $_key = "id";
     public function __construct()
     {
@@ -167,18 +169,52 @@ class users extends DB
     }
     public function RemoveCredits($user_id, $amount, $reason, $transid = NULL)
     {
+        return $this->debit_credits($user_id, $amount, $reason, $transid, true) === "debited";
+    }
+    /**
+     * Debit a user for a purchase, refusing when the balance does not cover it.
+     *
+     * Checkout used to read the balance, compare, then call RemoveCredits() in a second statement.
+     * Two purchases started in the same second both passed the comparison and both debited, leaving
+     * a negative balance and triggering the fraud ban for an innocent buyer. The balance read and
+     * the debit now happen under the same row lock, and the debit reports why it did not happen:
+     * "debited", "insufficient", "duplicate" (this transid already moved money) or "failed".
+     *
+     * @return string one of debited|insufficient|duplicate|failed
+     */
+    public function DebitCreditsChecked($user_id, $amount, $reason, $transid = NULL)
+    {
+        return $this->debit_credits($user_id, $amount, $reason, $transid, false);
+    }
+    private function debit_credits($user_id, $amount, $reason, $transid, $allowNegative)
+    {
         if($transid == NULL) {
             $transid = uniqid() . "_" . mt_rand(0, 9999999);
         }
-        return $this->transaction(function () use ($user_id, $amount, $reason, $transid) {
+        $this->debit_outcome = "failed";
+        $ok = $this->transaction(function () use ($user_id, $amount, $reason, $transid, $allowNegative) {
             $user_id = (int) $user_id;
             $balance = $this->get_row("SELECT `money` FROM `users` WHERE `id` = " . $user_id . " FOR UPDATE");
             $before = $balance ? $balance["money"] : 0;
-            if($this->ledger_claim($user_id, -$amount, $reason, $transid, $before) !== 1) {
+            if(!$allowNegative && (float) $before < (float) $amount) {
+                $this->debit_outcome = "insufficient";
+                return true;
+            }
+            $claim = $this->ledger_claim($user_id, -$amount, $reason, $transid, $before);
+            if($claim === -1) {
                 return false;
             }
-            return (bool) parent::tru("users", "money", $amount, " `id` = " . $user_id . " ");
+            if($claim === 0) {
+                $this->debit_outcome = "duplicate";
+                return true;
+            }
+            if(!(bool) parent::tru("users", "money", $amount, " `id` = " . $user_id . " ")) {
+                return false;
+            }
+            $this->debit_outcome = "debited";
+            return true;
         });
+        return $ok === false ? "failed" : $this->debit_outcome;
     }
     public function Banned($user_id, $reason)
     {

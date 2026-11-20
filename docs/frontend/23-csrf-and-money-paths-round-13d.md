@@ -108,7 +108,7 @@ Also fixed in the same file pair:
 - The web checkout records `products.sold`, `product_order.amount`, `product_order.cost` and
   `order_log.amount` with the delivered quantity `$isValue`; the API already did.
 
-## 5. One ledger row per transaction under concurrency
+## 5. One ledger row per transaction, one debit that cannot overdraw
 
 `ledger_claim()` inserts only `WHERE NOT EXISTS (SELECT 1 FROM dongtien WHERE transid = …)`. Without a
 `UNIQUE (transid)` index, two concurrent callbacks can both pass that check. The three balance reads
@@ -119,6 +119,13 @@ so claims for the same user serialise: the second transaction sees the first led
 A `UNIQUE` index is still the definitive fix; the repository holds no schema DDL, so it is documented
 as an owner-side migration rather than executed here.
 
+The same lock closes the checkout race: `DebitCreditsChecked()` re-reads the balance **inside** the
+transaction and refuses with `insufficient` when it does not cover the purchase. Previously the
+checkout compared the balance, then called `RemoveCredits()` in a separate statement — two purchases
+in the same second both passed the comparison, both debited, and the negative balance triggered the
+fraud ban for an innocent buyer. `RemoveCredits()` keeps its boolean contract for the admin and
+helper callers (which may intentionally allow a negative balance).
+
 ## 6. Tests
 
 | Suite | Checks | Covers |
@@ -127,8 +134,8 @@ as an owner-side migration rather than executed here.
 | `random_user_test.php` | 20 (new) | bounded user-id probing, sparse ids, and cron wiring |
 | `partial_delivery_test.php` | 30 (new) | proration table, boundaries, ledger key, delivered-vs-requested records |
 | `admin_user_lookup_test.php` | 39 (was 21) | count helpers, whitelist, 500-code chunking, grouped optgroups, batched product/supplier/task pages |
-| `purchase_flow_guards_test.php` | 28 (was 25) | quote clamp, guest quote, delivered quantities |
-| `db_hardening_test.php` | 37 (was 33) | tri-state refund, row lock, transaction pairing, duplicate audit |
+| `purchase_flow_guards_test.php` | 33 (was 25) | quote clamp, guest quote, delivered quantities, conditional debit, API_20 refunds |
+| `db_hardening_test.php` | 39 (was 33) | tri-state credit/refund/debit, row lock, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 38 | updated for the third clamp in the web quote |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
 

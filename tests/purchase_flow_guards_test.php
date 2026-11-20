@@ -111,6 +111,23 @@ check_flow('the checkout record reflects the delivered quantity, not the request
     && strpos($quote, '"amount" => $isValue, "money" => $money') !== false
     && strpos($quote, '"cost" => $product["cost"] * $isValue') !== false);
 
+$api = (string) file_get_contents($root . '/api/api.php');
+check_flow('the checkout debits only when the balance covers it (web)',
+    strpos($quote, 'DebitCreditsChecked($getUser["id"], $pay,') !== false
+    && strpos($quote, '$debitState === "insufficient"') !== false
+    && strpos($quote, 'RemoveCredits($getUser["id"], $pay,') === false);
+check_flow('the checkout debits only when the balance covers it (API)',
+    strpos($api, 'DebitCreditsChecked($getUser["id"], $pay,') !== false
+    && strpos($api, '$debitState === "insufficient"') !== false
+    && strpos($api, 'RemoveCredits($getUser["id"], $pay,') === false);
+check_flow('the API_20 path refunds when the supplier returns no accounts',
+    strpos($api, 'Nhà cung cấp nhận đơn nhưng không trả tài khoản') !== false
+    && strpos($api, 'Nhà cung cấp nhận đơn nhưng không trả tài khoản') > strpos($api, '"REFUND_" . $trans_id'));
+check_flow('the API_20 path refunds a supplier error reported after the charge',
+    strpos($api, 'Nhà cung cấp báo lỗi sau khi đã trừ tiền') !== false);
+check_flow('an unparseable supplier response is treated as an empty array',
+    strpos($api, 'if (!is_array($result)) {') !== false);
+
 $apiSold = (string) file_get_contents($root . '/api/api.php');
 check_flow('the API counts delivered units, not requested ones, as sold',
     strpos($apiSold, '$CMSNT->cong("products", "sold", $isValue,') !== false

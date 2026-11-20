@@ -63,7 +63,12 @@ check("settings lookups are escaped", strpos($source, 'mysqli_real_escape_string
 
 $users = (string) file_get_contents(__DIR__ . "/../libs/database/users.php");
 check("the ledger and the balance move in one transaction",
-    substr_count($users, 'return $this->transaction(') === 1 && substr_count($users, '$ok = $this->transaction(') === 2);
+    substr_count($users, 'return $this->transaction(') === 0 && substr_count($users, '$ok = $this->transaction(') === 3);
+check("a purchase debit re-checks the balance under the row lock",
+    strpos($users, 'if(!$allowNegative && (float) $before < (float) $amount)') !== false
+    && strpos($users, '$this->debit_outcome = "insufficient";') !== false);
+check("RemoveCredits keeps its boolean contract over the tri-state debit",
+    substr_count($users, 'debit_credits($user_id, $amount, $reason, $transid, true) === "debited"') === 1);
 check("AddCredits delegates to the tri-state credit path",
     substr_count($users, 'AddCreditsChecked($user_id, $amount, $reason, $transid)') === 1);
 check("RefundCredits delegates to the tri-state refund path",

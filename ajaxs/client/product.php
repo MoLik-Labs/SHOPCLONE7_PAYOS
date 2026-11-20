@@ -90,8 +90,13 @@ if($_REQUEST["action"] == "buyProduct") {
         exit(json_encode(["status" => "error", "msg" => __("Số dư không đủ, vui lòng nạp thêm")]));
     }
     $User = new users();
-    $isTru = $User->RemoveCredits($getUser["id"], $pay, __("Thanh toán đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "ORDER_" . $trans_id);
-    if($isTru) {
+    /* The debit itself re-checks the balance under the user row lock; a concurrent purchase can no
+       longer overdraw the wallet (and trigger the fraud ban) between the check above and this line. */
+    $debitState = $User->DebitCreditsChecked($getUser["id"], $pay, __("Thanh toán đơn hàng mua tài khoản") . " <b>" . $product["name"] . "</b> - #" . $trans_id, "ORDER_" . $trans_id);
+    if($debitState !== "debited") {
+        exit(json_encode(["status" => "error", "msg" => $debitState === "insufficient" ? __("Số dư không đủ, vui lòng nạp thêm") : __("Vui lòng thử lại")]));
+    }
+    if($debitState === "debited") {
         if(getRowRealtime("users", $getUser["id"], "money") < -500) {
             $User->Banned($getUser["id"], __("Gian lận khi mua tài khoản"));
             exit(json_encode(["status" => "error", "msg" => __("Bạn đã bị khoá tài khoản vì gian lận")]));
