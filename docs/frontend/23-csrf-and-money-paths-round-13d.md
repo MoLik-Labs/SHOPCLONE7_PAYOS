@@ -304,8 +304,8 @@ the old code left it in place and answered "already credited" — stranding the 
 | `random_user_test.php` | 20 (new) | bounded user-id probing, sparse ids, and cron wiring |
 | `partial_delivery_test.php` | 30 (new) | proration table, boundaries, ledger key, delivered-vs-requested records |
 | `admin_user_lookup_test.php` | 39 (was 21) | count helpers, whitelist, 500-code chunking, grouped optgroups, batched product/supplier/task pages |
-| `purchase_flow_guards_test.php` | 38 (was 25) | quote clamp, guest quote, delivered quantities, conditional debit, API_20 refunds, failed-insert refund, idempotent admin refund |
-| `db_hardening_test.php` | 47 (was 33) | tri-state credit/refund/debit, row locks, transaction pairing, duplicate audit |
+| `purchase_flow_guards_test.php` | 43 (was 25) | quote clamp, guest quote, delivered quantities, conditional debit, API_20 refunds, failed-insert refund, idempotent admin refund |
+| `db_hardening_test.php` | 48 (was 33) | tri-state credit/refund/debit, row locks, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 44 | updated for the third clamp in the web quote; coupon admin validation |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
 | `auth_guard_test.php` | 18 (new) | lockout semantics, reset on success, enumeration, logout |
@@ -335,8 +335,10 @@ noise; the walk-forward fill above fixes it, and the suite passed 20 consecutive
 - **Schema indexes still missing**: `UNIQUE (transid)` on `dongtien` and `UNIQUE (coupon_id, user_id)`
   on `coupon_used`. The coupon claim path already serialises with `GET_LOCK` and the ledger path now
   locks the user row, but the database-level constraints remain the correct long-term fix.
-  `tools/db-index-audit.php` now reports duplicate ledger keys **and** duplicate coupon/user pairs and
-  prints the exact `ALTER TABLE … ADD UNIQUE` for each, without ever writing to the database.
+  `tools/db-index-audit.php` now reports duplicate ledger keys, duplicate coupon/user pairs and
+  duplicate `payment_paypal.trans_id` / `payment_bank.tid` rows, and prints the exact
+  `ALTER TABLE … ADD UNIQUE` for each, without ever writing to the database. It also lists the
+  missing indexes on those two payment tables.
 - **Partial-delivery path is exercised by arithmetic and source assertions**, not by a live supplier
   response. The next staging run should place one order where the supplier confirms fewer accounts.
 - `install.php` still contains no schema DDL; no migration was run against any database.

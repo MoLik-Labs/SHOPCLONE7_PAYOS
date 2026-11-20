@@ -139,7 +139,10 @@ check("the index audit reports ledger duplicates before suggesting UNIQUE",
 check("the index audit reports coupon duplicates before suggesting UNIQUE",
     strpos($audit, "uniq_coupon_used") !== false
     && strpos($audit, "GROUP BY `coupon_id`, `user_id`") !== false);
-check("the audit is read-only", strpos($audit, "ADD UNIQUE") !== false
+check("the index audit reports recharge duplicates before suggesting UNIQUE",
+    strpos($audit, "uniq_payment_paypal_trans_id") !== false
+    && strpos($audit, "uniq_payment_bank_tid") !== false);
+check("the index audit is read-only", strpos($audit, "ADD UNIQUE") !== false
     && strpos($audit, "->query(\"ALTER") === false);
 
 echo "\n" . $pass . " passed, " . $fail . " failed.\n";

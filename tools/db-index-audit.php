@@ -64,6 +64,8 @@ $required = array(
     "currencies" => array(array("display", "default_currency")),
     "dongtien" => array(array("user_id"), array("transid")),
     "coupon_used" => array(array("coupon_id", "user_id"), array("trans_id")),
+    "payment_paypal" => array(array("trans_id"), array("user_id")),
+    "payment_bank" => array(array("tid"), array("user_id")),
 );
 
 $missing = 0;
@@ -153,6 +155,39 @@ try {
     }
 } catch (Throwable $error) {
     echo "  SKIP  coupon_used (table not present or not readable)\n";
+}
+
+/* Recharge idempotency: the PayPal confirmation is a read-then-insert, so two simultaneous posts can
+   both pass the duplicate check. `payment_bank` dedupes on (tid, description) with a SELECT first.
+   A unique key on `trans_id` / `tid` makes a second row impossible; report duplicates first. */
+echo "\nRecharge idempotency (advisory)\n";
+foreach (array(
+    "payment_paypal" => array("trans_id", "uniq_payment_paypal_trans_id"),
+    "payment_bank" => array("tid", "uniq_payment_bank_tid"),
+) as $table => $spec) {
+    try {
+        $column = $db->real_escape_string($spec[0]);
+        $duplicates = $db->query("SELECT `" . $column . "`, COUNT(*) AS `n` FROM `" . $table . "`
+            WHERE `" . $column . "` IS NOT NULL AND `" . $column . "` <> ''
+            GROUP BY `" . $column . "` HAVING `n` > 1 ORDER BY `n` DESC LIMIT 10");
+        if ($duplicates && $duplicates->num_rows > 0) {
+            $duplicateCount = 0;
+            while ($row = $duplicates->fetch_assoc()) {
+                ++$duplicateCount;
+                echo "  DUPLICATE " . $table . "." . $spec[0] . " " . $row[$spec[0]] . " x " . $row["n"] . "\n";
+            }
+            echo "  " . $duplicateCount . " duplicated " . $table . " key(s). Resolve them before adding a unique index;\n";
+            echo "  do NOT add UNIQUE while duplicates exist.\n";
+        } else {
+            echo "  " . $table . ": no duplicated " . $spec[0] . " - a unique index would hold.\n";
+            echo "  ALTER TABLE `" . $table . "` ADD UNIQUE INDEX `" . $spec[1] . "` (`" . $spec[0] . "`);\n";
+        }
+        if ($duplicates) {
+            $duplicates->free();
+        }
+    } catch (Throwable $error) {
+        echo "  SKIP  " . $table . " (table not present or not readable)\n";
+    }
 }
 
 $db->close();
