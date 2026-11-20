@@ -151,5 +151,20 @@ check("the index audit reports recharge duplicates before suggesting UNIQUE",
 check("the index audit is read-only", strpos($audit, "ADD UNIQUE") !== false
     && strpos($audit, "->query(\"ALTER") === false);
 
+/* The suites are not routes: every top-level test file must refuse a non-CLI request itself, because
+   .htaccess is not honoured by every deployment target. */
+$unguarded = array();
+foreach (glob(__DIR__ . "/*.php") as $testFile) {
+    if (basename($testFile) === basename(__FILE__)) {
+        continue;
+    }
+    $testSource = (string) file_get_contents($testFile);
+    if (preg_match("/PHP_SAPI\\s*!==\\s*[\"']cli[\"']/", $testSource) !== 1) {
+        $unguarded[] = basename($testFile);
+    }
+}
+check("every test file refuses to run as a web page" . ($unguarded ? " (missing: " . implode(", ", $unguarded) . ")" : ""),
+    $unguarded === array());
+
 echo "\n" . $pass . " passed, " . $fail . " failed.\n";
 exit($fail === 0 ? 0 : 1);
