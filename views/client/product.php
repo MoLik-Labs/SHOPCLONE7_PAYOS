@@ -71,7 +71,7 @@ if ($storeDiscount < 0) {
 if ($storeDiscount > 100) {
     $storeDiscount = 100;
 }
-$storeFinal = $storePrice - ($storePrice * $storeDiscount / 100);
+$storeFinal = orbit_unit_price($storeProduct);
 
 $storeMin = isset($storeProduct["min"]) ? (int) $storeProduct["min"] : 0;
 if ($storeMin < 1) {

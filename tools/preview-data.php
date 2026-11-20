@@ -572,7 +572,7 @@ if (!function_exists("preview_fixtures")) {
             "invoice" => array("trans_id" => "INV7Q2M9X", "name" => "Nạp 500.000đ",
                 "description" => "Chuyển USDT tương đương", "received" => 19.84, "address" => "TXk9PreviewAddress000000000000000",
                 "network" => "TRC20", "status" => "pending", "return_url" => "",
-                "wallet_id" => 1, "create_gettime" => date("Y-m-d H:i:s", time() - 120),
+                "wallet_id" => 1, "create_gettime" => date("Y-m-d H:i:s", orbit_now() - 120),
                 "user_id" => 7),
             /* Affiliate programme: three referred customers, a commission ledger and two withdrawals. */
             "aff_referrals" => array(

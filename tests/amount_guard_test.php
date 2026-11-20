@@ -203,5 +203,21 @@ check_withdraw('the restore logs and credits in one transaction',
 check_withdraw('a restore credits ref_price as well as logging it',
     strpos($users, 'parent::cong("users", "ref_price", $amount, " `id` = " . $user_id . " ")') !== false);
 
+/* ---- percentages arriving from the database ------------------------------ */
+check_withdraw('a negative percentage is zero', orbit_percent(-5) === 0.0);
+check_withdraw('a percentage over 100 is 100', orbit_percent(150) === 100.0);
+check_withdraw('a normal percentage is unchanged', orbit_percent('12.5') === 12.5);
+check_withdraw('a non-numeric percentage is zero', orbit_percent('abc') === 0.0);
+check_withdraw('a 150% product discount cannot make the unit price negative',
+    orbit_unit_price(array('price' => 100000, 'discount' => 150)) === 0.0);
+check_withdraw('a negative price is charged as zero',
+    orbit_unit_price(array('price' => -5000, 'discount' => 0)) === 0.0);
+check_withdraw('a normal product price keeps its discount',
+    orbit_unit_price(array('price' => 100000, 'discount' => 25)) === 75000.0);
+check_withdraw('the checkout and the storefront share one price calculation',
+    strpos((string) file_get_contents(__DIR__ . '/../ajaxs/client/product.php'), '$price = orbit_unit_price($product);') !== false
+    && strpos((string) file_get_contents(__DIR__ . '/../views/client/home.php'), 'orbit_unit_price($storeProduct)') !== false
+    && strpos((string) file_get_contents(__DIR__ . '/../api/api.php'), '$price = orbit_unit_price($product);') !== false);
+
 echo "\n" . $checks . " checks, " . $failures . " failure(s)\n";
 exit($failures === 0 ? 0 : 1);

@@ -69,7 +69,7 @@ if($_REQUEST["action"] == "buyProduct") {
         exit(json_encode(["status" => "error", "msg" => __("Sản phẩm này đang bảo trì, không thể mua hàng vào lúc này")]));
     }
     $trans_id = random("QWERTYUOPASDFGHJKZXCVBNM123456789", 4) . uniqid();
-    $price = $product["discount"] == 0 ? $product["price"] : $product["price"] - $product["price"] * $product["discount"] / 100;
+    $price = orbit_unit_price($product);
     $money = $amount * $price;
     if($getUser["discount"] == 0) {
         $discount = $money * getDiscount($amount, $product["id"]) / 100;
@@ -673,7 +673,7 @@ if($_REQUEST["action"] == "buyProduct") {
             exit(json_encode(["status" => "error", "msg" => __("Sản phẩm không khả dụng")]));
         }
         $discount = 0;
-        $price = $product["discount"] == 0 ? $product["price"] : $product["price"] - $product["price"] * $product["discount"] / 100;
+        $price = orbit_unit_price($product);
         $money = $amount * $price;
         $pay = $money;
         if(!empty($_REQUEST["token"])) {

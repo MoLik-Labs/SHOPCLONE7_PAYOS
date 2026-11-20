@@ -4,6 +4,8 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 $CMSNT = new DB();
+require_once __DIR__ . "/money.php";
+require_once __DIR__ . "/clock.php";
 date_default_timezone_set($CMSNT->site("timezone"));
 if($CMSNT->get_row(" SELECT * FROM `block_ip` WHERE `ip` = '" . myip() . "' AND `banned` = 1 ")) {
     require_once __DIR__ . "/../views/common/block-ip.php";
@@ -50,7 +52,7 @@ function getDiscount($amount, $product_id)
 {
     $CMSNT = orbit_db();
     foreach ($CMSNT->get_list("SELECT * FROM `product_discount` WHERE `min` <= '" . $amount . "' AND `product_id` = '" . $product_id . "' ORDER BY `min` DESC ") as $discount) {
-        return $discount["discount"];
+        return orbit_percent($discount["discount"]);
     }
     return 0;
 }
@@ -1639,6 +1641,65 @@ function curl_get2($url)
 {
     $arrContextOptions = ["ssl" => ["verify_peer" => true, "verify_peer_name" => true], "http" => ["timeout" => 10]];
     return file_get_contents($url, false, stream_context_create($arrContextOptions));
+}
+/**
+ * Whether reCAPTCHA accepts this token — or whether the site has reCAPTCHA switched off.
+ *
+ * Four copies of this check were pasted through ajaxs/client/auth.php. Each one called
+ * file_get_contents() on a GET URL with no timeout and no TLS context, then read ->success off
+ * whatever came back: an unreachable Google meant a login that hung for the default socket timeout
+ * and then a PHP warning on null. One POST request keeps the secret out of the URL, verifies the
+ * certificate, gives up in 8 s, and treats every failure (network, JSON, missing key) as "not
+ * verified" — a captcha is never skipped because the network broke.
+ */
+function orbit_recaptcha_ok($token, $secret = null)
+{
+    global $CMSNT;
+    if(!orbit_recaptcha_required()) {
+        return true;
+    }
+    if($secret === null) {
+        $secret = isset($CMSNT) ? (string) $CMSNT->site("reCAPTCHA_secret_key") : "";
+    }
+    $token = is_string($token) ? trim($token) : "";
+    if($token === "") {
+        return false;
+    }
+    if($secret === "") {
+        /* reCAPTCHA is enabled but the site has no secret: refuse rather than let everyone through. */
+        return false;
+    }
+    if(!function_exists("curl_init")) {
+        return false;
+    }
+    $ch = curl_init("https://www.google.com/recaptcha/api/siteverify");
+    if($ch === false) {
+        return false;
+    }
+    curl_setopt_array($ch, array(
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => http_build_query(array("secret" => $secret, "response" => $token)),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+    ));
+    $body = curl_exec($ch);
+    curl_close($ch);
+    if(!is_string($body)) {
+        return false;
+    }
+    $decoded = json_decode($body, true);
+    return is_array($decoded) && isset($decoded["success"]) && $decoded["success"] === true;
+}
+/**
+ * Enabled-and-verified, the check every login form actually wants.
+ */
+function orbit_recaptcha_required()
+{
+    global $CMSNT;
+    return isset($CMSNT) && (string) $CMSNT->site("reCAPTCHA_status") === "1";
 }
 function curl_get($url)
 {

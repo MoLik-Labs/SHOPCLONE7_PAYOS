@@ -174,7 +174,16 @@ if (!function_exists("pagination")) {
 
 require_once $root . "/tools/preview-data.php";
 
+/* A frozen clock: the invoice countdown is the one value that would change on every rebuild. */
+if (!function_exists("orbit_now")) {
+    function orbit_now()
+    {
+        return 1760000000;
+    }
+}
 /* The preview runs outside the shop's bootstrap, so it loads the same libraries the pages use. */
+require_once $root . "/libs/clock.php";
+require_once $root . "/libs/money.php";
 require_once $root . "/libs/sales_stats.php";
 require_once $root . "/views/common/pagination.php";
 require_once $root . "/views/common/orbit-shell.php";

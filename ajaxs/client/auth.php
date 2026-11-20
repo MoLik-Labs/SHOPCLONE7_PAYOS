@@ -27,17 +27,8 @@ if(isset($_POST["action"])) {
         if(empty($_POST["password"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập mật khẩu")]));
         }
-        if($CMSNT->site("reCAPTCHA_status") == 1) {
-            if(empty($_POST["recaptcha"])) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
-            $recaptcha = check_string($_POST["recaptcha"]);
-            $url = "https://www.google.com/recaptcha/api/siteverify?secret=" . $CMSNT->site("reCAPTCHA_secret_key") . "&response=" . $recaptcha;
-            $verify = file_get_contents($url);
-            $captcha_success = json_decode($verify);
-            if(!$captcha_success->success) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
+        if(!orbit_recaptcha_ok(isset($_POST["recaptcha"]) ? $_POST["recaptcha"] : "")) {
+            exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
         }
         $getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `username` = '" . $username . "' ");
         if(!$getUser) {
@@ -181,17 +172,8 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập mã xác minh")]));
         }
         $code = check_string($_POST["code"]);
-        if($CMSNT->site("reCAPTCHA_status") == 1) {
-            if(empty($_POST["recaptcha"])) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
-            $recaptcha = check_string($_POST["recaptcha"]);
-            $url = "https://www.google.com/recaptcha/api/siteverify?secret=" . $CMSNT->site("reCAPTCHA_secret_key") . "&response=" . $recaptcha;
-            $verify = file_get_contents($url);
-            $captcha_success = json_decode($verify);
-            if(!$captcha_success->success) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
+        if(!orbit_recaptcha_ok(isset($_POST["recaptcha"]) ? $_POST["recaptcha"] : "")) {
+            exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
         }
         $getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token_2fa` = '" . $token_2fa . "' AND `token_2fa` IS NOT NULL ");
         if(!$getUser) {
@@ -247,17 +229,8 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập OTP")]));
         }
         $code = check_string($_POST["code"]);
-        if($CMSNT->site("reCAPTCHA_status") == 1) {
-            if(empty($_POST["recaptcha"])) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
-            $recaptcha = check_string($_POST["recaptcha"]);
-            $url = "https://www.google.com/recaptcha/api/siteverify?secret=" . $CMSNT->site("reCAPTCHA_secret_key") . "&response=" . $recaptcha;
-            $verify = file_get_contents($url);
-            $captcha_success = json_decode($verify);
-            if(!$captcha_success->success) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
+        if(!orbit_recaptcha_ok(isset($_POST["recaptcha"]) ? $_POST["recaptcha"] : "")) {
+            exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
         }
         if(!($getUser = $CMSNT->get_row("SELECT * FROM `users` WHERE `token_otp_mail` = '" . $token_otp_mail . "' AND `token_otp_mail` IS NOT NULL "))) {
             exit(json_encode(["status" => "error", "msg" => __("Thông tin đăng nhập không chính xác")]));
@@ -329,17 +302,8 @@ if(isset($_POST["action"])) {
         if($password != $repassword) {
             exit(json_encode(["status" => "error", "msg" => __("Xác minh mật khẩu không chính xác")]));
         }
-        if($CMSNT->site("reCAPTCHA_status") == 1) {
-            if(empty($_POST["recaptcha"])) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
-            $recaptcha = check_string($_POST["recaptcha"]);
-            $url = "https://www.google.com/recaptcha/api/siteverify?secret=" . $CMSNT->site("reCAPTCHA_secret_key") . "&response=" . $recaptcha;
-            $verify = file_get_contents($url);
-            $captcha_success = json_decode($verify);
-            if(!$captcha_success->success) {
-                exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
-            }
+        if(!orbit_recaptcha_ok(isset($_POST["recaptcha"]) ? $_POST["recaptcha"] : "")) {
+            exit(json_encode(["status" => "error", "msg" => __("Vui lòng xác minh Captcha")]));
         }
         if(0 < $CMSNT->num_rows("SELECT * FROM `users` WHERE `username` = '" . $username . "' ")) {
             exit(json_encode(["status" => "error", "msg" => __("Tên đăng nhập đã tồn tại trong hệ thống")]));

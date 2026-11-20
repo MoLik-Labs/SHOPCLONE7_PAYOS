@@ -249,6 +249,25 @@ non-numeric values now become `""`, which the surrounding `empty()`/`==` checks 
 keep the exact legacy escaping (including the `\&#039;` shape `htmlspecialchars(addslashes(...))`
 produces), so no stored value changes. `tests/check_string_test.php` pins all of it.
 
+## 6h. Prices and percentages are numbers, not strings
+
+`products.discount` is free text from an admin form. The storefront clamped it to 0–100; the checkout
+did not, so a row holding `150` produced a negative unit price, a negative total, and a debit of a
+negative amount — `RemoveCredits(-x)` credits the buyer. `getDiscount()` had the same exposure through
+`product_discount`. `libs/money.php` now owns the arithmetic: `orbit_percent()` clamps to 0–100 and
+`orbit_unit_price()` never returns a negative price. The modal, the public API, the product page, the
+home page and the AJAX quote all call it, so a displayed price and a charged price cannot disagree.
+
+## 6i. One reCAPTCHA call, bounded and private
+
+Four copies of the captcha check were pasted into `ajaxs/client/auth.php`. Each built
+`…siteverify?secret=<secret>&response=<token>` and fetched it with `file_get_contents()` — no timeout,
+no TLS context, and the shared secret in the URL (visible in any proxy log). Each then read `->success`
+off whatever came back, so an unreachable Google hung the login for the default socket timeout and
+then raised a warning on null. `orbit_recaptcha_ok()` posts the secret in the body over verified TLS,
+gives up after 8 s, and fails closed on every error (network, JSON, missing secret). The preview's
+invoice countdown now reads `orbit_now()`, so a rebuild stays byte-identical.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:

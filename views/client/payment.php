@@ -34,7 +34,7 @@ $storeRetired = payos_config()["enabled"];
 $storeStatus = (string) $storeInvoice["status"];
 $storePaid = $storeStatus === "completed";
 $storeExpired = $storeStatus === "expired";
-$storeLife = (int) $CMSNT->site("invoice_life_time") - (time() - (int) strtotime($storeInvoice["create_gettime"]));
+$storeLife = (int) $CMSNT->site("invoice_life_time") - (orbit_now() - (int) strtotime($storeInvoice["create_gettime"]));
 $storeLife = max(0, min(86400, $storeLife));
 $storeAmount = (float) $storeInvoice["received"];
 $storeAddress = trim((string) $storeInvoice["address"]);

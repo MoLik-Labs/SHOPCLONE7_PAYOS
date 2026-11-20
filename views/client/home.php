@@ -388,8 +388,9 @@ store_shell_open($storeShell);
           $storeProductCategory = isset($storeCategoryNames[(int) $storeProduct["category_id"]])
               ? $storeCategoryNames[(int) $storeProduct["category_id"]] : null;
           $storePrice = (float) $storeProduct["price"];
-          $storeDiscount = (float) $storeProduct["discount"];
-          $storeFinal = $storePrice * (1 - ($storeDiscount / 100));
+          /* One bad discount row (150%) must not show a negative price on the home page. */
+          $storeDiscount = orbit_percent($storeProduct["discount"]);
+          $storeFinal = orbit_unit_price($storeProduct);
           $storeStockCount = (int) $storeProduct["_stock"];
           ?>
       <article class="product-card">

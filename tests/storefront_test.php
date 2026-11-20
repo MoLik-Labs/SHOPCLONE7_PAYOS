@@ -17,6 +17,7 @@ if (PHP_SAPI !== "cli" && PHP_SAPI !== "phpdbg") {
  */
 
 define("IN_SITE", true);
+require_once __DIR__ . "/../libs/money.php";
 
 if (!function_exists("base_url")) {
     function base_url($path = "")
