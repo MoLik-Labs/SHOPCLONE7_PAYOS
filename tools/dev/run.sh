@@ -17,6 +17,16 @@ if [ "${1:-}" = "--lint-only" ]; then MODE=lint; shift; fi
 if [ "${1:-}" = "--tests-only" ]; then MODE=tests; shift; fi
 fails=0; runs=0; notrun=0
 
+# node_modules is excluded from the workspace snapshot, so a fresh checkout has the PHP harness but
+# not its runtime. Install it once instead of failing every suite with ERR_MODULE_NOT_FOUND.
+if [ ! -d "tools/dev/node_modules/@php-wasm/universal" ]; then
+  echo "=== bootstrap: installing the PHP harness runtime"
+  if ! npm install --prefix tools/dev --silent; then
+    echo "FAILED: npm install --prefix tools/dev (the lint and test runner need @php-wasm/universal)"
+    exit 1
+  fi
+fi
+
 if [ "$MODE" != "tests" ]; then
   # Tracked files plus anything newly created: a brand-new page must be linted before it is committed.
   { git ls-files -z '*.php'; git ls-files -z --others --exclude-standard '*.php'; } \
