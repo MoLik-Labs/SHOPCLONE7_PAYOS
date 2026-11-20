@@ -23,14 +23,30 @@ if(isset($_POST["btnSubmit"])) {
     if($CMSNT->site("status_demo") != 0) {
         exit("<script type=\"text/javascript\">if(!alert(\"Không được dùng chức năng này vì đây là trang web demo.\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
     }
-    if($row["status"] == "cancel") {
-        exit("<script type=\"text/javascript\">if(!alert(\"Đơn rút này đã được hoàn tiền rồi, không thể thay đổi trạng thái\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
+    /* Validate the value before it is written: an unknown status would leave the row in a state the
+       rest of the shop does not understand. */
+    $newStatus = check_string($_POST["status"]);
+    $newReason = check_string($_POST["reason"]);
+    if(!in_array($newStatus, array("pending", "completed", "cancel"), true)) {
+        exit("<script type=\"text/javascript\">if(!alert(\"Trạng thái không hợp lệ\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
     }
-    if($_POST["status"] == "cancel") {
+    if($newStatus == "cancel") {
+        /* Claim the row first. Two admins (or one double-click) used to both pass the "not cancelled yet"
+           read and each call RefundCommission(), paying the member twice; and a failed row update after a
+           successful refund left a pending withdrawal that could be cancelled again. */
+        $CMSNT->query("UPDATE `aff_withdraw` SET `status` = 'cancel', `reason` = '" . addslashes($newReason) . "', `update_gettime` = '" . addslashes(gettime()) . "' WHERE `id` = " . (int) $row["id"] . " AND `status` <> 'cancel'");
+        if($CMSNT->affectedRows() !== 1) {
+            exit("<script type=\"text/javascript\">if(!alert(\"Đơn rút này đã được hoàn tiền rồi, không thể thay đổi trạng thái\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
+        }
         $User = new users();
-        $User->RefundCommission($row["user_id"], $row["amount"], __("Cancellation of withdrawal request") . " #" . $row["trans_id"]);
+        if(!$User->RefundCommission($row["user_id"], $row["amount"], __("Cancellation of withdrawal request") . " #" . $row["trans_id"])) {
+            /* Put the claim back so a retry can refund instead of the member silently losing the money. */
+            $CMSNT->update("aff_withdraw", ["status" => $row["status"], "reason" => isset($row["reason"]) ? $row["reason"] : "", "update_gettime" => isset($row["update_gettime"]) ? $row["update_gettime"] : gettime()], " `id` = " . (int) $row["id"] . " ");
+            exit("<script type=\"text/javascript\">if(!alert(\"Hoàn tiền thất bại, đơn rút được giữ nguyên để thử lại\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
+        }
+        exit("<script type=\"text/javascript\">if(!alert(\"Lưu thành công!\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
     }
-    $isUpdate = $CMSNT->update("aff_withdraw", ["status" => check_string($_POST["status"]), "reason" => check_string($_POST["reason"]), "update_gettime" => gettime()], " `id` = '" . $row["id"] . "' ");
+    $isUpdate = $CMSNT->update("aff_withdraw", ["status" => $newStatus, "reason" => $newReason, "update_gettime" => gettime()], " `id` = '" . (int) $row["id"] . "' ");
     if($isUpdate) {
         exit("<script type=\"text/javascript\">if(!alert(\"Lưu thành công!\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
     }

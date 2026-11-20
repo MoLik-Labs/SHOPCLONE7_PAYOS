@@ -169,6 +169,19 @@ parsed before the comparison.
   credit in one transaction). If that restore also fails, an `[Error]` log row names the amount and
   trans id, and the member is told to contact support with the reference.
 
+The **admin** side was not covered by that round. `ajaxs/admin/modal/withdraw-edit.php` refunded the
+member and only then wrote `status = cancel`, and it decided from an unlocked read. Two admins (or a
+double-click) both saw `pending`, both called `RefundCommission()` and paid the member twice; a failed
+row update after a successful refund left a pending withdrawal that could be cancelled again. The
+cancel path now claims the row with `UPDATE … WHERE id = ? AND status <> 'cancel'`, refunds only when
+that claim won, and puts the previous status back if the refund itself fails.
+
+`ajaxs/admin/modal/coupon-view.php` still carried a copy of that withdrawal handler. It ran under
+`view_coupon`, built `RefundCommission()` arguments from a **coupon** row (no `user_id`; `amount` is the
+usage limit), and then updated `aff_withdraw` using the coupon id — so a crafted POST could complete or
+cancel an unrelated withdrawal, without the `edit_withdraw_affiliate` permission and without paying the
+member. The handler is gone: the modal is read-only, like the button it renders.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:

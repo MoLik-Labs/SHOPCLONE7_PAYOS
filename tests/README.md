@@ -73,6 +73,7 @@ it pins.
 | `partial_delivery_test.php` | proration arithmetic (full/partial/over-delivery, rounding, hostile numbers) and both checkout wirings |
 | `random_user_test.php` | bounded PK probing for demo buyers, sparse/empty id spaces, deterministic fill, cron wiring |
 | `auth_guard_test.php` | sign-in lockout semantics, reset of `login_attempts`, forgot-password enumeration, logout cookie handling |
+| `admin_modal_test.php` | coupon modal is read-only, withdrawal cancel claims the row before refunding, status whitelist |
 | `upload_guard_test.php` | upload type follows the bytes, old files deleted only after a successful store, path-traversal refusals, both product forms and the stock importer |
 | `security_headers_test.php` | baseline nosniff / frame / referrer / permissions headers and their wiring in both page layouts |
 | `stock_claim_test.php` | local stock is delivered exactly once (claim by delete, rollback on a failed sold insert), and both checkouts use the helper |

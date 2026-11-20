@@ -20,23 +20,6 @@ if(!($row = $CMSNT->get_row(" SELECT * FROM `coupons` WHERE `id` = '" . check_st
     exit("<script type=\"text/javascript\">if(!alert(\"" . __("Item does not exist") . "\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
 }
 $id = check_string($_GET["id"]);
-if(isset($_POST["btnSubmit"])) {
-    if($CMSNT->site("status_demo") != 0) {
-        exit("<script type=\"text/javascript\">if(!alert(\"Không được dùng chức năng này vì đây là trang web demo.\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
-    }
-    if($row["status"] == "cancel") {
-        exit("<script type=\"text/javascript\">if(!alert(\"Đơn rút này đã được hoàn tiền rồi, không thể thay đổi trạng thái\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
-    }
-    if($_POST["status"] == "cancel") {
-        $User = new users();
-        $User->RefundCommission($row["user_id"], $row["amount"], __("Cancellation of withdrawal request") . " #" . $row["trans_id"]);
-    }
-    $isUpdate = $CMSNT->update("aff_withdraw", ["status" => check_string($_POST["status"]), "reason" => check_string($_POST["reason"]), "update_gettime" => gettime()], " `id` = '" . $row["id"] . "' ");
-    if($isUpdate) {
-        exit("<script type=\"text/javascript\">if(!alert(\"Lưu thành công!\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
-    }
-    exit("<script type=\"text/javascript\">if(!alert(\"Lưu thất bại!\")){location.href=`" . base_url_admin("affiliate-withdraw") . "`;}</script>");
-}
 echo " \n\n<form action=\"";
 echo BASE_URL("ajaxs/admin/modal/coupon-view.php?id=" . $row["id"] . "&token=" . $getUser["token"]);
 echo "\"\n    method=\"POST\">\n\n    <div class=\"modal-header\">\n        <h6 class=\"modal-title\" id=\"staticBackdropLabel2\"><i class=\"fa-solid fa-clock-rotate-left\"></i> Nhật ký sử dụng mã giảm giá <span\n                class=\"text-primary\">";
