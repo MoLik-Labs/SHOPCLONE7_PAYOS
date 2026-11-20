@@ -1,4 +1,10 @@
 <?php
+/* CLI only: this is a reporting tool, not a route. .htaccess refuses /tools, but a deployment that
+   ignores it would run the audit for any visitor (and print every path it examined). */
+if (PHP_SAPI !== "cli" && PHP_SAPI !== "phpdbg") {
+    http_response_code(404);
+    exit;
+}
 /*
  * Orbit frontend audit — proves the rendering-stability contract on the files it applies to.
  *

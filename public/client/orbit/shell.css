@@ -82,6 +82,13 @@
   white-space: nowrap;
   transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
+/* base.css already collapses every duration; this file states it for the one element it animates,
+   so the stylesheet is safe on its own and tools/frontend-audit.php stays at zero. */
+@media (prefers-reduced-motion: reduce) {
+  .topbar__nav a {
+    transition: none;
+  }
+}
 .topbar__nav a:hover {
   background: var(--surface-2);
   color: var(--text);
