@@ -67,6 +67,20 @@ if ($apiAction == "get-balance") { // lấy sô dư
     if ($amount === false) {
         exit(json_encode(["code" => 201, "message" => __("Số lượng mua không hợp lệ")]));
     }
+    /* The web checkout has always enforced the product's own quantity window; the API did not, so an
+       integrator could buy 1 account from a product whose minimum is 10. Same semantics as the
+       storefront: a minimum below 1 means 1, a maximum below 1 means "no limit" (stock is the limit). */
+    $minQuantity = (int) $product["min"];
+    if ($minQuantity < 1) {
+        $minQuantity = 1;
+    }
+    $maxQuantity = (int) $product["max"];
+    if ($amount < $minQuantity) {
+        exit(json_encode(["code" => 201, "message" => __("Số lượng cần mua tối thiểu là") . " " . format_cash($minQuantity)]));
+    }
+    if ($maxQuantity > 0 && $amount > $maxQuantity) {
+        exit(json_encode(["code" => 201, "message" => __("Số lượng cần mua tối đa là") . " " . format_cash($maxQuantity)]));
+    }
     if ($product["supplier_id"] == 0) {
         if ($CMSNT->get_row(" SELECT COUNT(id) FROM `product_stock` WHERE `product_code` = '" . $product["code"] . "' ")["COUNT(id)"] < $amount) {
             exit(json_encode(["code" => 201, "message" => __("Số lượng còn lại trong hệ thống không đủ")]));

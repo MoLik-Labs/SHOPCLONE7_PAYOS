@@ -111,6 +111,12 @@ foreach ($files as $file) {
             $statement .= $text;
             continue;
         }
+        /* A comment is prose, not an instruction: "this used to echo the raw value" must not be
+           reported as an echo of a request value. Keep the newlines so line numbers stay right. */
+        if (is_array($token) && ($token[0] === T_COMMENT || $token[0] === T_DOC_COMMENT)) {
+            $line += substr_count($text, "\n");
+            continue;
+        }
         /* A close tag ends a statement just like ";" does: everything before it is one echo. */
         $isCloseTag = is_array($token) && defined("T_CLOSE_TAG") && $token[0] === T_CLOSE_TAG;
         if ($text === ";" || $text === "{" || $isCloseTag) {

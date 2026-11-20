@@ -225,6 +225,21 @@ and its address appeared in the From header. Mail now:
 
 The campaign worker now records `status = 2` (failed) with a visible reason instead of claiming success.
 
+## 6f. One quantity window, three front doors
+
+The storefront page, the modal endpoint (`ajaxs/client/product.php`) and the public API
+(`api/api.php?action=create-order`) each decide what "amount" means. They disagreed: the modal compared
+the posted amount with the raw `max` column, so a product stored with `max = 0` (the storefront reads
+that as "no limit", with the stock count as the ceiling) could be added from the product page and then
+refused at checkout; the public API checked neither `min` nor `max`, so an integrator could buy below
+the advertised minimum. All three now agree: `min < 1` means 1, `max < 1` means "no limit", and the
+stock count is the real ceiling.
+
+The invoice status poller (`loadStatusInvoice`) now holds `trans_id` to the same
+`^[A-Za-z0-9_-]{4,64}$` shape as the payment page and returns only `pending`/`completed`/`expired`
+instead of the raw column. The scanner also stopped treating comments as code, so a comment that
+mentions `echo` no longer reads as an XSS finding.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:

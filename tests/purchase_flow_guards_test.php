@@ -184,5 +184,15 @@ check_flow('a failed credit removes the invoice row so a retry can succeed',
     strpos($paypal, '$CMSNT->remove("payment_paypal",') !== false
     && strpos($paypal, 'chưa cộng được tiền') !== false);
 
+/* ---- quantity window: storefront, modal and public API agree --------------- */
+$productApi = (string) file_get_contents($root . '/ajaxs/client/product.php');
+$publicApi = (string) file_get_contents($root . '/api/api.php');
+check_flow('the modal treats a maximum below 1 as "no limit" instead of blocking the sale',
+    strpos($productApi, '$maxQuantity > 0 && $amount > $maxQuantity') !== false
+    && strpos($productApi, '$minQuantity < 1') !== false);
+check_flow('the public API enforces the same quantity window as the web checkout',
+    strpos($publicApi, '$minQuantity = (int) $product["min"]') !== false
+    && strpos($publicApi, '$maxQuantity > 0 && $amount > $maxQuantity') !== false);
+
 echo "\n" . $checks . " checks, " . $failures . " failed\n";
 exit($failures > 0 ? 1 : 0);

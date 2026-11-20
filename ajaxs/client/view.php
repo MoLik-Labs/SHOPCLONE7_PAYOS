@@ -48,13 +48,22 @@ if($_POST["action"] == "download_order") {
     exit($data);
 } else {
     if($_POST["action"] == "loadStatusInvoice") {
-        if(empty($_POST["trans_id"])) {
+        /* Public by design: the payment page polls it while the buyer is not signed in.
+           It used to accept any string and echo the raw column. The id is now held to the same shape
+           the payment page accepts, so the endpoint cannot be used to probe arbitrary rows, and only
+           the three states the page understands are returned. */
+        $invoiceTransId = isset($_POST["trans_id"]) && is_string($_POST["trans_id"]) ? trim($_POST["trans_id"]) : "";
+        if($invoiceTransId === "" || preg_match('/^[A-Za-z0-9_-]{4,64}$/', $invoiceTransId) !== 1) {
             exit(json_encode(["status" => "error", "msg" => __("Trans ID does not exist in the system")]));
         }
-        if(!($row = $CMSNT->get_row("SELECT * FROM `invoices` WHERE `trans_id` = '" . check_string($_POST["trans_id"]) . "' "))) {
+        if(!($row = $CMSNT->get_row("SELECT `status` FROM `invoices` WHERE `trans_id` = '" . addslashes($invoiceTransId) . "' "))) {
             exit(json_encode(["status" => "error", "msg" => __("Trans ID does not exist in the system")]));
         }
-        exit(json_encode(["data" => ["status" => $row["status"]], "status" => "success", "msg" => ""]));
+        $invoiceStatus = (string) $row["status"];
+        if(!in_array($invoiceStatus, array("pending", "completed", "expired"), true)) {
+            $invoiceStatus = "pending";
+        }
+        exit(json_encode(["data" => ["status" => $invoiceStatus], "status" => "success", "msg" => ""]));
     }
     if($_POST["action"] == "notication_topup") {
         if(empty($_POST["token"])) {

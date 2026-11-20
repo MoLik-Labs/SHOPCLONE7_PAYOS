@@ -47,11 +47,19 @@ if($_REQUEST["action"] == "buyProduct") {
     if($amount === false) {
         exit(json_encode(["status" => "error", "msg" => __("Số lượng mua không hợp lệ")]));
     }
-    if($amount < (int) $product["min"]) {
-        exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối thiểu là") . " " . format_cash($product["min"])]));
+    /* Same reading of the two columns as the storefront: a minimum below 1 is 1, a maximum below 1
+       means "no limit" (the stock check below is the real ceiling). Taken literally, max = 0 made a
+       product impossible to buy from the modal even though the product page offered it. */
+    $minQuantity = (int) $product["min"];
+    if($minQuantity < 1) {
+        $minQuantity = 1;
     }
-    if($amount > (int) $product["max"]) {
-        exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối đa là") . " " . format_cash($product["max"])]));
+    $maxQuantity = (int) $product["max"];
+    if($amount < $minQuantity) {
+        exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối thiểu là") . " " . format_cash($minQuantity)]));
+    }
+    if($maxQuantity > 0 && $amount > $maxQuantity) {
+        exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối đa là") . " " . format_cash($maxQuantity)]));
     }
     if($product["supplier_id"] == 0) {
         if($CMSNT->get_row(" SELECT COUNT(id) FROM `product_stock` WHERE `product_code` = '" . $product["code"] . "' ")["COUNT(id)"] < $amount) {
