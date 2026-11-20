@@ -251,6 +251,23 @@ function orbit_password_upgrade($user_id, $raw)
     }
     $CMSNT->update("users", ["password" => password_hash((string) $raw, PASSWORD_BCRYPT)], " `id` = " . (int) $user_id . " ");
 }
+/**
+ * Baseline response headers for every rendered page.
+ *
+ * The site sent none: a browser was free to sniff a mislabelled upload as HTML, frame the storefront
+ * for clickjacking, and forward full URLs (with tokens in them) to third parties. Nothing here needs
+ * a nonce or a policy decision, so it is safe for every page; call it before the first byte of output.
+ */
+function orbit_security_headers()
+{
+    if(headers_sent()) {
+        return;
+    }
+    header("X-Content-Type-Options: nosniff");
+    header("X-Frame-Options: SAMEORIGIN");
+    header("Referrer-Policy: strict-origin-when-cross-origin");
+    header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
+}
 function checkPermission($admin_id, $role)
 {
     global $CMSNT;

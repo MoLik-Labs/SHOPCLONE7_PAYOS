@@ -3,6 +3,10 @@
 if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
+/* Baseline hardening headers; harmless for every rendered page. */
+if(function_exists("orbit_security_headers")) {
+    orbit_security_headers();
+}
 echo "\n<!doctype html>\n<html lang=\"en\" dir=\"ltr\" data-nav-layout=\"vertical\" data-theme-mode=\"light\" data-header-styles=\"light\"\n    data-menu-styles=\"dark\" data-toggled=\"close\">\n\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=no'>\n    <meta name=\"robots\" content=\"noindex, nofollow\">\n    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n    <title>";
 echo isset($body["title"]) ? $body["title"] : $CMSNT->site("title");
 echo "</title>\n    <!-- Choices JS -->\n    <script src=\"";

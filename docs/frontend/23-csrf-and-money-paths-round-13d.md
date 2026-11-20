@@ -233,7 +233,15 @@ both helpers against an in-memory database and checks that both checkout paths u
   string or `null` cannot raise a warning per row (the partial-delivery refund still runs).
 - **Admin lists** (`roles`, `coupons`) no longer iterate `null` when a JSON column is empty.
 
-## 10. Tests
+## 10. Baseline response headers
+
+Every rendered page now sends `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`,
+`Referrer-Policy: strict-origin-when-cross-origin` and a restrictive `Permissions-Policy`, from
+`orbit_security_headers()` at the top of both layouts, before any output. No CSP is sent: the
+templates still carry inline handlers, and a policy that is not actually enforced would be worse
+than none. Uploads under `assets/storage/` remain non-executable at the web-server level.
+
+## 11. Tests
 
 | Suite | Checks | Covers |
 | --- | --- | --- |
@@ -245,15 +253,16 @@ both helpers against an in-memory database and checks that both checkout paths u
 | `db_hardening_test.php` | 47 (was 33) | tri-state credit/refund/debit, row locks, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 44 | updated for the third clamp in the web quote; coupon admin validation |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
+| `security_headers_test.php` | 11 (new) | header names, ordering before output, layout wiring |
 | `stock_claim_test.php` | 20 (new) | exactly-once stock claim and return, rollback on failed insert, release after a failed order insert |
 | `amount_guard_test.php` | 59 (new) | amount parsing (strings, exponents, NAN/INF, injections), withdrawal wiring, commission lock, restore path, legacy card/crypto amounts |
 | `count_query_test.php` | 26 (new) | COUNT rewrite: plain scans, aliases, literals containing "ORDER BY"; and every shape that must not be rewritten |
 
 ```
 bash tools/dev/run.sh
-  LINT 310 files, 0 parse errors
+  LINT 311 files, 0 parse errors
   SCAN 237 files: 0 critical, 0 high, 0 medium, 0 low
-  44 suites, 1 not run (payos_service, no disposable database), 0 failures
+  45 suites, 1 not run (payos_service, no disposable database), 0 failures
 ```
 
 Two consecutive full runs produced identical per-suite counts. An earlier exploratory run reported
@@ -261,7 +270,7 @@ one failure in `random_user_test.php`: the first version of the helper could ret
 requested when every random probe missed a sparse id space. That was a real helper bug, not test
 noise; the walk-forward fill above fixes it, and the suite passed 20 consecutive runs afterwards.
 
-## 11. Not verified / owner actions
+## 12. Not verified / owner actions
 
 - **No live AJAX or login test.** The sandbox has no MySQL, so the CSRF guard is verified by source
   scan and unit-level token/origin checks, not by a browser session.
