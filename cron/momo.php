@@ -32,9 +32,9 @@ if($CMSNT->site("momo_status") == 1) {
             $description = $data["comment"];
             $tid = $data["tranId"];
             $partnerName = $data["partnerName"];
-            $amount = $data["amount"];
+            $amount = orbit_gateway_amount($data["amount"]);
             $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-            if(($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_momo` WHERE `tid` = '" . $tid . "' ") == 0) {
+            if($amount !== false && ($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_momo` WHERE `tid` = '" . $tid . "' ") == 0) {
                 $received = checkPromotion($amount);
                 $insertSv2 = $CMSNT->insert("payment_momo", ["tid" => $tid, "method" => "MOMO", "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
                 if($insertSv2) {

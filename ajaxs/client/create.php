@@ -78,7 +78,8 @@ if($_POST["action"] == "WithdrawCommission") {
     if((float) $getUser["ref_price"] < $amountValue) {
         exit(json_encode(["status" => "error", "msg" => __("Số dư hoa hồng khả dụng của bạn không đủ")]));
     }
-    $amount = check_string($_POST["amount"]);
+    /* Canonical decimal text: `check_string("1e6")` would send "1.0E+6" to the numeric column. */
+    $amount = orbit_amount_string($amountValue);
     $trans_id = random("123456789QWERTYUIOPASDFGHJKLZXCVBNM", 6);
     $User = new users();
     /* The debit re-checks the balance under the user row lock: two concurrent withdrawals can no
@@ -100,7 +101,7 @@ if($_POST["action"] == "WithdrawCommission") {
             $my_text = str_replace("{bank}", check_string($_POST["bank"]), $my_text);
             $my_text = str_replace("{account_number}", check_string($_POST["stk"]), $my_text);
             $my_text = str_replace("{account_name}", check_string($_POST["name"]), $my_text);
-            $my_text = str_replace("{amount}", format_currency(check_string($_POST["amount"])), $my_text);
+            $my_text = str_replace("{amount}", format_currency($amountValue), $my_text);
             $my_text = str_replace("{ip}", myip(), $my_text);
             $my_text = str_replace("{time}", gettime(), $my_text);
             sendMessTelegram($my_text, "", $CMSNT->site("affiliate_chat_id_telegram"));

@@ -1,6 +1,7 @@
 <?php
 /*
- * Withdrawals: validate the number, debit once, and give the money back if the request fails.
+ * Money amounts: validate the number before comparing, debit once, and give the money back if the
+ * request fails.
  *
  * The withdrawal form compared `$_POST["amount"]` as a string ("abc" is never less than 50000 in
  * PHP 8), then debited `ref_price` with a second statement after a separate balance check — so two
@@ -50,6 +51,48 @@ check_withdraw('a non-finite amount renders as zero, not NAN text',
     orbit_amount_string(NAN) === '0' && orbit_amount_string(INF) === '0');
 check_withdraw('the card and crypto flows share the positive parser',
     orbit_positive_amount('abc') === false && orbit_positive_amount('20000') === 20000.0);
+
+/* Gateway amounts: "1,500,000" is a string in PHP 8, so `"1,500,000" < 10000` compares as text
+   and a malformed or huge transfer can fall inside the configured range by accident. */
+$gateway = array(
+    array('1500000', 1500000.0),
+    array('1,500,000', 1500000.0),
+    array('1.500.000', 1500000.0),
+    array(' 25 000 ', 25000.0),
+    array(50000, 50000.0),
+    array('abc', false),
+    array('', false),
+    array(null, false),
+    array('0', false),
+    array('-1', false),
+);
+foreach ($gateway as $case) {
+    list($raw, $expected) = $case;
+    check_withdraw('a gateway amount is parsed or refused: ' . var_export($raw, true),
+        orbit_gateway_amount($raw) === $expected, var_export(orbit_gateway_amount($raw), true));
+}
+check_withdraw('a gateway amount with a real decimal still keeps it',
+    orbit_gateway_amount('12.75') === 12.75);
+
+foreach (array('cron/bank.php' => 8, 'cron/bankWeb2m.php' => 9, 'cron/momo.php' => 1) as $file => $assignments) {
+    $source = (string) file_get_contents(__DIR__ . '/../' . $file);
+    check_withdraw($file . ' parses every gateway amount before comparing it',
+        substr_count($source, 'orbit_gateway_amount(') === $assignments,
+        substr_count($source, 'orbit_gateway_amount(') . ' of ' . $assignments);
+    check_withdraw($file . ' no longer stores the raw gateway amount',
+        strpos($source, 'check_string($data["amount"])') === false
+        && strpos($source, 'check_string($data["Amount"])') === false);
+    if ($file === 'cron/bank.php') {
+        check_withdraw($file . ' compares the parsed amount numerically',
+            strpos($source, '$amount !== false && $amount >= (float) $CMSNT->site("bank_min")') !== false);
+    } elseif ($file === 'cron/bankWeb2m.php') {
+        check_withdraw($file . ' compares the parsed amount numerically',
+            strpos($source, '$amount === false || $amount < (float) $CMSNT->site("bank_min")') !== false);
+    } else {
+        check_withdraw($file . ' refuses a malformed amount before crediting',
+            strpos($source, 'if($amount !== false && ($getUser = $CMSNT->get_row(') !== false);
+    }
+}
 
 $recharge = (string) file_get_contents(__DIR__ . '/../ajaxs/client/create.php');
 $cardBlock = substr($recharge, strpos($recharge, 'if($_POST["action"] == "nap_the")'), strpos($recharge, 'if($_POST["action"] == "CreateInvoiceCrypto")') - strpos($recharge, 'if($_POST["action"] == "nap_the")'));

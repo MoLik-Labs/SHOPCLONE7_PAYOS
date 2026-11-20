@@ -169,7 +169,26 @@ parsed before the comparison.
   credit in one transaction). If that restore also fails, an `[Error]` log row names the amount and
   trans id, and the member is told to contact support with the reference.
 
-## 7. Tests
+## 7. Commission and debit bookkeeping
+
+Three more unlocked read-then-write sequences were left in the money layer:
+
+- **Commission credit** (`AddCommission`) wrote its `aff_log` row from two separate unlocked
+  `getUser()` reads, then credited three counters without checking the result. Concurrent payments
+  could record a wrong before/after pair, and a failed credit left a log row for money that never
+  arrived. The read (`SELECT ref_price … FOR UPDATE`), the log row and all three counters now share
+  one transaction, and the caller still gets a boolean.
+- **Commission clawback** (`ClawbackCommission`) checked for its `aff_log` row before taking any
+  lock, so two refund workers could both reverse the same commission. The referrer row is locked
+  first and the check runs inside that transaction.
+- **Commission refund** (`RefundCommission`) duplicated the restore path with the same unlocked
+  pattern; it now delegates to the locked `RestoreCommission()`.
+- **Debit settlement** (`debit_processing`) read `money`/`debit`, then ran two unconditional
+  updates. Two deposits could both pay the same overdraft, and a failure between the updates left
+  the debt reduced but the wallet untouched. `users::SettleDebit()` reads both under one row lock,
+  pays `min(money, debit)`, and commits the ledger row with both updates or none of them.
+
+## 8. Tests
 
 | Suite | Checks | Covers |
 | --- | --- | --- |
@@ -178,10 +197,10 @@ parsed before the comparison.
 | `partial_delivery_test.php` | 30 (new) | proration table, boundaries, ledger key, delivered-vs-requested records |
 | `admin_user_lookup_test.php` | 39 (was 21) | count helpers, whitelist, 500-code chunking, grouped optgroups, batched product/supplier/task pages |
 | `purchase_flow_guards_test.php` | 38 (was 25) | quote clamp, guest quote, delivered quantities, conditional debit, API_20 refunds, failed-insert refund, idempotent admin refund |
-| `db_hardening_test.php` | 40 (was 33) | tri-state credit/refund/debit, row locks, transaction pairing, duplicate audit |
+| `db_hardening_test.php` | 47 (was 33) | tri-state credit/refund/debit, row locks, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 44 | updated for the third clamp in the web quote; coupon admin validation |
 | `storefront_test.php` | 40 (was 36) | one nav tree, no per-parent menu queries |
-| `withdraw_guard_test.php` | 39 (new) | amount parsing (strings, exponents, NAN/INF, injections), withdrawal wiring, commission lock, restore path, legacy card/crypto amounts |
+| `amount_guard_test.php` | 59 (new) | amount parsing (strings, exponents, NAN/INF, injections), withdrawal wiring, commission lock, restore path, legacy card/crypto amounts |
 | `count_query_test.php` | 26 (new) | COUNT rewrite: plain scans, aliases, literals containing "ORDER BY"; and every shape that must not be rewritten |
 
 ```
@@ -196,7 +215,7 @@ one failure in `random_user_test.php`: the first version of the helper could ret
 requested when every random probe missed a sparse id space. That was a real helper bug, not test
 noise; the walk-forward fill above fixes it, and the suite passed 20 consecutive runs afterwards.
 
-## 8. Not verified / owner actions
+## 9. Not verified / owner actions
 
 - **No live AJAX or login test.** The sandbox has no MySQL, so the CSRF guard is verified by source
   scan and unit-level token/origin checks, not by a browser session.

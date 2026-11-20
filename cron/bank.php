@@ -22,9 +22,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
         foreach ($result["transactions"] as $data) {
             $tid = check_string($data["transactionID"]);
             $description = str_replace(" ", ".", check_string($data["description"]));
-            $amount = check_string($data["amount"]);
+            $amount = orbit_gateway_amount($data["amount"]);
             $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-            if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+            if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                 if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                     $received = checkPromotion($amount);
                     $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -62,9 +62,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
             foreach ($result["transactions"] as $data) {
                 $tid = check_string($data["transactionID"]);
                 $description = check_string($data["description"]);
-                $amount = check_string((int) $data["amount"]);
+                $amount = orbit_gateway_amount($data["amount"]);
                 $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                     if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                         $received = checkPromotion($amount);
                         $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -102,9 +102,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                 foreach ($result["transactions"] as $data) {
                     $tid = check_string($data["transactionID"]);
                     $description = check_string($data["description"]);
-                    $amount = check_string(str_replace(",", "", $data["amount"]));
+                    $amount = orbit_gateway_amount($data["amount"]);
                     $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                    if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                    if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                         if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                             $received = checkPromotion($amount);
                             $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -142,9 +142,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                     foreach ($result["transactions"] as $data) {
                         $tid = check_string($data["transactionID"]);
                         $description = check_string($data["description"]);
-                        $amount = check_string(str_replace(",", "", $data["amount"]));
+                        $amount = orbit_gateway_amount($data["amount"]);
                         $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                        if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                        if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                             if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                                 $received = checkPromotion($amount);
                                 $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -182,9 +182,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                         foreach ($result["transactions"] as $data) {
                             $tid = check_string($data["transactionID"]);
                             $description = check_string($data["description"]);
-                            $amount = check_string($data["amount"]);
+                            $amount = orbit_gateway_amount($data["amount"]);
                             $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                            if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                            if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                                 if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                                     $received = checkPromotion($amount);
                                     $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -222,9 +222,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                             foreach ($result["transactions"] as $data) {
                                 $tid = check_string($data["transactionID"]);
                                 $description = str_replace(" ", ".", check_string($data["description"]));
-                                $amount = check_string($data["amount"]);
+                                $amount = orbit_gateway_amount($data["amount"]);
                                 $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                                if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                                if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                                     if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                                         $received = checkPromotion($amount);
                                         $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -262,9 +262,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                 foreach ($result["transactions"] as $data) {
                                     $tid = check_string($data["transactionID"]);
                                     $description = check_string($data["description"]);
-                                    $amount = check_string($data["amount"]);
+                                    $amount = orbit_gateway_amount($data["amount"]);
                                     $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                                    if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                                    if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                                         if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                                             $received = checkPromotion($amount);
                                             $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);
@@ -302,9 +302,9 @@ foreach ($CMSNT->get_list(" SELECT * FROM `banks` WHERE `status` = 1 ") as $bank
                                     foreach ($result["transactions"] as $data) {
                                         $tid = check_string($data["transactionID"]);
                                         $description = check_string($data["description"]);
-                                        $amount = check_string(str_replace(",", "", $data["amount"]));
+                                        $amount = orbit_gateway_amount($data["amount"]);
                                         $user_id = parse_order_id($description, $CMSNT->site("prefix_autobank"));
-                                        if (!($amount < $CMSNT->site("bank_min") || $CMSNT->site("bank_max") < $amount)) {
+                                        if ($amount !== false && $amount >= (float) $CMSNT->site("bank_min") && $amount <= (float) $CMSNT->site("bank_max")) {
                                             if (($getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ")) && $CMSNT->num_rows(" SELECT * FROM `payment_bank` WHERE `tid` = '" . $tid . "' AND `description` = '" . $description . "'  ") == 0) {
                                                 $received = checkPromotion($amount);
                                                 $insertSv2 = $CMSNT->insert("payment_bank", ["tid" => $tid, "method" => $bank["short_name"], "user_id" => $getUser["id"], "description" => $description, "amount" => $amount, "received" => $received, "create_gettime" => gettime(), "create_time" => time()]);

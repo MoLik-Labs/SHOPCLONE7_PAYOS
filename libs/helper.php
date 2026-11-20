@@ -77,25 +77,9 @@ function admin_msg_warning($text, $url, $time)
 }
 function debit_processing($user_id)
 {
-    $CMSNT = orbit_db();
+    /* Balances are read and written under one row lock; see users::SettleDebit(). */
     $User = orbit_users();
-    $getUser = $CMSNT->get_row(" SELECT * FROM `users` WHERE `id` = '" . $user_id . "' ");
-    if(0 < $getUser["debit"]) {
-        if($getUser["debit"] <= $getUser["money"]) {
-            $isTru = $CMSNT->tru("users", "debit", $getUser["debit"], " `id` = '" . $user_id . "' ");
-            if($isTru) {
-                $User->RemoveCredits($getUser["id"], $getUser["debit"], __("Thanh toán số tiền ghi nợ"));
-                return true;
-            }
-        } else {
-            $isTru = $CMSNT->tru("users", "debit", $getUser["money"], " `id` = '" . $user_id . "' ");
-            if($isTru) {
-                $User->RemoveCredits($getUser["id"], $getUser["money"], __("Thanh toán số tiền ghi nợ"));
-                return true;
-            }
-        }
-    }
-    return false;
+    return $User->SettleDebit($user_id) === "settled";
 }
 function checkCoupon($product_id, $coupon, $user_id, $money, $pay)
 {
@@ -1073,6 +1057,30 @@ function orbit_positive_amount($raw)
         return false;
     }
     return $value;
+}
+/**
+ * A finite, strictly positive bank/MoMo amount, or false.
+ *
+ * These values arrive from a third-party gateway as strings such as "1,500,000". `check_string()`
+ * leaves them alone, and `"1,500,000" < 10000` is a *string* comparison in PHP 8 (comma sorts below
+ * "1"), so every malformed row would have been treated as "in range" and credited. Parse, then
+ * compare as numbers.
+ *
+ * @param mixed $raw
+ * @return float|false
+ */
+function orbit_gateway_amount($raw)
+{
+    if (is_string($raw)) {
+        $raw = trim($raw);
+        /* "1.500.000" / "1,500,000" are thousand groups, not a decimal point. */
+        if (preg_match('/^\d{1,3}(?:[.,]\d{3})+$/', $raw)) {
+            $raw = str_replace(array(",", "."), "", $raw);
+        } else {
+            $raw = str_replace(array(",", " "), "", $raw);
+        }
+    }
+    return orbit_positive_amount($raw);
 }
 /**
  * Render an amount as a plain decimal string for SQL and provider requests.

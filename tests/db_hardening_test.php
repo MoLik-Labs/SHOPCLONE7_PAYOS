@@ -63,8 +63,8 @@ check("settings lookups are escaped", strpos($source, 'mysqli_real_escape_string
 
 $users = (string) file_get_contents(__DIR__ . "/../libs/database/users.php");
 check("the ledger and the balance move in one transaction",
-    substr_count($users, '$ok = $this->transaction(') === 4
-    && substr_count($users, 'return (bool) $this->transaction(') === 1);
+    substr_count($users, '$ok = $this->transaction(') === 6
+    && substr_count($users, 'return (bool) $this->transaction(') === 2);
 check("a purchase debit re-checks the balance under the row lock",
     strpos($users, 'if(!$allowNegative && (float) $before < (float) $amount)') !== false
     && strpos($users, '$this->debit_outcome = "insufficient";') !== false);
@@ -75,7 +75,31 @@ check("AddCredits delegates to the tri-state credit path",
 check("RefundCredits delegates to the tri-state refund path",
     substr_count($users, 'RefundCreditsChecked($user_id, $amount, $reason, $transid)') === 1);
 check("the transaction locks the user row before claiming a ledger entry",
-    substr_count($users, "FOR UPDATE") === 5);
+    substr_count($users, "FOR UPDATE") === 8);
+check("a debit settlement locks both balances before moving either",
+    strpos($users, 'SELECT `money`, `debit` FROM `users` WHERE `id` = " . $user_id . " FOR UPDATE') !== false);
+check("a debit settlement pays at most the money on hand",
+    strpos($users, '$pay = min($money, $debit);') !== false
+    && strpos($users, 'if($pay <= 0) {') !== false);
+$commissionStart = strpos($users, "public function AddCommission(");
+$commissionEnd = strpos($users, "public function RemoveCommission(", $commissionStart);
+$commission = substr($users, $commissionStart, $commissionEnd - $commissionStart);
+check("a commission is logged and credited under the referrer's lock",
+    strpos($commission, 'SELECT `ref_price` FROM `users` WHERE `id` = " . $ref_id . " FOR UPDATE') !== false
+    && strpos($commission, '$this->transaction(') !== false
+    && strpos($commission, '= getUser(') === false);
+check("all three commission counters move inside the same transaction",
+    substr_count($commission, 'parent::cong("users",') === 3);
+$clawStart = strpos($users, "public function ClawbackCommission(");
+$claw = substr($users, $clawStart, strpos($users, "public function RefundCommission(", $clawStart) - $clawStart);
+check("a clawback checks for its log row only after taking the lock",
+    strpos($claw, "FOR UPDATE") < strpos($claw, "SELECT `id` FROM `aff_log`")
+    && strpos($claw, '$this->transaction(') !== false);
+check("a refunded commission delegates to the locked restore",
+    strpos((string) file_get_contents(__DIR__ . "/../libs/database/users.php"), 'return $this->RestoreCommission($user_id, $amount, $reason);') !== false);
+check("debit_processing delegates to the settled transaction",
+    strpos((string) file_get_contents(__DIR__ . "/../libs/helper.php"),
+        'return $User->SettleDebit($user_id) === "settled";') !== false);
 check("a withdrawal locks the commission row in its own transaction",
     strpos($users, 'SELECT `ref_price` FROM `users` WHERE `id` = " . $user_id . " FOR UPDATE') !== false);
 check("both tri-state helpers declare their outcome property",

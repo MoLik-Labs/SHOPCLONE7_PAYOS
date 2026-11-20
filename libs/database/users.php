@@ -218,6 +218,49 @@ class users extends DB
         });
         return $ok === false ? "failed" : $this->debit_outcome;
     }
+    /**
+     * Pay down a member's debit (an overdraft left by an admin adjustment) with the money they hold.
+     *
+     * The old helper read `money` and `debit`, then issued two unconditional updates. Two callbacks
+     * for two different deposits could both read the same balances and pay the same debt twice, and
+     * a failure between the updates left `debit` reduced but `money` untouched. Both balances are now
+     * read under one row lock and both updates share one transaction.
+     *
+     * @return string one of settled|nothing|failed
+     */
+    public function SettleDebit($user_id)
+    {
+        $this->debit_outcome = "failed";
+        $ok = $this->transaction(function () use ($user_id) {
+            $user_id = (int) $user_id;
+            $row = $this->get_row("SELECT `money`, `debit` FROM `users` WHERE `id` = " . $user_id . " FOR UPDATE");
+            if(!$row) {
+                $this->debit_outcome = "nothing";
+                return true;
+            }
+            $money = (float) $row["money"];
+            $debit = (float) $row["debit"];
+            $pay = min($money, $debit);
+            if($pay <= 0) {
+                $this->debit_outcome = "nothing";
+                return true;
+            }
+            $transid = "DEBIT_" . uniqid() . "_" . mt_rand(0, 9999999);
+            $claim = $this->ledger_claim($user_id, -$pay, __("Thanh toán số tiền ghi nợ"), $transid, $money);
+            if($claim !== 1) {
+                return false;
+            }
+            if(!(bool) parent::tru("users", "debit", $pay, " `id` = " . $user_id . " ")) {
+                return false;
+            }
+            if(!(bool) parent::tru("users", "money", $pay, " `id` = " . $user_id . " ")) {
+                return false;
+            }
+            $this->debit_outcome = "settled";
+            return true;
+        });
+        return $ok === false ? "failed" : $this->debit_outcome;
+    }
     public function Banned($user_id, $reason)
     {
         $Mobile_Detect = new Detection\MobileDetect();
@@ -234,16 +277,44 @@ class users extends DB
         }
         return false;
     }
+    /**
+     * Credit a referrer's commission and record it in `aff_log`.
+     *
+     * The log row used to be written from two unlocked `getUser()` reads before the balance move, so
+     * concurrent commissions could record the wrong before/after figures, and a failed credit left a
+     * log entry for money that never arrived. The read (under the referrer's row lock), the log row
+     * and all three counters now share one transaction; if any step fails the whole movement rolls
+     * back and the caller's boolean contract reports it.
+     */
     public function AddCommission($ref_id, $user_id, $amount, $reason)
     {
-        parent::insert("aff_log", ["sotientruoc" => getUser($ref_id, "ref_price"), "sotienthaydoi" => $amount, "sotienhientai" => getUser($ref_id, "ref_price") + $amount, "create_gettime" => gettime(), "reason" => $reason, "user_id" => $ref_id]);
-        $isUpdate = parent::cong("users", "ref_price", $amount, " `id` = '" . $ref_id . "' ");
-        if($isUpdate) {
-            parent::cong("users", "ref_total_price", $amount, " `id` = '" . $ref_id . "' ");
-            parent::cong("users", "ref_amount", $amount, " `id` = '" . $user_id . "' ");
-            return true;
+        $amount = (float) $amount;
+        if($amount <= 0) {
+            return false;
         }
-        return false;
+        $ok = $this->transaction(function () use ($ref_id, $user_id, $amount, $reason) {
+            $ref_id = (int) $ref_id;
+            $balance = $this->get_row("SELECT `ref_price` FROM `users` WHERE `id` = " . $ref_id . " FOR UPDATE");
+            if(!$balance) {
+                return false;
+            }
+            $before = (float) $balance["ref_price"];
+            $isLog = parent::insert("aff_log", ["sotientruoc" => $before, "sotienthaydoi" => $amount, "sotienhientai" => $before + $amount, "create_gettime" => gettime(), "user_id" => $ref_id, "reason" => $reason]);
+            if(!$isLog) {
+                return false;
+            }
+            if(!(bool) parent::cong("users", "ref_price", $amount, " `id` = " . $ref_id . " ")) {
+                return false;
+            }
+            if(!(bool) parent::cong("users", "ref_total_price", $amount, " `id` = " . $ref_id . " ")) {
+                return false;
+            }
+            if(!(bool) parent::cong("users", "ref_amount", $amount, " `id` = " . (int) $user_id . " ")) {
+                return false;
+            }
+            return true;
+        });
+        return $ok !== false;
     }
     public function RemoveCommission($user_id, $amount, $reason)
     {
@@ -327,27 +398,39 @@ class users extends DB
         if($ref_id <= 0 || $amount <= 0) {
             return false;
         }
-        if(parent::get_row("SELECT `id` FROM `aff_log` WHERE `user_id` = " . $ref_id . " AND `reason` = '" . addslashes((string) $reason) . "' ")) {
-            return false;
-        }
-        $before = getUser($ref_id, "ref_price");
-        $isInsert = parent::insert("aff_log", ["sotientruoc" => $before, "sotienthaydoi" => -$amount, "sotienhientai" => $before - $amount, "create_gettime" => gettime(), "reason" => $reason, "user_id" => $ref_id]);
-        if(!$isInsert) {
-            return false;
-        }
-        parent::cong("users", "ref_price", -$amount, " `id` = " . $ref_id . " ");
-        parent::cong("users", "ref_total_price", -$amount, " `id` = " . $ref_id . " ");
-        parent::cong("users", "ref_amount", -$amount, " `id` = " . $buyer_id . " ");
-        return true;
+        /*
+         * Lock the referrer first, then check for the log row: a refund retried by two workers could
+         * both pass the "already clawed back?" check and both reverse the commission. The lock makes
+         * the second worker wait until the first commits, so its check sees the row.
+         */
+        return (bool) $this->transaction(function () use ($ref_id, $buyer_id, $amount, $reason) {
+            $row = $this->get_row("SELECT `ref_price` FROM `users` WHERE `id` = " . $ref_id . " FOR UPDATE");
+            if(!$row) {
+                return false;
+            }
+            if(parent::get_row("SELECT `id` FROM `aff_log` WHERE `user_id` = " . $ref_id . " AND `reason` = '" . addslashes((string) $reason) . "'")) {
+                return false;
+            }
+            $before = (float) $row["ref_price"];
+            if(!parent::insert("aff_log", ["sotientruoc" => $before, "sotienthaydoi" => -$amount, "sotienhientai" => $before - $amount, "create_gettime" => gettime(), "reason" => $reason, "user_id" => $ref_id])) {
+                return false;
+            }
+            if(!(bool) parent::cong("users", "ref_price", -$amount, " `id` = " . $ref_id . " ")) {
+                return false;
+            }
+            if(!(bool) parent::cong("users", "ref_total_price", -$amount, " `id` = " . $ref_id . " ")) {
+                return false;
+            }
+            if(!(bool) parent::cong("users", "ref_amount", -$amount, " `id` = " . $buyer_id . " ")) {
+                return false;
+            }
+            return true;
+        });
     }
     public function RefundCommission($user_id, $amount, $reason)
     {
-        parent::insert("aff_log", ["sotientruoc" => getUser($user_id, "ref_price"), "sotienthaydoi" => $amount, "sotienhientai" => getUser($user_id, "ref_price") + $amount, "create_gettime" => gettime(), "reason" => $reason, "user_id" => $user_id]);
-        $isUpdate = parent::cong("users", "ref_price", $amount, " `id` = '" . $user_id . "' ");
-        if($isUpdate) {
-            return true;
-        }
-        return false;
+        /* Same movement as a restored withdrawal: log row and re-credit under the user's lock. */
+        return $this->RestoreCommission($user_id, $amount, $reason);
     }
 }
 
