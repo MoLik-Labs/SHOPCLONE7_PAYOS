@@ -50,6 +50,20 @@ if [ "$MODE" != "tests" ]; then
     fi
   done
 
+  # The PayPal button script is assembled from PHP echo statements: `php -l` proves the PHP parses
+  # but not that the emitted JavaScript does. Render the block with stub values and parse it.
+  echo "=== paypal_inline_js"
+  if node tools/dev/phpcl.mjs tools/dev/paypal-js.php > /tmp/shopclone7-paypal.js 2>/tmp/shopclone7-paypal.err; then
+    if [ -s /tmp/shopclone7-paypal.js ] && node --check /tmp/shopclone7-paypal.js >/dev/null 2>&1; then
+      echo "  ok   paypal.Buttons inline script ($(wc -c < /tmp/shopclone7-paypal.js) bytes)"
+    else
+      fails=$((fails+1)); echo "FAILED: paypal inline script does not parse"
+      node --check /tmp/shopclone7-paypal.js 2>&1 | head -5
+    fi
+  else
+    fails=$((fails+1)); echo "FAILED: cannot render the paypal inline script"; head -5 /tmp/shopclone7-paypal.err
+  fi
+
   # Render every page with fixture data into a throwaway folder. The builder also asserts that each
   # referenced asset exists and every CSS class used is defined; a fatal or a warning fails the gate.
   echo "=== preview_render"

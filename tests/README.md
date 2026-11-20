@@ -48,7 +48,8 @@ bash tools/dev/run.sh --tests-only tests/csrf_guard_test.php
 ```
 
 `run.sh` also renders all 36 pages with fixture data through `tools/preview-build.php` and fails on a
-PHP warning or a missing asset. A suite that cannot run (database or sub-process missing) is reported
+PHP warning or a missing asset, and parses the inline PayPal button script it renders from
+`tools/dev/paypal-js.php` with `node --check`. A suite that cannot run (database or sub-process missing) is reported
 as **NOT RUN**, never as passed.
 
 ## Suites added in rounds 12–13d
