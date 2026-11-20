@@ -1,4 +1,10 @@
 <?php
+/* CLI only: these files are test code, not a route. Without this, a deployment that does not
+   honour .htaccess (nginx, a static host) would serve them; the 404 tells a scanner nothing. */
+if (PHP_SAPI !== "cli" && PHP_SAPI !== "phpdbg") {
+    http_response_code(404);
+    exit;
+}
 /*
  * Orbit styleguide + shell render test — proves the admin-only reference page produces one well-formed
  * document built on the shell (no database, no browser).

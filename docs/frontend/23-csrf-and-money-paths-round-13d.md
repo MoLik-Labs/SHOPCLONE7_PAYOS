@@ -202,6 +202,12 @@ unauthenticated HTTP request, so on CLI that call could only time out; the token
 when MoMo itself had been invoked with one. It now includes `cron/cron.php` in the same request, which
 works on CLI and on the authenticated HTTP path.
 
+## 6d. Test files are not web routes
+
+`.htaccess` refuses `/tests`, but a deployment that ignores it (nginx, a static host) would execute the
+suites as PHP pages. Every `tests/*.php` now returns 404 unless the SAPI is CLI (or phpdbg), so the
+protection travels with the file instead of depending on server configuration.
+
 ## 7. Commission and debit bookkeeping
 
 Three more unlocked read-then-write sequences were left in the money layer:

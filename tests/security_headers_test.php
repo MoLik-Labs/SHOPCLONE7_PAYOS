@@ -1,4 +1,10 @@
 <?php
+/* CLI only: these files are test code, not a route. Without this, a deployment that does not
+   honour .htaccess (nginx, a static host) would serve them; the 404 tells a scanner nothing. */
+if (PHP_SAPI !== "cli" && PHP_SAPI !== "phpdbg") {
+    http_response_code(404);
+    exit;
+}
 /*
  * Baseline response headers.
  *
@@ -23,6 +29,16 @@ function check_headers($name, $condition, $detail = '')
     ++$failures;
     echo "FAIL  " . $name . ($detail !== '' ? "  (" . $detail . ")" : '') . "\n";
 }
+
+/* url() used to read $_SERVER["REQUEST_SCHEME"], which PHP-FPM does not set, and its two bare
+   expressions did nothing. It must derive the scheme from the same proxy-aware helper. */
+$urlStart = strpos($helper, 'function url()');
+$urlBody = $urlStart === false ? '' : substr($helper, $urlStart, strpos($helper, 'function is_valid_domain_name', $urlStart) - $urlStart);
+check_headers('the current URL is built from the proxy-aware scheme',
+    strpos($urlBody, 'orbit_is_https() ? "https" : "http"') !== false
+    && strpos($urlBody, 'REQUEST_SCHEME') === false);
+check_headers('the current URL falls back when a SAPI omits the host',
+    strpos($urlBody, 'HTTP_HOST') !== false && strpos($urlBody, 'SERVER_NAME') !== false);
 
 $start = strpos($helper, 'function orbit_security_headers()');
 $end = strpos($helper, 'function checkPermission', $start);

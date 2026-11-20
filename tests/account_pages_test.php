@@ -1,4 +1,10 @@
 <?php
+/* CLI only: these files are test code, not a route. Without this, a deployment that does not
+   honour .htaccess (nginx, a static host) would serve them; the 404 tells a scanner nothing. */
+if (PHP_SAPI !== "cli" && PHP_SAPI !== "phpdbg") {
+    http_response_code(404);
+    exit;
+}
 /*
  * Account pages on the Orbit shell — favourites, balance history, activity log, change password,
  * security, contact, forgot and reset password.
