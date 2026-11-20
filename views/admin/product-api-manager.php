@@ -329,6 +329,7 @@ echo ";\n\n                                    const data = {\n                 
 $i = 0;
 $orbitApiCategories = $CMSNT->get_list(" SELECT * FROM `categories` WHERE `supplier_id` = '" . $id . "' ");
 $orbitParentCategoryNames = orbit_lookup_names("categories", $orbitApiCategories, "parent_id");
+$orbitCategoryProductCounts = orbit_category_product_counts();
 foreach ($orbitApiCategories as $cate) {
     echo "                                            <tr>\n                                                <td class=\"text-center\">\n                                                    <div class=\"form-check form-check-md d-flex align-items-center\">\n                                                        <input type=\"checkbox\"\n                                                            class=\"form-check-input checkbox_category_api\"\n                                                            data-id=\"";
     echo $cate["id"];
@@ -345,7 +346,7 @@ foreach ($orbitApiCategories as $cate) {
         echo "</a>\n                                                    ";
     }
     echo "                                                </td>\n                                                <td>\n                                                    <span class=\"badge bg-outline-primary\">Sản phẩm:\n                                                        ";
-    echo format_cash($CMSNT->num_rows(" SELECT * FROM `products` WHERE `category_id` = '" . $cate["id"] . "' "));
+    echo format_cash(isset($orbitCategoryProductCounts[(int) $cate["id"]]) ? $orbitCategoryProductCounts[(int) $cate["id"]] : 0);
     echo "</span><br>\n                                                </td>\n                                                <td><img src=\"";
     echo base_url($cate["icon"]);
     echo "\" width=\"40px\"></td>\n                                                <td class=\"text-center\">\n                                                    <div class=\"form-check form-switch form-check-lg\">\n                                                        <input class=\"form-check-input\" type=\"checkbox\"\n                                                            id=\"list_category_status";

@@ -67,6 +67,8 @@ echo " <span\n                                        class=\"text-danger\">*</s
 echo __("Submit");
 echo "</button>\n                        </form>\n                    </div>\n                </div>\n            </div>\n            ";
 $parentCategories = $CMSNT->get_list("SELECT * FROM `categories` WHERE `parent_id` = 0 ORDER BY `stt` DESC");
+/* One grouped products query for every count on the page, instead of one per row. */
+$orbitCategoryProductCounts = orbit_category_product_counts();
 echo "\n            <div class=\"col-xl-12\">\n                <div class=\"card custom-card\">\n                    <div class=\"card-header justify-content-between\">\n                        <h4 class=\"card-title\">DANH SÁCH CHUYÊN MỤC SẢN PHẨM</h4>\n                    </div>\n                    <div class=\"card-body\">\n                        <nav class=\"nav nav-pills mb-3 nav-justified d-sm-flex d-block\" role=\"tablist\">\n                            <div class=\"row\">\n                                ";
 $i = 0;
 echo "                                ";
@@ -116,7 +118,7 @@ foreach ($parentCategories as $category) {
         echo "</td>\n                                                <td>";
         echo $cate["slug"];
         echo "</td>\n                                                <td>\n                                                    <span class=\"badge bg-outline-primary\">\n                                                        Sản phẩm:\n                                                        ";
-        echo format_cash($CMSNT->num_rows("SELECT * FROM `products` WHERE `category_id` = '" . $cate["id"] . "'"));
+        echo format_cash(isset($orbitCategoryProductCounts[(int) $cate["id"]]) ? $orbitCategoryProductCounts[(int) $cate["id"]] : 0);
         echo "                                                    </span>\n                                                </td>\n                                                <td><img src=\"";
         echo base_url($cate["icon"]);
         echo "\" width=\"40px\"></td>\n                                                <td>\n                                                    <div class=\"form-check form-switch form-check-lg\">\n                                                        <input class=\"form-check-input\" type=\"checkbox\"\n                                                            id=\"status";

@@ -45,8 +45,11 @@ once per generated row — MySQL sorts the entire user table and PHP fetches one
 shop a single tick could spend minutes on a cosmetic feature.
 
 `orbit_random_user_ids($count)` now probes the primary key: `MAX(id)`, then a random id followed by
-`WHERE id >= ? ORDER BY id ASC LIMIT 1`, at most three probes per wanted id, de-duplicated. It costs
-the same whether the table has 10 rows or 10 million.
+`WHERE id >= ? ORDER BY id ASC LIMIT 1`, at most three probes per wanted id, de-duplicated. A sparse
+id space (three members among a million ids) could miss every probe, so the helper then walks forward
+from the last hit with `WHERE id > ? LIMIT 1`, wrapping once and stopping when it revisits an id; the
+result is always `min($count, members)` distinct ids, still with no table sort. It costs the same
+whether the table has 10 rows or 10 million.
 
 - The buyers are resolved **once per cron tick** and reused by the deposit and order generators.
 - The fake order loop no longer runs `ORDER BY RAND()` on `products`; the order of the inserts was
@@ -56,8 +59,9 @@ the same whether the table has 10 rows or 10 million.
   the documented behaviour, without the query.
 - An empty user table still writes the row with `buyer = 0` instead of crashing on a missing row.
 
-`tests/random_user_test.php` — **19 checks**: distinct existing ids, bounded probes, no
-`ORDER BY RAND`, empty table, probes past the last row, clamping, and the cron wiring.
+`tests/random_user_test.php` — **20 checks**: distinct existing ids, bounded probes, sparse and
+empty id spaces, no `ORDER BY RAND`, probes past the last row, clamping, and the cron wiring. The
+suite was run **20 times** after the fix to confirm it is deterministic.
 
 ## 3. Last table scans on admin and storefront pages
 
@@ -120,9 +124,9 @@ as an owner-side migration rather than executed here.
 | Suite | Checks | Covers |
 | --- | --- | --- |
 | `csrf_guard_test.php` | 48 | every client/admin endpoint guarded or documented exception |
-| `random_user_test.php` | 19 (new) | bounded user-id probing and cron wiring |
+| `random_user_test.php` | 20 (new) | bounded user-id probing, sparse ids, and cron wiring |
 | `partial_delivery_test.php` | 30 (new) | proration table, boundaries, ledger key, delivered-vs-requested records |
-| `admin_user_lookup_test.php` | 31 (was 21) | count helper, whitelist, 500-code chunking, batched product/supplier/task pages |
+| `admin_user_lookup_test.php` | 39 (was 21) | count helpers, whitelist, 500-code chunking, grouped optgroups, batched product/supplier/task pages |
 | `purchase_flow_guards_test.php` | 28 (was 25) | quote clamp, guest quote, delivered quantities |
 | `db_hardening_test.php` | 37 (was 33) | tri-state refund, row lock, transaction pairing, duplicate audit |
 | `coupon_claim_test.php` | 38 | updated for the third clamp in the web quote |
@@ -135,8 +139,10 @@ bash tools/dev/run.sh
   41 suites, 1 not run (payos_service, no disposable database), 0 failures
 ```
 
-Two consecutive full runs produced identical per-suite counts. One earlier exploratory run reported a
-single failure that could not be reproduced in either later run; it is not counted as a pass.
+Two consecutive full runs produced identical per-suite counts. An earlier exploratory run reported
+one failure in `random_user_test.php`: the first version of the helper could return fewer ids than
+requested when every random probe missed a sparse id space. That was a real helper bug, not test
+noise; the walk-forward fill above fixes it, and the suite passed 20 consecutive runs afterwards.
 
 ## 7. Not verified / owner actions
 

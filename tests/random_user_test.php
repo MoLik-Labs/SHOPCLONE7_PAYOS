@@ -28,6 +28,18 @@ class DB
     public function get_row($sql)
     {
         self::$queries[] = $sql;
+        if (preg_match('/WHERE `id` > ([0-9]+)/', $sql, $m)) {
+            if (self::$missingProbe) {
+                return false;
+            }
+            $after = (int) $m[1];
+            foreach (self::$ids as $id) {
+                if ($id > $after) {
+                    return array('id' => $id);
+                }
+            }
+            return false;
+        }
         if (stripos($sql, 'MAX(`id`)') !== false) {
             if (self::$maxOverride !== null) {
                 return array('max_id' => self::$maxOverride);
@@ -47,7 +59,7 @@ class DB
             return false;
         }
         if (stripos($sql, 'FROM `users` ORDER BY `id` ASC LIMIT 1') !== false) {
-            if (self::$missingProbe || !self::$ids) {
+            if (!self::$ids) {
                 return false;
             }
             return array('id' => min(self::$ids));
@@ -88,7 +100,7 @@ check_random('it returns the number of ids asked for', count($picked) === 4, (st
 check_random('every id exists in the users table', count(array_diff($picked, DB::$ids)) === 0, implode(',', $picked));
 check_random('the ids are distinct', count(array_unique($picked)) === count($picked));
 check_random('it never sorts the user table', strpos(implode("\n", DB::$queries), 'ORDER BY RAND') === false);
-check_random('the probes are bounded (at most 3 per wanted id plus MAX)', count(DB::$queries) <= 4 * 3 + 1, (string) count(DB::$queries));
+check_random('the probes and the walk are bounded', count(DB::$queries) <= 4 * 3 + 4 + 2, (string) count(DB::$queries));
 check_random('it uses the primary key', strpos(implode("\n", DB::$queries), '`id` >=') !== false);
 
 DB::$ids = array(5);
@@ -102,7 +114,12 @@ check_random('and costs one MAX plus one fallback lookup', count(DB::$queries) =
 
 DB::$ids = array(1, 2, 3);
 DB::$maxOverride = 1000;   /* the id space is much larger than the populated rows */
-check_random('probes that land past the last row fall back to the first user', orbit_random_user_ids(2) === array(1));
+$sparse = orbit_random_user_ids(2);
+check_random('a sparse id space still fills the request from existing rows',
+    count($sparse) === 2 && count(array_diff($sparse, DB::$ids)) === 0, implode(',', $sparse));
+DB::$missingProbe = true;  /* every probe lands past the last row */
+$probeFallback = orbit_random_user_ids(2);
+check_random('probes that land past the last row fall back to the first user', $probeFallback === array(1), implode(',', $probeFallback));
 DB::$maxOverride = null;
 DB::$missingProbe = false;
 

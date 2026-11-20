@@ -73,11 +73,13 @@ echo $row["type"] == "delete_order_revenue" ? "selected" : "";
 echo ">Xóa đơn hàng & tài khoản đã bán</option>\n                                            <option value=\"change_warehouse\" ";
 echo $row["type"] == "change_warehouse" ? "selected" : "";
 echo ">Thay đổi kho hàng</option>\n                                        </select>\n                                    </div>\n                                </div>\n                            </div>\n                            <div class=\"row mb-4\" id=\"product_id_input\" style=\"display: none;\">\n                                <label class=\"col-sm-4 col-form-label\" for=\"example-hf-email\">Sản phẩm áp dụng (<span\n                                        class=\"text-danger\">*</span>)</label>\n                                <div class=\"col-sm-8\">\n                                    <select class=\"form-control\" name=\"product_id[]\" id=\"listProduct\" multiple>\n                                        <option value=\"\">Mặc định sẽ áp dụng cho toàn bộ sản phẩm nếu không chọn\n                                        </option>\n                                        ";
+/* One grouped products read for the whole select, not one per category. */
+$orbitProductGroups = orbit_products_by_category();
 foreach ($CMSNT->get_list(" SELECT * FROM `categories` ") as $category) {
     echo "                                        <optgroup label=\"__";
     echo $category["name"];
     echo "__\">\n                                            ";
-    foreach ($CMSNT->get_list(" SELECT * FROM `products` WHERE `category_id` = '" . $category["id"] . "' ") as $product) {
+    foreach (isset($orbitProductGroups[(int) $category["id"]]) ? $orbitProductGroups[(int) $category["id"]] : [] as $product) {
         echo "                                            <option\n                                                ";
         echo in_array($product["id"], json_decode($row["product_id"] ?? "[]", true) ?? [], true) ? "selected" : "";
         echo "                                                value=\"";

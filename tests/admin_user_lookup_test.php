@@ -27,9 +27,42 @@ class DB
     );
     /* code => count, for orbit_counts_by_code(). */
     public static $codeCounts = array('P1' => 4, 'P2' => 0, "P'3" => 2);
+    /* coupon id => redemption count, for orbit_coupon_usage_counts(). */
+    public static $couponUsage = array(4 => 9, 5 => 1);
+    /* category id => product count, for orbit_category_product_counts(). */
+    public static $categoryProductCounts = array(1 => 3, 2 => 2, 9 => 1);
+    /* category id => product rows, for orbit_products_by_category(). */
+    public static $productsByCategory = array(
+        1 => array(array('id' => 5, 'name' => 'Netflix', 'category_id' => 1)),
+        2 => array(array('id' => 6, 'name' => 'Spotify', 'category_id' => 2), array('id' => 7, 'name' => 'Office', 'category_id' => 2)),
+    );
     public function get_list($sql)
     {
         self::$log[] = $sql;
+        if (strpos($sql, 'FROM `coupon_used`') !== false && strpos($sql, 'COUNT(*)') !== false) {
+            $rows = array();
+            foreach (self::$couponUsage as $couponId => $count) {
+                $rows[] = array('coupon_id' => $couponId, 'c' => $count);
+            }
+            return $rows;
+        }
+        if (strpos($sql, 'FROM `products`') !== false && strpos($sql, 'COUNT(*)') !== false
+            && strpos($sql, 'GROUP BY `category_id`') !== false) {
+            $rows = array();
+            foreach (self::$categoryProductCounts as $categoryId => $count) {
+                $rows[] = array('category_id' => $categoryId, 'c' => $count);
+            }
+            return $rows;
+        }
+        if (strpos($sql, 'FROM `products`') !== false && strpos($sql, '`category_id`') !== false) {
+            $rows = array();
+            foreach (self::$productsByCategory as $products) {
+                foreach ($products as $product) {
+                    $rows[] = $product;
+                }
+            }
+            return $rows;
+        }
         if (preg_match('/FROM `(product_stock|product_die)` WHERE `product_code` IN \((.*)\) GROUP BY/', $sql, $m)) {
             $rows = array();
             if (preg_match_all("/'((?:[^'\\\\]|\\\\.)*)'/", $m[2], $codes)) {
@@ -222,6 +255,55 @@ $task = (string) file_get_contents(__DIR__ . '/../cron/task.php');
 check_lookup('the warehouse automation resolves its product codes in one lookup',
     strpos($task, 'orbit_lookup_names("products", $taskProductRows, "id", "code")') !== false
     && strpos($task, "SELECT * FROM `products` WHERE `id` = '") === false);
+
+/* ---- product optgroups --------------------------------------------------- */
+DB::$log = array();
+$groups = orbit_products_by_category();
+check_lookup('products are grouped by category in one query',
+    count(DB::$log) === 1 && isset($groups[2]) && count($groups[2]) === 2
+    && $groups[1][0]['name'] === 'Netflix');
+check_lookup('the grouping drops the row columns the select does not need',
+    isset($groups[1][0]['id']) && !isset($groups[1][0]['price']));
+
+$optgroupPages = array(
+    'views/admin/automations.php',
+    'views/admin/automation-edit.php',
+    'views/admin/coupons.php',
+    'views/admin/coupon-edit.php',
+);
+$optgroupOk = true;
+foreach ($optgroupPages as $optgroupPage) {
+    $source = (string) file_get_contents(__DIR__ . '/../' . $optgroupPage);
+    if (strpos($source, 'orbit_products_by_category()') === false
+        || strpos($source, 'get_list(" SELECT * FROM `products` WHERE `category_id`') !== false) {
+        $optgroupOk = false;
+        echo "      " . $optgroupPage . " still builds its optgroups per category\n";
+    }
+}
+check_lookup('all four optgroup pages read the products once', $optgroupOk);
+
+/* ---- category product counts --------------------------------------------- */
+DB::$log = array();
+$countsByCategory = orbit_category_product_counts();
+check_lookup('category product counts come from one grouped query',
+    count(DB::$log) === 1 && $countsByCategory === array(1 => 3, 2 => 2, 9 => 1));
+
+DB::$log = array();
+$couponUsage = orbit_coupon_usage_counts();
+check_lookup('coupon redemption counts come from one grouped query',
+    count(DB::$log) === 1 && $couponUsage === array(4 => 9, 5 => 1));
+$couponList = (string) file_get_contents(__DIR__ . '/../views/admin/coupons.php');
+check_lookup('the coupon list uses the grouped redemption counts',
+    strpos($couponList, 'orbit_coupon_usage_counts()') !== false
+    && strpos($couponList, 'num_rows(" SELECT * FROM coupon_used') === false);
+
+foreach (array('views/admin/categories.php', 'views/admin/product-api-manager.php') as $countPage) {
+    $source = (string) file_get_contents(__DIR__ . '/../' . $countPage);
+    check_lookup($countPage . ' uses the grouped counts',
+        strpos($source, 'orbit_category_product_counts()') !== false
+        && strpos($source, 'num_rows("SELECT * FROM `products` WHERE `category_id`') === false
+        && strpos($source, 'num_rows(" SELECT * FROM `products` WHERE `category_id`') === false);
+}
 
 echo "\n" . $checks . " checks, " . $failures . " failed\n";
 exit($failures === 0 ? 0 : 1);

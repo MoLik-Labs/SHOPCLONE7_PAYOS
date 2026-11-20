@@ -903,11 +903,45 @@ function orbit_random_user_ids($count = 20)
     $maxId = $max && isset($max["max_id"]) ? (int) $max["max_id"] : 0;
     $ids = array();
     if ($maxId > 0) {
+        /* Random PK probes give a different sample each tick without sorting the table. */
         for ($attempt = 0; $attempt < $count * 3 && count($ids) < $count; ++$attempt) {
             $probe = random_int(1, $maxId);
             $row = $CMSNT->get_row("SELECT `id` FROM `users` WHERE `id` >= " . $probe . " ORDER BY `id` ASC LIMIT 1");
             if ($row && isset($row["id"])) {
                 $ids[(int) $row["id"]] = true;
+            }
+        }
+        if (!$ids && $maxId > 0) {
+            $row = $CMSNT->get_row("SELECT `id` FROM `users` ORDER BY `id` ASC LIMIT 1");
+            if ($row && isset($row["id"])) {
+                $ids[(int) $row["id"]] = true;
+            }
+        }
+        /*
+         * A small shop with sparse ids can miss every probe (three members among a million ids).
+         * Walk forward from the last hit until the requested number is found, wrapping once; the
+         * walk stops when it reaches an id it already has, so a table with fewer members than
+         * `$count` costs one wrap and returns everyone instead of looping.
+         */
+        if (0 < count($ids) && count($ids) < $count) {
+            $last = max(array_keys($ids));
+            $first = min(array_keys($ids));
+            $guard = $count + 2;
+            while (count($ids) < $count && 0 < $guard--) {
+                $row = $CMSNT->get_row("SELECT `id` FROM `users` WHERE `id` > " . (int) $last . " ORDER BY `id` ASC LIMIT 1");
+                if (!$row || !isset($row["id"])) {
+                    $row = $CMSNT->get_row("SELECT `id` FROM `users` ORDER BY `id` ASC LIMIT 1");
+                    if (!$row || !isset($row["id"])) {
+                        break;
+                    }
+                }
+                $next = (int) $row["id"];
+                if (isset($ids[$next]) || $next === (int) $first) {
+                    $ids[$next] = true;
+                    break;
+                }
+                $ids[$next] = true;
+                $last = $next;
             }
         }
     }
@@ -918,6 +952,54 @@ function orbit_random_user_ids($count = 20)
         }
     }
     return array_keys($ids);
+}
+/**
+ * How many times each coupon has been redeemed, in one grouped query.
+ *
+ * The coupon list ran `num_rows(SELECT * FROM coupon_used WHERE coupon_id = ?)` once per row.
+ *
+ * @return array<int,int> coupon id => redemption count
+ */
+function orbit_coupon_usage_counts()
+{
+    $counts = array();
+    foreach (orbit_db()->get_list("SELECT `coupon_id`, COUNT(*) AS `c` FROM `coupon_used` GROUP BY `coupon_id` ") as $row) {
+        $counts[(int) $row["coupon_id"]] = (int) $row["c"];
+    }
+    return $counts;
+}
+/**
+ * How many products each category has, in one grouped query.
+ *
+ * The category screens printed a count per row with `num_rows(...)`; `num_rows()` also counts by
+ * selecting the whole result set, which makes the per-row cost worse than a plain COUNT.
+ *
+ * @return array<int,int> category id => product count
+ */
+function orbit_category_product_counts()
+{
+    $counts = array();
+    foreach (orbit_db()->get_list("SELECT `category_id`, COUNT(*) AS `c` FROM `products` GROUP BY `category_id` ") as $row) {
+        $counts[(int) $row["category_id"]] = (int) $row["c"];
+    }
+    return $counts;
+}
+/**
+ * Every product, grouped by category id, for the `<optgroup>` selects in the admin.
+ *
+ * Four admin pages rendered a category optgroup by running one `SELECT * FROM products WHERE
+ * category_id = ?` per category. The grouped read is one query for the page; a category with no
+ * products simply has no key.
+ *
+ * @return array<int,array<int,array{id:int,name:string}>>
+ */
+function orbit_products_by_category()
+{
+    $groups = array();
+    foreach (orbit_db()->get_list("SELECT `id`, `name`, `category_id` FROM `products` ") as $row) {
+        $groups[(int) $row["category_id"]][] = array("id" => (int) $row["id"], "name" => (string) $row["name"]);
+    }
+    return $groups;
 }
 /**
  * Per-code row counts for the stock and dead-stock tables, in one query per 500 codes.
