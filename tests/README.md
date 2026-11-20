@@ -43,12 +43,13 @@ The sandbox images do not ship a PHP binary. The project keeps a PHP-WASM runner
 ```
 npm install --prefix tools/dev                     # once per workspace restore
 node tools/dev/phpcl.mjs tests/storefront_test.php
-bash tools/dev/run.sh                              # lint + security scan + every suite
+bash tools/dev/run.sh                              # lint + scan + render every page + every suite
 bash tools/dev/run.sh --tests-only tests/csrf_guard_test.php
 ```
 
-`run.sh` prints `PASS`/`FAIL` per suite and exits non-zero on the first failure. A suite that cannot
-run (database or sub-process missing) is reported as **NOT RUN**, never as passed.
+`run.sh` also renders all 36 pages with fixture data through `tools/preview-build.php` and fails on a
+PHP warning or a missing asset. A suite that cannot run (database or sub-process missing) is reported
+as **NOT RUN**, never as passed.
 
 ## Suites added in rounds 12–13d
 

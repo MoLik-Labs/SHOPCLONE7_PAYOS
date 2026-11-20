@@ -49,6 +49,21 @@ if [ "$MODE" != "tests" ]; then
       fails=$((fails+1)); echo "FAILED: node --check $js"; node --check "$js"
     fi
   done
+
+  # Render every page with fixture data into a throwaway folder. The builder also asserts that each
+  # referenced asset exists and every CSS class used is defined; a fatal or a warning fails the gate.
+  echo "=== preview_render"
+  if node tools/dev/phpcl.mjs tools/preview-build.php --out=/tmp/shopclone7-preview > /tmp/shopclone7-preview.log 2>&1; then
+    if grep -qE 'PHP (Warning|Fatal error|Notice|Deprecated)' /tmp/shopclone7-preview.log; then
+      fails=$((fails+1)); echo "FAILED: preview_render (PHP diagnostics in output)"
+      grep -E 'PHP (Warning|Fatal error|Notice|Deprecated)' /tmp/shopclone7-preview.log | head -10
+    else
+      grep -E 'asset check|class check|^wrote ' /tmp/shopclone7-preview.log | tail -3 | sed 's/^/  /'
+      echo "  $(grep -c '^wrote ' /tmp/shopclone7-preview.log) pages rendered"
+    fi
+  else
+    fails=$((fails+1)); echo "FAILED: preview_render"; tail -15 /tmp/shopclone7-preview.log
+  fi
 fi
 
 if [ "$MODE" != "lint" ]; then
