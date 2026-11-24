@@ -30,12 +30,9 @@ if($_REQUEST["action"] == "buyProduct") {
     if($getUser["banned"] != 0) {
         exit(json_encode(["status" => "error", "msg" => __("Tài khoản của bạn đã bị cấm")]));
     }
-    /*
-     * Idempotent checkout. The storefront sends one key per opened buy panel; a retry after a lost
-     * response arrives with the same key, finds the order it already created and answers success
-     * instead of charging again. Checked before the purchase throttle, which would otherwise reject
-     * the retry with "too fast".
-     */
+    /* Existing completed orders can be looked up before the throttle. This is not a durable
+       checkout claim: a request can stop between debit, supplier delivery and order insertion.
+       Do not assume retrying the same key safely reconciles every interrupted purchase. */
     $clientOrderKey = isset($_REQUEST["client_order_id"]) && is_string($_REQUEST["client_order_id"])
         ? trim($_REQUEST["client_order_id"]) : "";
     $trans_id = "";
@@ -56,22 +53,32 @@ if($_REQUEST["action"] == "buyProduct") {
             exit(json_encode(["status" => "success", "msg" => __("Đơn hàng này đã được tạo trước đó."), "trans_id" => $trans_id, "data" => []]));
         }
     }
+    /* This response describes this request only. It may be sent ONLY before coupon reservation,
+       wallet debit, stock mutation or supplier calls; it is not a global idempotency claim. */
+    $rejectBeforeProcessing = function ($message) use ($clientOrderKey) {
+        $response = ["status" => "error", "msg" => $message];
+        if ($clientOrderKey !== "") {
+            $response["outcome"] = "not_started";
+            $response["request_id"] = $clientOrderKey;
+        }
+        exit(json_encode($response));
+    };
     if(time() - $getUser["time_request"] < $CMSNT->site("thoi_gian_mua_cach_nhau")) {
-        exit(json_encode(["status" => "error", "msg" => __("Thao tác quá nhanh, vui lòng chờ")]));
+        $rejectBeforeProcessing(__("Thao tác quá nhanh, vui lòng chờ"));
     }
     if(empty($_REQUEST["id"])) {
-        exit(json_encode(["status" => "error", "msg" => __("Sản phẩm không hợp lệ")]));
+        $rejectBeforeProcessing(__("Sản phẩm không hợp lệ"));
     }
     if(!($product = $CMSNT->get_row("SELECT * FROM `products` WHERE `id` = '" . check_string($_REQUEST["id"]) . "' AND `status` = 1 "))) {
-        exit(json_encode(["status" => "error", "msg" => __("Sản phẩm không tồn tại trong hệ thống")]));
+        $rejectBeforeProcessing(__("Sản phẩm không tồn tại trong hệ thống"));
     }
     if(empty($_REQUEST["amount"])) {
-        exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập số lượng cần mua")]));
+        $rejectBeforeProcessing(__("Vui lòng nhập số lượng cần mua"));
     }
     /* Digits only: this value becomes `LIMIT <n>` below, so a non-number must never reach SQL. */
     $amount = order_quantity($_REQUEST["amount"]);
     if($amount === false) {
-        exit(json_encode(["status" => "error", "msg" => __("Số lượng mua không hợp lệ")]));
+        $rejectBeforeProcessing(__("Số lượng mua không hợp lệ"));
     }
     /* Same reading of the two columns as the storefront: a minimum below 1 is 1, a maximum below 1
        means "no limit" (the stock check below is the real ceiling). Taken literally, max = 0 made a
@@ -82,17 +89,17 @@ if($_REQUEST["action"] == "buyProduct") {
     }
     $maxQuantity = (int) $product["max"];
     if($amount < $minQuantity) {
-        exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối thiểu là") . " " . format_cash($minQuantity)]));
+        $rejectBeforeProcessing(__("Số lượng cần mua tối thiểu là") . " " . format_cash($minQuantity));
     }
     if($maxQuantity > 0 && $amount > $maxQuantity) {
-        exit(json_encode(["status" => "error", "msg" => __("Số lượng cần mua tối đa là") . " " . format_cash($maxQuantity)]));
+        $rejectBeforeProcessing(__("Số lượng cần mua tối đa là") . " " . format_cash($maxQuantity));
     }
     if($product["supplier_id"] == 0) {
         if($CMSNT->get_row(" SELECT COUNT(id) FROM `product_stock` WHERE `product_code` = '" . $product["code"] . "' ")["COUNT(id)"] < $amount) {
-            exit(json_encode(["status" => "error", "msg" => __("Số lượng còn lại trong hệ thống không đủ")]));
+            $rejectBeforeProcessing(__("Số lượng còn lại trong hệ thống không đủ"));
         }
     } elseif(!($supplier = $CMSNT->get_row(" SELECT * FROM `suppliers` WHERE `id` = '" . $product["supplier_id"] . "' AND `status` = 1 "))) {
-        exit(json_encode(["status" => "error", "msg" => __("Sản phẩm này đang bảo trì, không thể mua hàng vào lúc này")]));
+        $rejectBeforeProcessing(__("Sản phẩm này đang bảo trì, không thể mua hàng vào lúc này"));
     }
     if($trans_id === "") {
         $trans_id = random("QWERTYUOPASDFGHJKZXCVBNM123456789", 4) . uniqid();
@@ -123,6 +130,10 @@ if($_REQUEST["action"] == "buyProduct") {
         $pay = $money - $discount;
     }
     if(getRowRealtime("users", $getUser["id"], "money") < $pay) {
+        // A coupon may already have been reserved; its release at shutdown is not guaranteed.
+        if (empty($_REQUEST["coupon"])) {
+            $rejectBeforeProcessing(__("Số dư không đủ, vui lòng nạp thêm"));
+        }
         exit(json_encode(["status" => "error", "msg" => __("Số dư không đủ, vui lòng nạp thêm")]));
     }
     $User = new users();

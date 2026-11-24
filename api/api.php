@@ -81,10 +81,9 @@ if ($apiAction == "get-balance") { // lấy sô dư
     if ($maxQuantity > 0 && $amount > $maxQuantity) {
         exit(json_encode(["code" => 201, "message" => __("Số lượng cần mua tối đa là") . " " . format_cash($maxQuantity)]));
     }
-    /*
-     * Optional idempotency key. A client whose connection drops after the debit can retry with the
-     * same key and receive the order it already paid for, instead of paying twice. The key is
-     * namespaced by the buyer and hashed, so it can never name another customer's order.
+    /* Optional buyer-scoped correlation key: completed orders may be found by their derived ID.
+     * This lookup is not a durable claim and does not prove a retry is safe after a lost response:
+     * debit, supplier delivery and order insertion do not share one atomic transaction.
      */
     $clientOrderKey = isset($_GET["client_order_id"]) && is_string($_GET["client_order_id"])
         ? trim($_GET["client_order_id"]) : "";

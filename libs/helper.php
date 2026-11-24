@@ -6,6 +6,7 @@ if(!defined("IN_SITE")) {
 $CMSNT = new DB();
 require_once __DIR__ . "/money.php";
 require_once __DIR__ . "/clock.php";
+require_once __DIR__ . "/request_security.php";
 date_default_timezone_set($CMSNT->site("timezone"));
 if($CMSNT->get_row(" SELECT * FROM `block_ip` WHERE `ip` = '" . myip() . "' AND `banned` = 1 ")) {
     require_once __DIR__ . "/../views/common/block-ip.php";
@@ -231,14 +232,31 @@ function orbit_password_matches($raw, $stored)
         if (password_verify($raw, $stored)) {
             return true;
         }
-        $legacy = check_string($raw);
-        return $legacy !== $raw && password_verify($legacy, $stored);
+        foreach (orbit_legacy_password_forms($raw) as $legacy) {
+            if ($legacy !== $raw && password_verify($legacy, $stored)) {
+                return true;
+            }
+        }
+        return false;
     }
-    $legacy = check_string($raw);
     if (hash_equals($stored, (string) TypePassword($raw))) {
         return true;
     }
-    return $legacy !== $raw && hash_equals($stored, (string) TypePassword($legacy));
+    foreach (orbit_legacy_password_forms($raw) as $legacy) {
+        if ($legacy !== $raw && hash_equals($stored, (string) TypePassword($legacy))) {
+            return true;
+        }
+    }
+    return false;
+}
+/** Legacy htmlspecialchars defaults changed in PHP 8.1; retain both forms for existing hashes. */
+function orbit_legacy_password_forms($raw)
+{
+    return array_unique(array(
+        check_string($raw),
+        trim(htmlspecialchars(addslashes($raw), ENT_COMPAT, 'UTF-8')),
+        trim(htmlspecialchars(addslashes($raw), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')),
+    ));
 }
 /** Re-hash a bcrypt password with its raw bytes after a successful legacy login. */
 function orbit_password_upgrade($user_id, $raw)
@@ -522,10 +540,8 @@ function isValidTRC20Address($address)
  */
 function url()
 {
-    $scheme = orbit_is_https() ? "https" : "http";
-    $host = isset($_SERVER["HTTP_HOST"]) ? (string) $_SERVER["HTTP_HOST"] : (isset($_SERVER["SERVER_NAME"]) ? (string) $_SERVER["SERVER_NAME"] : "localhost");
     $uri = isset($_SERVER["REQUEST_URI"]) ? (string) $_SERVER["REQUEST_URI"] : "/";
-    return $scheme . "://" . $host . $uri;
+    return orbit_request_origin() . $uri;
 }
 function is_valid_domain_name($domain_name)
 {
@@ -1075,8 +1091,9 @@ function orbit_positive_amount($raw)
 {
     if (is_int($raw) || is_float($raw)) {
         $value = (float) $raw;
-    } elseif (is_string($raw) && is_numeric($raw)) {
-        $value = (float) $raw;
+    } elseif (is_string($raw) && is_numeric(trim($raw))) {
+        /* PHP 7.4 rejects trailing whitespace in is_numeric(), while PHP 8 accepts it. */
+        $value = (float) trim($raw);
     } else {
         return false;
     }
@@ -1414,16 +1431,40 @@ function get_url()
     $url .= $_SERVER["REQUEST_URI"];
     return $url;
 }
-/**
- * Absolute URL for this request's host.
- *
- * Built on the same host/scheme resolution as url() so a host that terminates TLS at a proxy does not
- * emit http:// for links that are about to be pasted into an email or a payment return URL. The old
- * `localhost` rewrite to a developer's local path is gone: it only ever fired on a real deployment
- * left on "localhost", where it pointed every link at a directory that does not exist.
- */
+/** A fixed HTTPS origin for links that may carry secrets. Never derive this from request headers. */
+function orbit_canonical_origin()
+{
+    $configured = $_ENV['APP_URL'] ?? getenv('APP_URL');
+    $configured = $configured === false ? '' : trim((string) $configured);
+    if ($configured === '' || preg_match('/[\x00-\x20\x7f\\\\]/', $configured)) {
+        return '';
+    }
+    $parts = parse_url($configured);
+    if (!is_array($parts) || !isset($parts['scheme'], $parts['host']) || strtolower($parts['scheme']) !== 'https'
+        || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])
+        || (isset($parts['path']) && $parts['path'] !== '/' && $parts['path'] !== '')
+        || (isset($parts['port']) && ($parts['port'] < 1 || $parts['port'] > 65535))) {
+        return '';
+    }
+    $host = $parts['host'];
+    if (substr($host, 0, 1) === '[' && substr($host, -1) === ']') {
+        if (!filter_var(substr($host, 1, -1), FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) { return ''; }
+    } elseif (strlen($host) > 253 || !preg_match('/^(?=.{1,253}$)[A-Za-z0-9]+(?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9]+(?:[A-Za-z0-9-]*[A-Za-z0-9])?)*$/D', $host)) {
+        return '';
+    } else {
+        foreach (explode('.', $host) as $label) { if (strlen($label) > 63) { return ''; } }
+    }
+    return 'https://' . $host . (isset($parts['port']) ? ':' . $parts['port'] : '');
+}
+
+/** Prefer the configured origin. A missing setting keeps legacy rendering compatible;
+ * secret-bearing external links must separately require orbit_canonical_origin(). */
 function orbit_request_origin()
 {
+    $canonical = orbit_canonical_origin();
+    if ($canonical !== '') { return $canonical; }
+    $configured = $_ENV['APP_URL'] ?? getenv('APP_URL');
+    if ($configured !== false && trim((string) $configured) !== '') { return 'http://localhost'; }
     if(!empty($_SERVER["HTTP_HOST"])) {
         $host = (string) $_SERVER["HTTP_HOST"];
     } elseif(!empty($_SERVER["SERVER_NAME"])) {
@@ -1431,8 +1472,8 @@ function orbit_request_origin()
     } else {
         $host = "localhost";
     }
-    /* HTTP_HOST is attacker-controllable; keep it to a host name, optional port. Anything else (a
-       slash, a query string, a second host) would let a request rewrite our absolute links elsewhere. */
+    /* Syntax validation blocks markup and URL structure injection, not a valid hostile host.
+       An edge allowlist is still required; secret-bearing links must use the canonical origin. */
     if(preg_match('/^[A-Za-z0-9.\-]+(:[0-9]{1,5})?$/', $host) !== 1) {
         $host = !empty($_SERVER["SERVER_NAME"]) ? (string) $_SERVER["SERVER_NAME"] : "localhost";
         if(preg_match('/^[A-Za-z0-9.\-]+(:[0-9]{1,5})?$/', $host) !== 1) {
@@ -1559,7 +1600,7 @@ function myip()
     if (!filter_var($remote, FILTER_VALIDATE_IP)) {
         return '0.0.0.0';
     }
-    $trusted = array_filter(array_map('trim', explode(',', $_ENV['TRUSTED_PROXY_IPS'] ?? '')));
+    $trusted = orbit_trusted_proxy_ips();
     if (!in_array($remote, $trusted, true)) {
         return $remote;
     }
@@ -1587,10 +1628,10 @@ function myip()
 function check_string($data)
 {
     if(is_string($data)) {
-        return trim(htmlspecialchars(addslashes($data)));
+        return trim(htmlspecialchars(addslashes($data), ENT_QUOTES, 'UTF-8'));
     }
     if(is_int($data) || is_float($data)) {
-        return trim(htmlspecialchars(addslashes((string) $data)));
+        return trim(htmlspecialchars(addslashes((string) $data), ENT_QUOTES, 'UTF-8'));
     }
     return "";
 }
@@ -1801,25 +1842,6 @@ function random($string, $int)
         $result .= $string[random_int(0, $last)];
     }
     return $result;
-}
-/**
- * Whether this request arrived over TLS, including when TLS terminates at a proxy.
- *
- * `$_SERVER["HTTPS"]` alone is empty behind Render/Cloudflare, so the auth cookie was issued without
- * Secure on exactly the hosts that only speak HTTPS. APP_URL is a fallback for a misconfigured proxy.
- */
-function orbit_is_https()
-{
-    if(!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off") {
-        return true;
-    }
-    if(isset($_SERVER["HTTP_X_FORWARDED_PROTO"]) && strtolower((string) $_SERVER["HTTP_X_FORWARDED_PROTO"]) === "https") {
-        return true;
-    }
-    if(isset($_SERVER["SERVER_PORT"]) && (int) $_SERVER["SERVER_PORT"] === 443) {
-        return true;
-    }
-    return stripos((string) ($_ENV["APP_URL"] ?? ""), "https://") === 0;
 }
 function set_auth_cookie($token, $expires)
 {

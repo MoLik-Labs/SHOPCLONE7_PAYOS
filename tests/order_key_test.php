@@ -6,11 +6,10 @@ if (PHP_SAPI !== "cli" && PHP_SAPI !== "phpdbg") {
     exit;
 }
 /*
- * Idempotent checkout keys.
+ * Checkout correlation keys.
  *
- * A buyer whose response is lost must be able to retry without paying twice. The storefront sends a
- * per-panel key; the server derives a deterministic trans_id from (buyer, key). These checks pin the
- * derivation and the wiring in both purchase paths.
+ * The server derives a deterministic trans_id from (buyer, key). These checks pin the derivation and
+ * wiring only: the order lookup is not an atomic claim and does not prove retry safety after a crash.
  */
 
 define('IN_SITE', true);
@@ -55,11 +54,11 @@ key_is(true, strpos($product, '$existingOrder = $CMSNT->get_row("SELECT * FROM `
 key_is(true, strpos($api, '$trans_id = orbit_order_id($getUser["id"], $clientOrderKey);') !== false,
     'the public API derives the order id from the key');
 key_is(true, strpos($api, '$existingOrder = $CMSNT->get_row("SELECT * FROM `product_order` WHERE `trans_id` = ') !== false,
-    'the public API returns the existing order instead of charging again');
+    'the public API looks for a previously completed order');
 key_is(true, strpos($product, 'if($trans_id === "") {') !== false && strpos($api, 'if ($trans_id === "") {') !== false,
     'a request without a key still gets a random id');
 key_is(true, strpos($js, 'client_order_id: orderKey') !== false, 'the buy panel sends its key');
-key_is(1, substr_count($js, 'orderKey = newOrderKey();'), 'an error does not rotate the key while an earlier request may still be processing');
+key_is(1, substr_count($js, 'orderKey = newOrderKey();'), 'the panel generates one key for its attempt');
 key_is(true, strpos($product, '(int) $existingOrder["trash"] === 1') !== false, 'a cancelled order cannot be revived by replaying its key');
 key_is(true, strpos($api, '(int) $existingOrder["trash"] === 1') !== false, 'the API refuses to reuse a cancelled order key');
 key_is(true, strpos($product, 'Mã đơn hàng đã được dùng cho sản phẩm khác') !== false,

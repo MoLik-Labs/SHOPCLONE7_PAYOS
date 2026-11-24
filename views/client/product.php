@@ -5,7 +5,7 @@
  * Two jobs: show the product honestly (real stock, real price, the admin's own description) and let a
  * signed-in buyer pay from their balance without leaving the page. The purchase endpoint is the same one
  * the legacy modal uses (`ajaxs/client/product.php`: total_payment + buyProduct), so pricing, coupons,
- * stock checks and the exactly-once wallet movement stay in one place.
+ * stock checks and wallet movement stay in one place. Retry protection is not an exactly-once guarantee.
  *
  * No rating, review count or "sold" figure is invented; `sold` only prints when the shop setting allows it.
  * Without JavaScript the page still shows every fact and the balance, and the buy button explains itself.
@@ -85,7 +85,10 @@ if ($storeStock > 0 && $storeMax > $storeStock) {
     $storeMax = $storeStock;
 }
 $storeAvailable = $storeStock > 0;
-$storeCanBuy = $getUser && $storeAvailable;
+/* A positive stock count is not enough if the configured minimum cannot be met. */
+$storeBuyBlockedByLimit = $storeAvailable && $storeMax < $storeMin;
+$storePurchasable = $storeAvailable && !$storeBuyBlockedByLimit;
+$storeCanBuy = $getUser && $storePurchasable;
 
 $storeImages = array();
 if ((string) $CMSNT->site("product_photo_display") === "1" && trim((string) $storeProduct["images"]) !== "") {
@@ -126,7 +129,7 @@ store_shell_open($storeShell);
     <a href="<?php echo BASE_URL("client/home"); ?>">Trang chủ</a>
     <?php if ($storeCategory) { ?>
     <span aria-hidden="true">/</span>
-    <a href="<?php echo BASE_URL("category/" . $storeCategory["slug"]); ?>"><?php echo store_e($storeCategory["name"]); ?></a>
+    <a href="<?php echo store_e(BASE_URL("category/" . rawurlencode((string) $storeCategory["slug"]))); ?>"><?php echo store_e($storeCategory["name"]); ?></a>
     <?php } ?>
     <span aria-hidden="true">/</span>
     <span aria-current="page"><?php echo store_e($storeProduct["name"]); ?></span>
@@ -198,6 +201,7 @@ store_shell_open($storeShell);
       <div class="buy-panel" id="mua" data-buy
         data-endpoint="<?php echo store_e(BASE_URL("ajaxs/client/product.php")); ?>"
         data-product="<?php echo (int) $storeProduct["id"]; ?>"
+        data-buyer="<?php echo $getUser ? (int) $getUser["id"] : 0; ?>"
         data-min="<?php echo (int) $storeMin; ?>"
         data-max="<?php echo (int) $storeMax; ?>"
         data-stock="<?php echo (int) $storeStock; ?>"
@@ -214,11 +218,11 @@ store_shell_open($storeShell);
         <div class="buy-panel__row">
           <label class="field__label" for="amount">Số lượng</label>
           <div class="stepper">
-            <button class="stepper__btn" type="button" data-step="-1" aria-label="Giảm số lượng">−</button>
+            <button class="stepper__btn" type="button" data-step="-1" aria-label="Giảm số lượng" <?php echo $storeCanBuy ? "" : "disabled"; ?>>−</button>
             <input class="input stepper__input" id="amount" name="amount" type="number" inputmode="numeric"
               min="<?php echo (int) $storeMin; ?>" max="<?php echo (int) $storeMax; ?>"
               value="<?php echo (int) $storeMin; ?>" <?php echo $storeCanBuy ? "" : "disabled"; ?>>
-            <button class="stepper__btn" type="button" data-step="1" aria-label="Tăng số lượng">+</button>
+            <button class="stepper__btn" type="button" data-step="1" aria-label="Tăng số lượng" <?php echo $storeCanBuy ? "" : "disabled"; ?>>+</button>
           </div>
         </div>
 
@@ -235,10 +239,15 @@ store_shell_open($storeShell);
         </dl>
 
         <?php if ($storeCanBuy) { ?>
-        <button class="btn btn--primary btn--block btn--lg" type="button" data-buy-submit>
+        <button class="btn btn--primary btn--block btn--lg" type="button" data-buy-submit disabled>
           Thanh toán bằng số dư
         </button>
-        <?php } elseif (!$getUser) { ?>
+        <button class="btn btn--ghost btn--sm" type="button" data-buy-retry-quote hidden>Thử tính lại</button>
+        <noscript><p class="small">Bật JavaScript để thanh toán hoặc liên hệ shop để được hỗ trợ.</p></noscript>
+        <?php } elseif ($storeBuyBlockedByLimit) { ?>
+        <button class="btn btn--block btn--lg" type="button" disabled>Chưa đủ số lượng</button>
+        <p class="small muted m0">Số lượng còn lại hoặc giới hạn mua thấp hơn mức tối thiểu <?php echo (int) $storeMin; ?>. Vui lòng liên hệ shop.</p>
+        <?php } elseif (!$getUser && $storePurchasable) { ?>
         <a class="btn btn--primary btn--block btn--lg" href="<?php echo BASE_URL("client/login"); ?>">Đăng nhập để mua</a>
         <p class="small faint m0">Đơn hàng và nội dung sản phẩm được lưu trong tài khoản của bạn.</p>
         <?php } else { ?>
@@ -247,6 +256,8 @@ store_shell_open($storeShell);
         <?php } ?>
 
         <p class="buy-panel__status" role="status" aria-live="polite" data-buy-status></p>
+        <p class="buy-panel__reference small" data-buy-reference hidden>Mã tham chiếu yêu cầu (không phải mã đơn hàng): <code data-buy-reference-value></code>. Gửi mã này cho shop khi cần hỗ trợ; không gửi mật khẩu hoặc khoá API.</p>
+        <p class="small" data-buy-help hidden><a href="<?php echo store_e(BASE_URL("product-orders")); ?>">Xem lịch sử đơn hàng</a> · <a href="<?php echo store_e(BASE_URL("client/contact")); ?>">Liên hệ shop</a></p>
       </div>
 
       <ul class="product-assurances">
@@ -335,7 +346,7 @@ store_shell_open($storeShell);
     <span class="faint xs">Giá hiện tại</span>
     <strong><?php echo format_currency($storeFinal); ?></strong>
   </div>
-  <a class="btn btn--primary" href="#mua"><?php echo $storeCanBuy ? "Mua ngay" : ($storeAvailable ? "Đăng nhập" : "Tạm hết"); ?></a>
+  <a class="btn btn--primary" href="#mua"><?php echo $storeCanBuy ? "Mua ngay" : ($storeBuyBlockedByLimit ? "Chưa đủ số lượng" : ($storePurchasable ? "Đăng nhập" : "Tạm hết")); ?></a>
 </div>
 
 <?php

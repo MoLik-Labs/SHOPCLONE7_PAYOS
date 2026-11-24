@@ -143,6 +143,9 @@ check("the shell top bar is present", strpos($html, "topbar__inner") !== false);
 check("the shell footer is present", strpos($html, 'class="footer"') !== false);
 check("exactly one skip link", substr_count($html, 'class="skip-link"') === 1);
 check("exactly one main landmark", substr_count($html, '<main id="main"') === 1);
+check("the styleguide has one page h1", preg_match_all('/<h1[\\s>]/', $html) === 1);
+check("example search and copy inputs have labels", strpos($html, 'for="styleguide-search"') !== false
+    && strpos($html, 'for="styleguide-copy"') !== false);
 check("no PHP tag leaked into the output", strpos($html, "<?php") === false && strpos($html, "<?=") === false);
 $open = substr_count($html, "<div");
 $close = substr_count($html, "</div>");

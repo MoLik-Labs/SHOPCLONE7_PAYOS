@@ -8,7 +8,7 @@ if(function_exists("orbit_security_headers")) {
     orbit_security_headers();
 }
 echo "<!doctype html>\n<html class=\"h-100\">\n\n<head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">\n    <meta http-equiv=\"Content-Security-Policy\" content=\"upgrade-insecure-requests\">\n    <link rel=\"canonical\" href=\"";
-echo url();
+echo htmlspecialchars(url(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 echo "\" />\n    <title>";
 echo isset($body["title"]) ? $body["title"] : $CMSNT->site("title");
 echo "</title>\n    <meta name=\"description\" content=\"";

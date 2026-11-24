@@ -36,6 +36,8 @@ function check($label, $condition, $detail = "")
     }
 }
 
+check("bootstrap permits hosting-provided environment variables when .env is absent",
+    strpos($source, '$dotenv->safeLoad();') !== false);
 check("the driver error mode is pinned, not inherited from php.ini",
     strpos($source, "mysqli_report(MYSQLI_REPORT_OFF);") !== false);
 check("the report pin happens inside connect(), before connecting",
@@ -120,7 +122,7 @@ check("the user id is an integer in the three balance statements", strpos($credi
 check("a transaction rolls back on an exception",
     strpos($source, '@mysqli_rollback($this->ketnoi);') !== false);
 check("a transaction commits only on a truthy result",
-    strpos($source, '@mysqli_commit($this->ketnoi);') !== false && strpos($source, 'if ($result) {') !== false);
+    strpos($source, '@mysqli_commit($this->ketnoi)') !== false && strpos($source, 'if ($result) {') !== false);
 check("non-numeric amounts are refused before SQL",
     strpos($source, 'if (!is_numeric($sotien)) {') !== false);
 

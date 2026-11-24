@@ -127,7 +127,7 @@ orbit_chart_assets();
     </div>
     <div class="segmented" role="group" aria-label="Khoảng thời gian">
       <?php foreach (array(7 => "7 ngày", 30 => "30 ngày", 90 => "90 ngày") as $option => $label) { ?>
-        <a href="<?php echo BASE_URL("client/purchase-history&amp;days=" . (int) $option); ?>"
+        <a href="<?php echo htmlspecialchars(BASE_URL("index.php?module=client&action=purchase-history&days=" . (int) $option), ENT_QUOTES, "UTF-8"); ?>"
            <?php echo $days === $option ? 'aria-current="page"' : ""; ?>><?php echo $label; ?></a>
       <?php } ?>
     </div>
@@ -204,7 +204,7 @@ orbit_chart_assets();
           </div>
         </div>
         <?php if ($query !== "") { ?>
-          <a class="btn btn--ghost btn--sm" href="<?php echo BASE_URL("client/purchase-history&amp;days=" . (int) $days); ?>">Xoá lọc</a>
+          <a class="btn btn--ghost btn--sm" href="<?php echo htmlspecialchars(BASE_URL("index.php?module=client&action=purchase-history&days=" . (int) $days), ENT_QUOTES, "UTF-8"); ?>">Xoá lọc</a>
         <?php } ?>
       </form>
     </div>
@@ -253,8 +253,12 @@ orbit_chart_assets();
           "total" => $state["total"],
           "aria" => "Phân trang đơn hàng",
           "href" => function ($page) use ($days, $query) {
-              return BASE_URL("client/purchase-history&amp;days=" . (int) $days
-                  . ($query !== "" ? "&amp;q=" . urlencode($query) : "") . "&amp;page=" . (int) $page);
+              $params = array("module" => "client", "action" => "purchase-history", "days" => (int) $days);
+              if ($query !== "") {
+                  $params["q"] = $query;
+              }
+              $params["page"] = (int) $page;
+              return BASE_URL("index.php") . "?" . http_build_query($params);
           },
       )); ?>
     <?php } else { ?>

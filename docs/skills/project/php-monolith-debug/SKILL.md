@@ -11,50 +11,30 @@ fix → re-run → full sweep**.
 
 ## 1. Run PHP anyway
 
-`.harness/phpcl.mjs` boots PHP 8.2.29 (php-wasm) as the CLI SAPI with the host repository mounted.
-`STDOUT`/`STDERR`, `getenv()`, `__DIR__`, `$_SERVER['argv']`, `http_response_code()` and sessions all
-work; `proc_open()` and a real `mysqli` do not.
+`tools/dev/phpcl.mjs` boots PHP 8.2 (php-wasm) as the CLI SAPI with the host repository mounted.
+It is a useful local test runtime, not a native PHP installation or a substitute for production PHP,
+MySQL, provider integrations, or browser interaction tests. `proc_open()` and real `mysqli` are not
+available through the shim.
 
 ```bash
-node .harness/phpcl.mjs tests/recharge_pages_test.php
-node .harness/phpcl.mjs tools/preview-build.php
+npm install --prefix tools/dev --no-audit --no-fund
+node tools/dev/phpcl.mjs tests/storefront_test.php
+node tools/dev/phpcl.mjs tools/preview-build.php --out=/tmp/shopclone7-preview
 ```
 
-If `.harness/` vanished (it is intentionally git-excluded), rebuild it:
+For static browser smoke tests, the optional Chromium package is already in `tools/dev/package.json`:
 
 ```bash
-mkdir -p .harness && cd .harness && npm init -y
-npm i @php-wasm/universal@2.0.22 @php-wasm/node@2.0.22
-
-# screenshots (optional): Chromium 153 + its AL2023 libraries
-npm i @sparticuz/chromium puppeteer-core
-node -e 'const fs=require("fs"),z=require("zlib"),p=require("path");const d="node_modules/@sparticuz/chromium/bin";
-fs.writeFileSync("/tmp/al2023.tar",z.brotliDecompressSync(fs.readFileSync(p.join(d,"al2023.tar.br"))));
-fs.writeFileSync("/tmp/chromium",z.brotliDecompressSync(fs.readFileSync(p.join(d,"chromium.br"))));'
-tar -xf /tmp/al2023.tar -C /tmp/al2023 && chmod 755 /tmp/chromium
-LD_LIBRARY_PATH=/tmp/al2023/lib /tmp/chromium --version   # Chromium 153.0.8010.0
+bash tools/dev/setup-chromium.sh
+node tools/dev/phpcl.mjs tools/preview-build.php
+LD_LIBRARY_PATH=/tmp/al2023/lib node tools/dev/browser.mjs /tmp/shots docs/frontend/preview/home.html --widths=1440,390
 ```
 
-`.harness/browser.mjs` serves `docs/frontend/preview/` over a throwaway localhost port before taking
-shots. **Do not screenshot `file://` pages**: the browser blocks the font fetch as a cross-origin
-request, the page silently renders in a fallback typeface, and the report shows two bogus console
-errors. Over HTTP the same pages report `errors=0 failed=0`.
-
-```js
-// .harness/phpcl.mjs
-import { PHP } from '@php-wasm/universal';
-import { loadNodeRuntime, useHostFilesystem } from '@php-wasm/node';
-const php = new PHP(await loadNodeRuntime('8.2'));
-useHostFilesystem(php);
-const args = process.argv.slice(2);
-const stream = await php.cli(['php', '-d', 'session.save_path=/tmp', args[0], ...args.slice(1)]);
-process.stdout.write(await stream.stdoutText);
-process.stderr.write(await stream.stderrText);
-process.exit(await stream.exitCode);
-```
-
-Why the CLI SAPI: under the request SAPI (`php.run`), `STDOUT`/`STDERR` are undefined and `exit()`
-becomes an exception. Tests legitimately call `fwrite(STDERR, "SKIP…")`.
+The preview builder's default output modifies tracked preview files; use a throwaway `--out` for
+normal regression testing. The browser harness currently serves the default preview directory, so
+only regenerate it deliberately and review the diff. It serves over HTTP rather than `file://` to
+avoid blocked font requests. Screenshots and overflow/error counts alone do not verify keyboard,
+contrast, interactions, real data, production services or accessibility.
 
 ## 2. The test pattern
 
@@ -96,18 +76,14 @@ Rules:
 ## 3. The regression sweep
 
 ```bash
-bash .harness/run.sh "$PWD" .harness/specs/all.json
-# LINT 282 files, 0 parse errors
-# SUMMARY: 24 runs, 0 harness-level failures
+bash tools/dev/run.sh                 # lint, security scan, JS syntax, preview, suites
+bash tools/dev/run.sh --lint-only
+bash tools/dev/run.sh tests/storefront_test.php
 ```
 
-A spec is `{"lint": "all" | [files], "run": [{"script": "tests/x_test.php", "label": "x"}]}`;
-a shell-driven suite uses `{"cmd": "bash .harness/legacy-gate.sh"}`. The legacy payment gate needs
-`vendor/autoload.php`; the checkout has no Composer tree, so a **test-only** stub defines
-`Dotenv\Dotenv` (vendor/ is gitignored — never commit it, never use it in production).
-
-Lint is `token_get_all($code, TOKEN_PARSE)` in `.harness/lintlist.php`; it catches syntax errors the
-eye misses (an `elseif` after a closed brace already cost a round).
+The runner uses `tools/dev/lintlist.php`, reports skipped database suites as NOT RUN and uses
+`tools/dev/legacy-gate.sh` for the test that requires process isolation. Treat fixture rendering as
+static evidence, not proof of real database, browser interaction, or provider behavior.
 
 ## 4. Where things are
 

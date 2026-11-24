@@ -135,47 +135,70 @@ final class GtfCardService
         try {
             $response = $this->client->submit($telco, $amount, $code, $serial, $requestId);
         } catch (Throwable $error) {
-            // Ambiguous outcome: the card may already have been accepted. Never mark it failed.
-            $this->query("UPDATE gtf_card_orders SET status = 'UNKNOWN', reason = 'submit_transport_unknown', attempt_count = attempt_count + 1, submitted_at = NOW(), updated_at = NOW() WHERE id = ?", [$orderId]);
+            // A callback may already have finalised the order while submit was in flight.
+            $changed = $this->query("UPDATE gtf_card_orders SET status = 'UNKNOWN', reason = 'submit_transport_unknown', attempt_count = attempt_count + 1, submitted_at = NOW(), updated_at = NOW() WHERE id = ? AND status = 'CREATING' AND credited_at IS NULL", [$orderId])->rowCount();
+            if ($changed !== 1) {
+                return $this->currentSubmissionResult($orderId, $requestId);
+            }
             gtf_alert('GTF card submit outcome unknown for order ' . $orderId . ' (request ' . $requestId . ').');
             return ['status' => 'unknown', 'request_id' => $requestId, 'msg' => 'Chưa nhận được kết quả từ GachtheFast. Vui lòng kiểm tra lại trong lịch sử.'];
         }
 
-        $providerStatus = isset($response['status']) ? (string) $response['status'] : '';
-        $this->query('UPDATE gtf_card_orders SET provider_status = ?, submitted_at = NOW(), updated_at = NOW() WHERE id = ?', [$providerStatus === '' ? null : $providerStatus, $orderId]);
+        $providerStatus = isset($response['status']) && is_scalar($response['status']) ? (string) $response['status'] : '';
+        $changed = $this->query("UPDATE gtf_card_orders SET provider_status = ?, submitted_at = NOW(), updated_at = NOW() WHERE id = ? AND status = 'CREATING' AND credited_at IS NULL", [$providerStatus === '' ? null : $providerStatus, $orderId])->rowCount();
+        if ($changed !== 1) {
+            return $this->currentSubmissionResult($orderId, $requestId);
+        }
 
         if ($providerStatus === '99') {
-            $this->query("UPDATE gtf_card_orders SET status = 'PENDING', updated_at = NOW() WHERE id = ?", [$orderId]);
+            $changed = $this->query("UPDATE gtf_card_orders SET status = 'PENDING', updated_at = NOW() WHERE id = ? AND status = 'CREATING' AND credited_at IS NULL", [$orderId])->rowCount();
+            if ($changed !== 1) { return $this->currentSubmissionResult($orderId, $requestId); }
             return ['status' => 'pending', 'request_id' => $requestId, 'msg' => 'Đẩy thẻ lên thành công, vui lòng chờ xử lý.'];
         }
         if ($providerStatus === '1' || $providerStatus === '2') {
-            $this->query("UPDATE gtf_card_orders SET status = 'VERIFYING', updated_at = NOW() WHERE id = ?", [$orderId]);
+            $changed = $this->query("UPDATE gtf_card_orders SET status = 'VERIFYING', updated_at = NOW() WHERE id = ? AND status = 'CREATING' AND credited_at IS NULL", [$orderId])->rowCount();
+            if ($changed !== 1) { return $this->currentSubmissionResult($orderId, $requestId); }
             try {
                 $outcome = $this->reconcile($this->find($requestId), true);
             } catch (Throwable $error) {
                 // The card may already be accepted: the order stays open for the worker.
                 $outcome = 'pending';
             }
-            if ($outcome === 'credited') {
+            if ($outcome === 'credited' || $outcome === 'already_credited') {
                 return ['status' => 'success', 'request_id' => $requestId, 'msg' => 'Nạp thẻ thành công.'];
             }
+            if ($outcome === 'terminal') { return $this->currentSubmissionResult($orderId, $requestId); }
             return ['status' => 'pending', 'request_id' => $requestId, 'msg' => 'Thẻ đã được ghi nhận, đang chờ xác minh. Vui lòng kiểm tra lại trong lịch sử.'];
         }
-        if ($providerStatus === '3') {
-            $this->finishWithoutCredit($orderId, 'REJECTED', 'card_invalid');
-            return ['status' => 'error', 'request_id' => $requestId, 'msg' => 'Thẻ không hợp lệ hoặc đã được sử dụng.'];
+        $terminal = [
+            '3' => ['REJECTED', 'card_invalid', 'Thẻ không hợp lệ hoặc đã được sử dụng.'],
+            '4' => ['MAINTENANCE', 'provider_maintenance', 'Nhà cung cấp đang bảo trì, vui lòng thử lại sau.'],
+            '100' => ['REJECTED', 'submission_failed', 'GachtheFast từ chối nhận thẻ.'],
+        ];
+        if (isset($terminal[$providerStatus])) {
+            list($status, $reason, $message) = $terminal[$providerStatus];
+            $changed = $this->query("UPDATE gtf_card_orders SET status = ?, reason = ?, serial_sealed = NULL, code_sealed = NULL, updated_at = NOW() WHERE id = ? AND status = 'CREATING' AND credited_at IS NULL", [$status, $reason, $orderId])->rowCount();
+            if ($changed !== 1) { return $this->currentSubmissionResult($orderId, $requestId); }
+            return ['status' => 'error', 'request_id' => $requestId, 'msg' => $message];
         }
-        if ($providerStatus === '4') {
-            $this->finishWithoutCredit($orderId, 'MAINTENANCE', 'provider_maintenance');
-            return ['status' => 'error', 'request_id' => $requestId, 'msg' => 'Nhà cung cấp đang bảo trì, vui lòng thử lại sau.'];
-        }
-        if ($providerStatus === '100') {
-            $this->finishWithoutCredit($orderId, 'REJECTED', 'submission_failed');
-            return ['status' => 'error', 'request_id' => $requestId, 'msg' => 'GachtheFast từ chối nhận thẻ.'];
-        }
-        $this->query("UPDATE gtf_card_orders SET status = 'UNKNOWN', reason = ?, updated_at = NOW() WHERE id = ?", ['unexpected_submit_status', $orderId]);
+        $changed = $this->query("UPDATE gtf_card_orders SET status = 'UNKNOWN', reason = ?, updated_at = NOW() WHERE id = ? AND status = 'CREATING' AND credited_at IS NULL", ['unexpected_submit_status', $orderId])->rowCount();
+        if ($changed !== 1) { return $this->currentSubmissionResult($orderId, $requestId); }
         gtf_alert('GTF card submit returned an undocumented status for order ' . $orderId . '.');
         return ['status' => 'unknown', 'request_id' => $requestId, 'msg' => 'Chưa xác định được kết quả nạp thẻ. Vui lòng kiểm tra lại trong lịch sử.'];
+    }
+
+    /** Another process updated this order while submit was running: never overwrite it. */
+    private function currentSubmissionResult(int $orderId, string $requestId): array
+    {
+        $row = $this->query('SELECT status,credited_at FROM gtf_card_orders WHERE id = ?', [$orderId])->fetch();
+        if (!$row) { throw new RuntimeException('Card order disappeared after submit.'); }
+        if ($row['credited_at']) {
+            return ['status' => 'success', 'request_id' => $requestId, 'msg' => 'Nạp thẻ thành công.'];
+        }
+        if (in_array($row['status'], GTF_CARD_TERMINAL, true)) {
+            return ['status' => 'error', 'request_id' => $requestId, 'msg' => 'Đơn nạp thẻ đã kết thúc. Vui lòng kiểm tra lịch sử.'];
+        }
+        return ['status' => 'pending', 'request_id' => $requestId, 'msg' => 'Đơn đang được xử lý hoặc chờ xác minh. Vui lòng kiểm tra lịch sử.'];
     }
 
     /**
@@ -185,26 +208,30 @@ final class GtfCardService
      */
     public function callback(array $query): string
     {
-        $requestId = isset($query['request_id']) ? trim((string) $query['request_id']) : '';
-        $sign = isset($query['callback_sign']) ? trim((string) $query['callback_sign']) : '';
-        $code = isset($query['code']) ? trim((string) $query['code']) : '';
-        $serial = isset($query['serial']) ? trim((string) $query['serial']) : '';
-        if ($requestId === '' || $sign === '' || $code === '' || $serial === '') {
-            throw new InvalidArgumentException('Callback is missing required fields.');
+        foreach (['request_id', 'callback_sign', 'code', 'serial'] as $field) {
+            if (!isset($query[$field]) || !is_string($query[$field])) {
+                throw new InvalidArgumentException('Callback is missing required fields.');
+            }
+        }
+        $requestId = trim($query['request_id']);
+        $sign = trim($query['callback_sign']);
+        $code = trim($query['code']);
+        $serial = trim($query['serial']);
+        if (!preg_match('/^[A-Za-z0-9]{4,64}$/D', $requestId)
+            || !preg_match('/^[a-f0-9]{32}$/D', $sign)
+            || !preg_match('/^[A-Za-z0-9]{6,24}$/D', $code)
+            || !preg_match('/^[A-Za-z0-9]{6,24}$/D', $serial)) {
+            throw new InvalidArgumentException('Callback fields are invalid.');
         }
         if ($this->config['partner_key'] === '') {
             throw new RuntimeException('The GachtheFast channel is not configured.');
         }
         if (!hash_equals(GtfCardClient::sign($this->config['partner_key'], $code, $serial), $sign)) {
-            $this->recordEvent(null, 'callback', 'bad_signature', $requestId, null, null);
+            // Unauthenticated requests must not create unbounded DB rows.
             throw new InvalidArgumentException('Callback signature does not match.');
         }
         $order = $this->find($requestId);
-        $providerStatus = isset($query['status']) ? preg_replace('/[^A-Za-z0-9_-]/', '', (string) $query['status']) : '';
-        $providerRef = isset($query['trans_id']) ? preg_replace('/[^A-Za-z0-9_-]/', '', (string) $query['trans_id']) : '';
-        $this->recordEvent($order ? (int) $order['id'] : null, 'callback', $providerStatus, $requestId, $providerRef, $providerStatus);
         if (!$order) {
-            // Nothing is credited for an unknown order; the event stays for audit.
             return 'ignored';
         }
         if ($order['credited_at']) {
@@ -213,8 +240,17 @@ final class GtfCardService
         if (in_array($order['status'], GTF_CARD_TERMINAL, true)) {
             return 'already_final';
         }
+        // The provider signature covers card data but not request_id. Bind it to the stored order.
+        $storedCode = GtfSecret::open($order['code_sealed']);
+        $storedSerial = GtfSecret::open($order['serial_sealed']);
+        if (!hash_equals($storedCode, $code) || !hash_equals($storedSerial, $serial)) {
+            throw new InvalidArgumentException('Callback card does not match the order.');
+        }
+        // Callback status/reference are unsigned. One event per known order is enough to record
+        // receipt without allowing tampered values to create an unbounded stream of audit rows.
+        $this->recordEvent((int) $order['id'], 'callback', '', $requestId, null, null);
         try {
-            return $this->reconcile($order, true);
+            return $this->reconcile($order, false);
         } catch (Throwable $error) {
             // Non-2xx lets the provider retry; nothing was credited.
             error_log('GachtheFast: card callback verification failed for request ' . $requestId);
@@ -271,7 +307,7 @@ final class GtfCardService
             );
         } catch (Throwable $error) {
             if (in_array($order['status'], ['CREATING', 'UNKNOWN', 'VERIFYING'], true)) {
-                $this->query("UPDATE gtf_card_orders SET status = 'UNKNOWN', reason = 'check_unavailable', attempt_count = attempt_count + 1, updated_at = NOW() WHERE id = ?", [(int) $order['id']]);
+                $this->query("UPDATE gtf_card_orders SET status = 'UNKNOWN', reason = 'check_unavailable', attempt_count = attempt_count + 1, updated_at = NOW() WHERE id = ? AND credited_at IS NULL AND status IN ('CREATING','UNKNOWN','VERIFYING')", [(int) $order['id']]);
             }
             throw new RuntimeException('The provider status lookup is unavailable.');
         }
@@ -315,8 +351,8 @@ final class GtfCardService
         return 'review';
     }
 
-    /** Atomic, idempotent wallet credit for one card order. */
-    public function credit(array $order, string $gross, string $source): string
+    /** Only reconcile() may credit, after a fresh provider check. */
+    private function credit(array $order, string $gross, string $source): string
     {
         if (!GtfCredit::isEnabled($this->config)) {
             throw new DomainException('Cộng tiền GachtheFast đang bị khoá cho tới khi hợp đồng và quy tắc cộng tiền được xác nhận.');
@@ -324,10 +360,6 @@ final class GtfCardService
         if (!GtfRules::validAmountString($gross)) {
             throw new RuntimeException('Refusing to credit a malformed amount.');
         }
-        $net = GtfRules::cardNet($gross, (float) $this->config['card_fee_percent']);
-        $transid = 'GTF_CARD_' . $order['request_id'];
-        $reason = 'Nạp thẻ GachtheFast #' . $order['request_id'] . ' (seri ' . (string) $order['serial_masked'] . ')';
-
         $this->db->beginTransaction();
         try {
             $locked = $this->query('SELECT * FROM gtf_card_orders WHERE id = ? FOR UPDATE', [(int) $order['id']])->fetch();
@@ -338,9 +370,23 @@ final class GtfCardService
                 $this->db->commit();
                 return 'already_credited';
             }
-            if ($source !== 'admin_review' && (int) $locked['declared_amount'] !== (int) $gross) {
-                throw new RuntimeException('Amount changed after verification.');
+            if (in_array($locked['status'], GTF_CARD_TERMINAL, true)) {
+                $this->db->commit();
+                return 'terminal';
             }
+            if (!in_array($locked['status'], ['CREATING', 'PENDING', 'UNKNOWN', 'VERIFYING', 'REVIEW'], true)
+                || !hash_equals((string) $locked['request_id'], (string) $order['request_id'])
+                || (int) $locked['user_id'] !== (int) $order['user_id']
+                || (int) $locked['declared_amount'] !== (int) $gross
+                || (string) $locked['telco'] !== (string) $order['telco']
+                || (string) $locked['currency'] !== (string) $order['currency']
+                || !hash_equals((string) $locked['serial_sealed'], (string) $order['serial_sealed'])
+                || !hash_equals((string) $locked['code_sealed'], (string) $order['code_sealed'])) {
+                throw new RuntimeException('Order changed after verification.');
+            }
+            $net = GtfRules::cardNet($gross, (float) $this->config['card_fee_percent']);
+            $transid = 'GTF_CARD_' . $locked['request_id'];
+            $reason = 'Nạp thẻ GachtheFast #' . $locked['request_id'] . ' (seri ' . (string) $locked['serial_masked'] . ')';
             $result = GtfCredit::applyWithin($this->db, [
                 'user_id' => (int) $locked['user_id'],
                 'credited' => $net,
@@ -363,9 +409,12 @@ final class GtfCardService
         }
     }
 
-    /** Operator-approved credit for an order parked in manual review. */
+    /** Backward-compatible admin action: recheck the provider, never directly credit a typed amount. */
     public function adminCredit(int $orderId, string $gross, string $note): string
     {
+        if (!GtfCredit::isEnabled($this->config)) {
+            throw new DomainException('Cộng tiền GachtheFast đang bị khoá cho tới khi hợp đồng và quy tắc cộng tiền được xác nhận.');
+        }
         $order = $this->query('SELECT * FROM gtf_card_orders WHERE id = ?', [$orderId])->fetch();
         if (!$order) {
             throw new DomainException('Không tìm thấy đơn nạp thẻ.');
@@ -373,13 +422,14 @@ final class GtfCardService
         if ($order['credited_at']) {
             throw new DomainException('Đơn này đã được cộng tiền.');
         }
-        if ($gross === '') {
-            throw new DomainException('Số tiền cộng không hợp lệ.');
+        if (!in_array($order['status'], ['REVIEW', 'UNKNOWN'], true) || empty($order['provider_checked_at'])) {
+            throw new DomainException('Đơn chưa đủ điều kiện đối soát lại.');
         }
-        $note = substr(preg_replace('/[\x00-\x1F\x7F]/', '', (string) $note), 0, 120);
-        $result = $this->credit($order, $gross, 'admin_review');
-        $this->query('UPDATE gtf_card_orders SET reason = ?, updated_at = NOW() WHERE id = ?', ['admin_credit:' . $note, $orderId]);
-        return $result;
+        if (!GtfRules::validAmountString($gross) || (int) $gross !== (int) $order['declared_amount']) {
+            throw new DomainException('Số tiền phải khớp mệnh giá của đơn.');
+        }
+        // The posted amount and note never authorise a credit; status 2 or uncertainty remains review.
+        return $this->reconcile($order, true);
     }
 
     public function adminResolve(int $orderId, string $status, string $note): void
@@ -415,7 +465,7 @@ final class GtfCardService
     private function finishWithoutCredit(int $orderId, string $status, string $reason): void
     {
         $this->query(
-            "UPDATE gtf_card_orders SET status = ?, reason = ?, serial_sealed = NULL, code_sealed = NULL, updated_at = NOW() WHERE id = ? AND credited_at IS NULL",
+            "UPDATE gtf_card_orders SET status = ?, reason = ?, serial_sealed = NULL, code_sealed = NULL, updated_at = NOW() WHERE id = ? AND credited_at IS NULL AND status IN ('CREATING','PENDING','UNKNOWN','VERIFYING','REVIEW')",
             [$status, $reason, $orderId]
         );
     }
@@ -424,7 +474,8 @@ final class GtfCardService
     {
         $changed = $this->query(
             "UPDATE gtf_card_orders SET status = 'REVIEW', reason = ?, updated_at = NOW()
-             WHERE id = ? AND credited_at IS NULL AND (status <> 'REVIEW' OR reason IS NULL OR reason <> ?)",
+             WHERE id = ? AND credited_at IS NULL AND status IN ('CREATING','PENDING','UNKNOWN','VERIFYING','REVIEW')
+             AND (status <> 'REVIEW' OR reason IS NULL OR reason <> ?)",
             [$reason, $orderId, $reason]
         )->rowCount();
         if ($changed === 1) {

@@ -37,6 +37,15 @@ if (count($input) > 40) {
 
 try {
     $result = gtf_card_service()->callback($input);
+    // A concurrent/recent check may have seen an older state: request another callback rather than
+    // acknowledging an outcome that has not been verified. Provider retry semantics remain unverified.
+    if ($result === 'busy') {
+        http_response_code(503);
+        header('Retry-After: 15');
+        header('Cache-Control: no-store');
+        echo 'retry_later';
+        exit;
+    }
     http_response_code(200);
     header('Content-Type: text/plain; charset=utf-8');
     header('Cache-Control: no-store');

@@ -647,6 +647,8 @@ check("affiliates shows the commission balance", strpos($page["html"], "250.000�
 check("affiliates shows the referral rate", strpos($page["html"], "25%") !== false);
 check("affiliates prints a referral link for this account", strpos($page["html"], "aff=7") !== false);
 check("affiliates lists referred customers", strpos($page["html"], "minhanh") !== false);
+check("affiliates filter uses the direct index route", strpos($page["html"], 'action="https://shop.example/index.php"') !== false
+    && strpos($page["html"], 'name="action" value="affiliates"') !== false);
 check("affiliates has its own sub-navigation", strpos($page["html"], "account-nav--sub") !== false);
 check("affiliates does not print the account token", strpos($page["html"], "tok-lan") === false);
 
@@ -654,6 +656,8 @@ $page = render_view("views/client/affiliate-history.php", array("action" => "aff
     array("login" => "tok-lan"), array("token" => "tok-lan"));
 assert_clean("affiliate history", $page["html"]);
 assert_private("affiliate history", $page["html"]);
+check("affiliate-history filter uses the direct index route", strpos($page["html"], 'action="https://shop.example/index.php"') !== false
+    && strpos($page["html"], 'name="action" value="affiliate-history"') !== false);
 check("commission rows show the change", strpos($page["html"], "96.000đ") !== false);
 check("commission rows show the balance after", strpos($page["html"], "250.000đ") !== false);
 check("the history explains what a row is", strpos($page["html"], "số dư trước và sau") !== false);
@@ -662,6 +666,8 @@ $page = render_view("views/client/affiliate-withdraw.php", array("action" => "af
     array("login" => "tok-lan"), array("token" => "tok-lan"));
 assert_clean("affiliate withdraw", $page["html"]);
 assert_private("affiliate withdraw", $page["html"]);
+check("affiliate-withdraw filter uses the direct index route", strpos($page["html"], 'action="https://shop.example/index.php"') !== false
+    && strpos($page["html"], 'name="action" value="affiliate-withdraw"') !== false);
 check("withdraw lists the configured banks", strpos($page["html"], "TPBank") !== false);
 check("withdraw states the minimum", strpos($page["html"], "100.000đ") !== false);
 check("withdraw sends a CSRF token", strpos($page["html"], 'name="csrf_token"') !== false);
@@ -719,6 +725,7 @@ assert_private("invoice", $page["html"]);
 check("invoice does not redirect a real id", $page["redirect"] === null);
 check("invoice shows the amount", strpos($page["html"], "19.84") !== false);
 check("invoice shows the receiving address", strpos($page["html"], "TXk9PreviewAddress") !== false);
+check("invoice address has an accessible label", strpos($page["html"], 'for="invoice-address"') !== false);
 check("invoice offers the address copy button", strpos($page["html"], 'data-copy="#invoice-address"') !== false);
 /* The warning depends on PAYOS_ENABLED, which is part of the deployment's environment, not the code:
    assert the branch exists and that the page never invites a transfer to a retired channel. */

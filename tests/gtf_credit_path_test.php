@@ -141,6 +141,7 @@ final class FakeCardGateway implements GtfCardGateway
     public $submitError = false;
     public $checkResult = ['status' => '99'];
     public $checkError = false;
+    public $onCheck = null;
 
     public function submit(string $telco, string $amount, string $code, string $serial, string $requestId): array
     {
@@ -152,6 +153,11 @@ final class FakeCardGateway implements GtfCardGateway
 
     public function check(string $telco, string $code, string $serial, string $amount, string $requestId): array
     {
+        if ($this->onCheck !== null) {
+            $hook = $this->onCheck;
+            $this->onCheck = null;
+            $hook();
+        }
         if ($this->checkError) {
             throw new RuntimeException('mock transport failure');
         }
@@ -199,7 +205,7 @@ $db->exec("CREATE TABLE `gtf_ledger` (`id` BIGINT NOT NULL AUTO_INCREMENT, `tran
     `reason` VARCHAR(255) NOT NULL DEFAULT '', `created_at` DATETIME NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `transid` (`transid`)) ENGINE=InnoDB");
 $db->exec("CREATE TABLE `gtf_events` (`id` BIGINT NOT NULL AUTO_INCREMENT, `flow` VARCHAR(16) NOT NULL, `order_id` BIGINT NULL,
     `direction` VARCHAR(16) NOT NULL, `event_key` CHAR(64) NOT NULL, `provider_status` VARCHAR(32) NULL, `provider_ref` VARCHAR(64) NULL,
-    `created_at` DATETIME NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `event_key` (`event_key`)) ENGINE=InnoDB");
+    `created_at` DATETIME NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `gtf_event_key` (`flow`,`order_id`,`direction`,`event_key`)) ENGINE=InnoDB");
 
 $gateway = new FakeCardGateway();
 $newService = function () use ($db, $gateway) {
@@ -320,9 +326,8 @@ checkSame('the mismatching answer parks the order in review', 'review', $card->r
 checkSame('the order records the amount conflict', 'amount_conflict', $card->find($mismatch['request_id'])['reason']);
 checkSame('nothing was credited', '0.00', wallet($db, 1));
 checkSame('no ledger row was written', 0, countRows($db, 'gtf_ledger'));
-checkThrows('a credit whose value disagrees with the stored amount is refused', function () use ($card, $mismatch) {
-    $card->credit($card->find($mismatch['request_id']), '49999', 'provider_confirmed');
-}, 'RuntimeException');
+checkSame('the credit method cannot be invoked from outside the service', true,
+    (new ReflectionMethod('GtfCardService', 'credit'))->isPrivate());
 checkSame('still no ledger row', 0, countRows($db, 'gtf_ledger'));
 checkSame('the wallet is still untouched', '0.00', wallet($db, 1));
 // Recovery path: a later, fully consistent answer may pay the order once — and only once.
@@ -331,22 +336,20 @@ checkSame('a fully consistent answer can still settle the parked order', 'credit
 checkSame('the wallet moved exactly once', '50000.00', wallet($db, 1));
 
 // --- A6: status 2 is never auto-credited ----------------------------------
-section('A6 status 2 goes to manual review and is only payable by an operator');
+section('A6 status 2 remains in review until provider verification is conclusive');
 seed($db);
 $card = $newService();
 $statusTwo = $card->create(1, ['telco' => 'VCOIN', 'amount' => '50000', 'serial' => 'SERI222222', 'pin' => 'PIN2222222']);
 $gateway->checkResult = ['status' => '2', 'value' => '50000', 'amount' => '50000', 'declared_value' => '50000', 'request_id' => $statusTwo['request_id']];
 checkSame('status 2 is parked for a human', 'review', $card->reconcile($card->find($statusTwo['request_id']), true));
-checkSame('the documented reason is recorded', 'status_2_value_differs', $card->find($statusTwo['request_id'])['reason']);
-checkSame('no wallet moved', '0.00', wallet($db, 1));
-checkSame('no ledger row was written', 0, countRows($db, 'gtf_ledger'));
-checkSame('a repeated verification cannot credit it either', 'review', $card->reconcile($card->find($statusTwo['request_id']), true));
-checkSame('still nothing credited', '0.00', wallet($db, 1));
+checkSame('the reason is recorded', 'status_2_value_differs', $card->find($statusTwo['request_id'])['reason']);
 $orderId = (int) $card->find($statusTwo['request_id'])['id'];
-checkSame('the operator path is the only way to pay it', 'credited', $card->adminCredit($orderId, '50000', 'reviewed by QA'));
-checkSame('the operator credit is recorded as such', 'admin_credit:reviewed by QA', $card->find($statusTwo['request_id'])['reason']);
-checkSame('the operator credit moved the wallet once', '50000.00', wallet($db, 1));
-checkSame('the operator credit is led by exactly one row', 1, countRows($db, 'gtf_ledger'));
+checkSame('operator retry cannot override status 2', 'review', $card->adminCredit($orderId, '50000', 'reviewed by QA'));
+checkSame('status 2 cannot move the wallet', '0.00', wallet($db, 1));
+checkSame('status 2 cannot write ledger', 0, countRows($db, 'gtf_ledger'));
+$gateway->checkResult = ['status' => '1', 'value' => '50000', 'amount' => '50000', 'declared_value' => '50000', 'request_id' => $statusTwo['request_id']];
+checkSame('a fresh, matching provider check can settle the review', 'credited', $card->adminCredit($orderId, '50000', 'checked'));
+checkSame('confirmed review credits once', '50000.00', wallet($db, 1));
 checkThrows('the operator cannot pay the same order twice', function () use ($card, $orderId) {
     $card->adminCredit($orderId, '50000', 'another attempt');
 }, 'DomainException');
@@ -389,21 +392,78 @@ checkSame('exactly one ledger row exists', 1, countRows($db, 'gtf_ledger'));
 checkSame('the order still points at the original credit source', 'provider_confirmed', $card->find($overlap['request_id'])['reason']);
 
 // --- A9: the operator cannot re-value an order downward -------------------
-section('A9 the operator path pays the operator-typed figure (finding DEF-2)');
+section('A9 operator cannot override verification or choose an arbitrary amount');
 seed($db);
 $card = $newService();
 $underpay = $card->create(1, ['telco' => 'GARENA', 'amount' => '100000', 'serial' => 'SERI888888', 'pin' => 'PIN8888888']);
 $orderId = (int) $card->find($underpay['request_id'])['id'];
-// The admin form passes whatever the operator typed; the service does not clamp it to the
-// verified card value. QA records the actual behaviour (see DEF-2 in the QA matrix) instead of
-// asserting an intention the code does not implement.
-checkSame('an operator credit of 1000 moves 1000, not the stored declared amount', 'credited', $card->adminCredit($orderId, '1000', 'typed 1000'));
-checkSame('the wallet received the operator-typed figure', '1000.00', wallet($db, 1));
-checkSame('the ledger still records the typed gross', '1000.00', (string) $db->query('SELECT gross FROM gtf_ledger ORDER BY id DESC LIMIT 1')->fetchColumn());
-checkSame('the order stores the operator-typed credited amount', '1000.00', (string) $card->find($underpay['request_id'])['credited_amount']);
-// The override is also not restricted to orders sitting in REVIEW.
-$fresh = $card->create(1, ['telco' => 'VIETTEL', 'amount' => '10000', 'serial' => 'SERI444444', 'pin' => 'PIN4444444']);
-checkSame('a brand-new, unverified order can be paid by the operator too (DEF-3)', 'credited', $card->adminCredit((int) $card->find($fresh['request_id'])['id'], '10000', 'paid without a check'));
+checkThrows('unverified pending order cannot be credited by the operator', function () use ($card, $orderId) {
+    $card->adminCredit($orderId, '100000', 'unverified');
+}, 'DomainException');
+$gateway->checkResult = ['status'=>'2', 'value'=>'100000', 'amount'=>'100000', 'declared_value'=>'100000', 'request_id'=>$underpay['request_id']];
+checkSame('provider status 2 parks order for review', 'review', $card->reconcile($card->find($underpay['request_id']), true));
+foreach (['1000', '100000000', '100001'] as $badGross) {
+    checkThrows('operator cannot set a different amount: ' . $badGross, function () use ($card, $orderId, $badGross) {
+        $card->adminCredit($orderId, $badGross, 'test');
+    }, 'DomainException');
+}
+checkSame('operator amount attempts did not move wallet', '0.00', wallet($db, 1));
+checkSame('operator amount attempts created no ledger', 0, countRows($db, 'gtf_ledger'));
+
+// --- A9b: mutable order data is checked again under the credit row lock -----
+section('A9b stale provider checks cannot credit changed or closed orders');
+foreach (['status' => 'CANCELLED', 'user_id' => '2', 'declared_amount' => '20000', 'request_id' => 'CHANGED12345',
+    'telco' => 'MOBIFONE', 'currency' => 'USD', 'serial_sealed' => 'changed-serial', 'code_sealed' => 'changed-code'] as $field => $replacement) {
+    seed($db);
+    $card = $newService();
+    $createdRace = $card->create(1, ['telco'=>'VIETTEL', 'amount'=>'10000', 'serial'=>'SERIRACE11', 'pin'=>'PINRACE111']);
+    $raceRow = $card->find($createdRace['request_id']);
+    $gateway->checkResult = ['status'=>'1', 'value'=>'10000', 'amount'=>'10000', 'declared_value'=>'10000', 'request_id'=>$createdRace['request_id']];
+    $gateway->onCheck = function () use ($db, $field, $replacement, $raceRow) {
+        // Test-controlled field names only; mutation stands in for a concurrent administrator.
+        $statement = $db->prepare('UPDATE gtf_card_orders SET `' . $field . '` = ? WHERE id = ?');
+        $statement->execute([$replacement, (int) $raceRow['id']]);
+    };
+    if ($field === 'status') {
+        checkSame('cancelled order remains terminal', 'terminal', $card->reconcile($raceRow, true));
+    } else {
+        checkThrows('changed ' . $field . ' refuses the stale provider check', function () use ($card, $raceRow) {
+            $card->reconcile($raceRow, true);
+        }, 'RuntimeException');
+    }
+    checkSame('changed ' . $field . ' cannot credit either user', ['0.00', '0.00'], [wallet($db, 1), wallet($db, 2)]);
+    checkSame('changed ' . $field . ' cannot create a ledger row', 0, countRows($db, 'gtf_ledger'));
+}
+
+seed($db);
+$card = $newService();
+$staleReview = $card->create(1, ['telco'=>'VIETTEL', 'amount'=>'10000', 'serial'=>'SERIRACE22', 'pin'=>'PINRACE222']);
+$staleRow = $card->find($staleReview['request_id']);
+$gateway->checkResult = ['status'=>'1', 'value'=>'20000', 'amount'=>'20000', 'declared_value'=>'20000', 'request_id'=>$staleReview['request_id']];
+$gateway->onCheck = function () use ($db, $staleRow) {
+    $db->prepare("UPDATE gtf_card_orders SET status='CANCELLED' WHERE id=?")->execute([(int) $staleRow['id']]);
+};
+$card->reconcile($staleRow, true);
+checkSame('a stale review decision cannot reopen a cancelled order', 'CANCELLED', $card->find($staleReview['request_id'])['status']);
+checkSame('a stale review decision cannot credit money', '0.00', wallet($db, 1));
+
+seed($db);
+$card = $newService();
+$staleTimeout = $card->create(1, ['telco'=>'VIETTEL', 'amount'=>'10000', 'serial'=>'SERIRACE33', 'pin'=>'PINRACE333']);
+$db->prepare("UPDATE gtf_card_orders SET status='VERIFYING' WHERE request_id=?")->execute([$staleTimeout['request_id']]);
+$staleRow = $card->find($staleTimeout['request_id']);
+$gateway->checkResult = ['status'=>'1', 'value'=>'10000', 'amount'=>'10000', 'declared_value'=>'10000', 'request_id'=>$staleTimeout['request_id']];
+$gateway->checkError = true;
+$gateway->onCheck = function () use ($card, $gateway, $staleRow) {
+    $gateway->checkError = false;
+    if ($card->reconcile($staleRow, true) !== 'credited') { throw new RuntimeException('fixture settlement failed'); }
+    $gateway->checkError = true;
+};
+checkThrows('the stale verification reports its transport error', function () use ($card, $staleRow) { $card->reconcile($staleRow, true); }, 'RuntimeException');
+$gateway->checkError = false;
+checkSame('a stale verification timeout cannot downgrade a paid order', 'PAID', $card->find($staleTimeout['request_id'])['status']);
+checkSame('the prior settled wallet credit remains intact', '10000.00', wallet($db, 1));
+checkSame('the prior settled credit has one ledger row', 1, countRows($db, 'gtf_ledger'));
 
 // --- A10: malformed amounts are refused at the boundary -------------------
 section('A10 malformed and hostile amounts never reach the ledger');
@@ -413,16 +473,13 @@ $target = $card->create(1, ['telco' => 'MOBIFONE', 'amount' => '100000', 'serial
 $malformed = ['', '0', '-1', '1e6', 'ABC', '10.000', ' 10000', '10000 ', '99999999999999999999'];
 $rejected = 0;
 foreach ($malformed as $candidate) {
-    try {
-        $card->credit($card->find($target['request_id']), $candidate, 'provider_confirmed');
-    } catch (Throwable $error) {
-        $rejected++;
-    }
+    $gateway->checkResult = ['status'=>'1', 'value'=>$candidate, 'amount'=>$candidate, 'declared_value'=>$candidate, 'request_id'=>$target['request_id']];
+    if ($card->reconcile($card->find($target['request_id']), true) === 'review') { $rejected++; }
 }
-checkSame('every malformed or mis-sized amount was refused', count($malformed), $rejected);
+checkSame('every malformed or mis-sized provider amount was parked for review', count($malformed), $rejected);
 checkSame('nothing was credited during the malformed attempts', '0.00', wallet($db, 1));
 checkSame('no ledger row was written', 0, countRows($db, 'gtf_ledger'));
-checkSame('the order is still open', 'PENDING', $card->find($target['request_id'])['status']);
+checkSame('the order remains in review', 'REVIEW', $card->find($target['request_id'])['status']);
 
 // --- A11: the shipped lock is restored ------------------------------------
 section('A11 the lock is closed again for the rest of the session');

@@ -25,6 +25,7 @@ balance; the suites use stubs, synthetic fixtures and disposable databases.
 | `gtf_rules_test.php` | nothing | the card/bank rules, the credit lock, fail-closed behaviour |
 | `gtf_service_test.php`, `gtf_credit_path_test.php`, `gtf_credit_path_mutation.php`, `gtf_migration_verify.php` | a **disposable** MySQL database whose DSN contains `test` | exactly-once crediting, races, migration verification. They refuse to run against anything else |
 | `gtf_migration_fixture.php`, `gtf_transport_probe.php` | a disposable database | helpers used by the suites above |
+| `gtf_callback_endpoint_test.php` | native PHP with `proc_open` | real callback endpoint in a throwaway subprocess with fake service, including busy/retry response; no network |
 | `legacy_payment_gate_test.php`, `legacy_security_test.php`, `payos_*_test.php` | a PHP binary that can spawn sub-processes | the legacy payment entry points answer exactly as before |
 | `audit-fixture/run_selftest.py` | a runner for `tools/frontend-audit.php` (see that folder's README) | every audit rule, with a wrong and a right fixture each |
 
@@ -37,8 +38,8 @@ Two notes for whoever runs these next:
 
 ## Harness
 
-The sandbox images do not ship a PHP binary. The project keeps a PHP-WASM runner under
-`tools/dev/`, so every suite can be executed with Node:
+The project keeps a PHP-WASM runner under `tools/dev/` for fixture and static suites. It cannot
+run the MySQL integration suites; use a native PHP with the required extensions for those:
 
 ```
 npm install --prefix tools/dev                     # once per workspace restore
@@ -47,10 +48,33 @@ bash tools/dev/run.sh                              # lint + scan + render every 
 bash tools/dev/run.sh --tests-only tests/csrf_guard_test.php
 ```
 
-`run.sh` also renders all 36 pages with fixture data through `tools/preview-build.php` and fails on a
+`run.sh` also renders all 38 pages with fixture data through `tools/preview-build.php` and fails on a
 PHP warning or a missing asset, and parses the inline PayPal button script it renders from
 `tools/dev/paypal-js.php` with `node --check`. A suite that cannot run (database or sub-process missing) is reported
 as **NOT RUN**, never as passed.
+
+## Local database integration (destructive fixture data only)
+
+Tests below require a native PHP with `mysqli`, `pdo_mysql`, and real Composer dependencies. Create
+separate disposable databases on an isolated loopback-only MySQL instance, using a dedicated test account.
+Never point these tests, payOS/GTF tests or migration fixtures at an actual shop database. Database names
+and DSN checks are guardrails, **not** proof that data is safe to destroy.
+
+```bash
+# Temporary tables; forcibly closes two connections belonging to this test account.
+ORBIT_DB_TEST=1 ORBIT_DB_TEST_NAME=orbit_test_example ORBIT_DB_TEST_PORT=3307 \
+  ORBIT_DB_TEST_USER=fixture ORBIT_DB_TEST_PASSWORD='<local-test-password>' \
+  php tests/db_connection_integration_test.php
+
+# Must be a DIFFERENT, initially empty database; creates fixture tables and a trigger.
+ORBIT_MONEY_TEST=1 ORBIT_MONEY_TEST_NAME=orbit_test_money_example ORBIT_MONEY_TEST_PORT=3307 \
+  ORBIT_MONEY_TEST_USER=fixture ORBIT_MONEY_TEST_PASSWORD='<local-test-password>' \
+  php tests/db_money_integration_test.php
+```
+
+Test account permissions must allow the fixture DDL, local connection-kill checks and trigger creation.
+If opt-in is absent these suites print SKIP and perform no DB activity; report that as NOT RUN. See
+`docs/frontend/30-native-database-review.md` for the isolated runs and remaining release gates.
 
 ## Suites added in rounds 12–13d
 
@@ -73,7 +97,10 @@ it pins.
 | `partial_delivery_test.php` | proration arithmetic (full/partial/over-delivery, rounding, hostile numbers) and both checkout wirings |
 | `random_user_test.php` | bounded PK probing for demo buyers, sparse/empty id spaces, deterministic fill, cron wiring |
 | `auth_guard_test.php` | sign-in lockout semantics, reset of `login_attempts`, forgot-password enumeration, logout cookie handling |
+| `canonical_origin_test.php` | HTTPS origin validation, hostile Host and process-environment configuration |
+| `auth_reset_endpoint_test.php` | real auth handler with fake DB/mail: canonical reset URL, neutral responses, write-before-send and stale token refusal; requires native PHP with `proc_open` |
 | `admin_modal_test.php` | coupon modal is read-only, withdrawal cancel claims the row before refunding, status whitelist, log rows escaped on output |
+| `admin_stock_render_test.php` | real stock-row loop with hostile fixture values: HTML/attribute escaping, export value preservation and TXT line separators; no DB/browser |
 | `upload_guard_test.php` | upload type follows the bytes, old files deleted only after a successful store, path-traversal refusals, both product forms and the stock importer |
 | `security_headers_test.php` | baseline nosniff / frame / referrer / permissions headers and their wiring in both page layouts |
 | `stock_claim_test.php` | local stock is delivered exactly once (claim by delete, rollback on a failed sold insert), and both checkouts use the helper |
@@ -82,3 +109,5 @@ it pins.
 | `settings_cache_test.php`, `lang_cache_test.php` | one settings load and one language load per request; cache invalidation |
 | `self_hosted_assets_test.php` | every admin asset resolves on disk, licences present, no unapproved remote host |
 | `account_pages_test.php`, `client_pages_test.php`, `content_pages_test.php`, `orders_pages_test.php`, `recharge_pages_test.php`, `oauth_pages_test.php`, `storefront_test.php` | every customer-facing page renders on the shell: one `h1`, no inline style, escaped output, honest empty states, no PHP warning |
+| `checkout_preflight_test.php` | real endpoint in isolated subprocesses with stubbed dependencies: tags only selected pre-processing rejections; native PHP with `proc_open` required |
+| `js/checkout_quote_test.mjs`, `js/checkout_retry_test.mjs`, `js/checkout_recovery_test.mjs` | mock quote races, stale prices, same-tab uncertainty warning/reference, narrow preflight unlock, storage failures and confirmed-success cleanup; no real database or payment |

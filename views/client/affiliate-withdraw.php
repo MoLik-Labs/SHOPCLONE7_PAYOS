@@ -188,7 +188,9 @@ store_shell_open($storeShell);
         <span class="pill"><?php echo format_cash($storeTotal); ?> yêu cầu</span>
       </div>
 
-      <form class="toolbar" method="get" action="<?php echo store_e(BASE_URL("client/affiliate-withdraw")); ?>">
+      <form class="toolbar" method="get" action="<?php echo store_e(BASE_URL("index.php")); ?>">
+        <input type="hidden" name="module" value="client">
+        <input type="hidden" name="action" value="affiliate-withdraw">
         <div class="toolbar__field">
           <label class="toolbar__label" for="wd-trans">Mã giao dịch</label>
           <input class="input" id="wd-trans" name="transid" type="search" maxlength="16"

@@ -1020,6 +1020,7 @@
 .buy-panel__status.is-error { color: var(--danger); }
 .buy-panel__status.is-ok { color: var(--ok); }
 .buy-panel__status a { font-weight: var(--weight-medium); }
+.buy-panel__reference { margin: 0; overflow-wrap: anywhere; }
 
 .stepper {
   display: inline-flex;

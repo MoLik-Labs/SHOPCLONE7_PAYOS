@@ -94,6 +94,15 @@ check_auth('check_string() really does rewrite this password', $legacy !== $raw)
 DB::$stored = password_hash($legacy, PASSWORD_BCRYPT);
 check_auth('the legacy sanitised password still verifies', orbit_password_matches($raw, DB::$stored) === true);
 
+$oldLegacy = trim(htmlspecialchars(addslashes($raw), ENT_COMPAT, 'UTF-8'));
+check_auth('old PHP legacy single-quote encoding differs from the current form', $oldLegacy !== $legacy);
+DB::$stored = password_hash($oldLegacy, PASSWORD_BCRYPT);
+check_auth('bcrypt accepts a pre-PHP-8.1 legacy password', orbit_password_matches($raw, DB::$stored) === true);
+$invalidRaw = "bad\xFF'password";
+$substituteLegacy = trim(htmlspecialchars(addslashes($invalidRaw), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+check_auth('bcrypt accepts PHP 8.1 legacy substitution for malformed UTF-8',
+    orbit_password_matches($invalidRaw, password_hash($substituteLegacy, PASSWORD_BCRYPT)) === true);
+
 DB::$updates = array();
 orbit_password_upgrade(7, $raw);
 check_auth('a legacy login rewrites the hash with the raw password', count(DB::$updates) === 1 && password_verify($raw, DB::$stored));
@@ -108,6 +117,8 @@ DB::$mode = 'md5';
 DB::$stored = md5($raw);
 check_auth('md5 mode verifies the raw password', orbit_password_matches($raw, md5($raw)) === true);
 check_auth('md5 mode accepts a legacy sanitised hash', orbit_password_matches($raw, md5(check_string($raw))) === true);
+check_auth('md5 mode accepts a pre-PHP-8.1 legacy password', orbit_password_matches($raw, md5($oldLegacy)) === true);
+check_auth('md5 accepts PHP 8.1 legacy substitution for malformed UTF-8', orbit_password_matches($invalidRaw, md5($substituteLegacy)) === true);
 check_auth('md5 mode rejects a wrong password', orbit_password_matches($raw . 'x', md5($raw)) === false);
 DB::$updates = array();
 orbit_password_upgrade(7, $raw);

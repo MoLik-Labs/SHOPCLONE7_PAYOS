@@ -103,7 +103,7 @@ if (!function_exists("store_nav_default")) {
         $action = isset($_GET["action"]) ? (string) $_GET["action"] : "";
         $recharge = is_array($methods) ? $methods : store_payment_methods($cmsnt);
         $rechargeHref = !empty($recharge) ? $recharge[0]["href"] : BASE_URL("client/login");
-        return array(
+        $nav = array(
             array("label" => "Sản phẩm", "href" => BASE_URL("client/home") . "#san-pham",
                 "current" => $action === "home"),
             array("label" => "Danh mục", "href" => BASE_URL("client/home") . "#danh-muc"),
@@ -332,14 +332,20 @@ if (!function_exists("store_pager")) {
             return "";
         }
         $href = function ($number) use ($query, $path) {
-            $params = array();
+            /* Apache's pretty-route rewrites replace the incoming query string. Generate a direct
+               index URL for client pages, with the route fixed by the caller rather than the query. */
+            $clientPath = preg_match('~^client/([A-Za-z0-9-]+)$~', (string) $path, $route);
+            $params = $clientPath ? array("module" => "client", "action" => $route[1]) : array();
             foreach ($query as $key => $value) {
+                if ($clientPath && ($key === "module" || $key === "action")) {
+                    continue;
+                }
                 if (is_scalar($value) && (string) $value !== "") {
                     $params[$key] = (string) $value;
                 }
             }
             $params["page"] = (int) $number;
-            return BASE_URL($path) . "?" . http_build_query($params);
+            return BASE_URL($clientPath ? "index.php" : $path) . "?" . http_build_query($params);
         };
         $out = '<nav class="pager" aria-label="Phân trang">';
         if ($page > 1) {
@@ -386,7 +392,7 @@ if (!function_exists("store_shell_open")) {
             $favicon = BASE_URL($favicon);
         }
         $user = store_current_user();
-        $searchAction = BASE_URL("client/home");
+        $searchAction = BASE_URL("index.php");
         $styles = array(
             "public/client/orbit/tokens.css",
             "public/client/orbit/base.css",
@@ -444,6 +450,8 @@ if (!function_exists("store_shell_open")) {
     </nav>
 <?php if (!empty($o["search"])) { ?>
     <form class="topbar__search" role="search" action="<?php echo store_e($searchAction); ?>" method="get">
+      <input type="hidden" name="module" value="client">
+      <input type="hidden" name="action" value="home">
       <label class="sr-only" for="site-search">Tìm sản phẩm</label>
       <input class="input" id="site-search" type="search" name="keyword" value="<?php echo store_e($o["search_value"]); ?>" placeholder="Tìm sản phẩm…" autocomplete="off">
       <button class="btn btn--ghost btn--icon" type="submit" aria-label="Tìm">
@@ -483,6 +491,8 @@ if (!function_exists("store_shell_open")) {
     </nav>
 <?php if (!empty($o["search"])) { ?>
     <form class="topbar__search" role="search" action="<?php echo store_e($searchAction); ?>" method="get">
+      <input type="hidden" name="module" value="client">
+      <input type="hidden" name="action" value="home">
       <label class="sr-only" for="site-search-mobile">Tìm sản phẩm</label>
       <input class="input" id="site-search-mobile" type="search" name="keyword" placeholder="Tìm sản phẩm…" autocomplete="off">
       <button class="btn btn--ghost" type="submit">Tìm</button>

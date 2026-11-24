@@ -7,11 +7,11 @@ include_once __DIR__ . "/../vendor/autoload.php";
 require_once __DIR__ . "/settings_cache.php";
 require_once __DIR__ . "/sql_count.php";
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . "/../");
-$dotenv->load();
-/* TLS may terminate at a proxy (Render, Cloudflare) while PHP still sees http. */
-$orbitHttps = (!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off")
-    || (isset($_SERVER["HTTP_X_FORWARDED_PROTO"]) && strtolower((string) $_SERVER["HTTP_X_FORWARDED_PROTO"]) === "https")
-    || (isset($_SERVER["SERVER_PORT"]) && (int) $_SERVER["SERVER_PORT"] === 443);
+// Shared hosting may use a .env file; managed hosting often provides only process variables.
+$dotenv->safeLoad();
+require_once __DIR__ . "/request_security.php";
+// Session, CSRF and authentication cookies must agree about TLS and proxy trust.
+$orbitHttps = orbit_is_https();
 if (PHP_SAPI !== "cli" && !headers_sent()) {
     /* Refuse a session id the server never issued (session fixation), and keep the cookie away
        from scripts and from cross-site form posts. */
@@ -98,7 +98,8 @@ class DB
             $link = mysqli_init();
             if ($link) {
                 mysqli_options($link, MYSQLI_OPT_CONNECT_TIMEOUT, 5);
-                $this->ketnoi = @mysqli_real_connect($link, $host, $user, $pass, $name, $port);
+                // mysqli_real_connect returns a boolean, not the connection object.
+                $this->ketnoi = @mysqli_real_connect($link, $host, $user, $pass, $name, $port) ? $link : false;
             } else {
                 $this->ketnoi = false;
             }
@@ -123,6 +124,7 @@ class DB
     {
         if($this->ketnoi) {
             mysqli_close($this->ketnoi);
+            $this->ketnoi = null;
         }
     }
     public function site($data)
@@ -190,24 +192,31 @@ class DB
     public function transaction($callback)
     {
         $this->connect();
-        $started = @mysqli_begin_transaction($this->ketnoi);
+        $started = false;
         try {
-            $result = $callback();
-        } catch (Throwable $error) {
-            if ($started) {
-                @mysqli_rollback($this->ketnoi);
+            $started = @mysqli_begin_transaction($this->ketnoi);
+            if (!$started) {
+                error_log("[orbit-db] could not begin transaction");
+                return false;
             }
-            error_log("[orbit-db] transaction rolled back: " . $error->getMessage());
-            return false;
-        }
-        if ($started) {
+            $result = $callback();
             if ($result) {
-                @mysqli_commit($this->ketnoi);
+                if (!@mysqli_commit($this->ketnoi)) {
+                    // A failed commit can be ambiguous: never report the operation as successful.
+                    error_log("[orbit-db] transaction commit failed or outcome unknown");
+                    return false;
+                }
             } else {
                 @mysqli_rollback($this->ketnoi);
             }
+            return $result;
+        } catch (Throwable $error) {
+            if ($started) {
+                try { @mysqli_rollback($this->ketnoi); } catch (Throwable $ignored) { }
+            }
+            error_log("[orbit-db] transaction failed: " . $error->getMessage());
+            return false;
         }
-        return $result;
     }
     public function query($sql)
     {

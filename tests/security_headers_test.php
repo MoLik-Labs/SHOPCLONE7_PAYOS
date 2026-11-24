@@ -30,20 +30,23 @@ function check_headers($name, $condition, $detail = '')
     echo "FAIL  " . $name . ($detail !== '' ? "  (" . $detail . ")" : '') . "\n";
 }
 
-/* url() used to read $_SERVER["REQUEST_SCHEME"], which PHP-FPM does not set, and its two bare
-   expressions did nothing. It must derive the scheme from the same proxy-aware helper. */
+/* Current links share the canonical-or-legacy origin resolver. */
 $urlStart = strpos($helper, 'function url()');
 $urlBody = $urlStart === false ? '' : substr($helper, $urlStart, strpos($helper, 'function is_valid_domain_name', $urlStart) - $urlStart);
-check_headers('the current URL is built from the proxy-aware scheme',
-    strpos($urlBody, 'orbit_is_https() ? "https" : "http"') !== false
-    && strpos($urlBody, 'REQUEST_SCHEME') === false);
-check_headers('the current URL falls back when a SAPI omits the host',
-    strpos($urlBody, 'HTTP_HOST') !== false && strpos($urlBody, 'SERVER_NAME') !== false);
+check_headers('the current URL uses the shared origin resolver',
+    strpos($urlBody, 'orbit_request_origin()') !== false && strpos($urlBody, 'REQUEST_SCHEME') === false);
+check_headers('the current URL is escaped in the legacy canonical tag',
+    strpos((string) file_get_contents($root . '/views/client/header.php'), "htmlspecialchars(url(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')") !== false);
 
 check_headers('absolute links reject a host header that is not a bare host',
     strpos($helper, "'/^[A-Za-z0-9.\\-]+(:[0-9]{1,5})?$/'") !== false);
 check_headers('absolute links no longer point at a developer checkout path',
     strpos($helper, 'CMSNT.CO/SHOPCLONE7_ENCRYPTION') === false);
+$db = (string) file_get_contents($root . '/libs/db.php');
+check_headers('the early session and CSRF cookie setup shares the HTTPS decision',
+    strpos($db, 'require_once __DIR__ . "/request_security.php";') !== false
+    && strpos($db, '$orbitHttps = orbit_is_https();') !== false
+    && strpos($db, 'HTTP_X_FORWARDED_PROTO') === false);
 
 $start = strpos($helper, 'function orbit_security_headers()');
 $end = strpos($helper, 'function checkPermission', $start);

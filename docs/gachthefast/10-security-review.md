@@ -1,5 +1,9 @@
 # 10 — Independent security / backdoor review of the GachtheFast payment diff
 
+> Historical review of the then-current revision. Subsequent fixes and isolated retests for SEC-01,
+> parts of SEC-02/03 and SEC-06 are documented in [13-security-hardening-retest.md](13-security-hardening-retest.md).
+> The provider contract and release gates remain unverified; do not enable the integration on this evidence alone.
+
 **Date:** 2026-10-04 · **Reviewer:** independent pass (Arena agent) · **Mode: READ-ONLY** — no file in the
 repository was modified, created or deleted by this review, nothing was committed, no feature was
 enabled, no production provider or production database was contacted, and no CMSNT licence check was

@@ -130,13 +130,13 @@ if(isset($_POST["action"])) {
                 $bcc = $CMSNT->site("title");
                 sendCSM($getUser["email"], $getUser["username"], $subject, $content, $bcc);
             }
-            exit(json_encode(["status" => "verify", "url" => base_url("?action=verify_otp&token=" . $token_otp_mail), "msg" => __("Vui lòng xác minh OTP để hoàn tất quá trình đăng nhập")]));
+            exit(json_encode(["status" => "verify", "url" => "/?action=verify_otp&token=" . $token_otp_mail, "msg" => __("Vui lòng xác minh OTP để hoàn tất quá trình đăng nhập")]));
         }
         if($getUser["status_2fa"] == 1) {
             $token_2fa = md5(random("qwertyuiopasdfghjklzxcvbnm0123456789", 55)) . md5(uniqid());
             $CMSNT->update("users", ["token_2fa" => $token_2fa, "limit_2fa" => 0], " `id` = '" . $getUser["id"] . "' ");
             $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Warning] " . __("Đăng nhập thành công - đang tiến hành đến bước xác minh 2FA")]);
-            exit(json_encode(["status" => "verify", "url" => base_url("?action=verify_2fa&token=" . $token_2fa), "msg" => __("Vui lòng xác minh 2FA để hoàn tất quá trình đăng nhập")]));
+            exit(json_encode(["status" => "verify", "url" => "/?action=verify_2fa&token=" . $token_2fa, "msg" => __("Vui lòng xác minh 2FA để hoàn tất quá trình đăng nhập")]));
         }
         $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => "[Warning] " . __("Thực hiện đăng nhập vào website")]);
         $CMSNT->update("users", ["token_2fa" => NULL, "limit_2fa" => 0, "token_otp_mail" => NULL, "limit_otp_mail" => 0, "otp_mail" => NULL, "ip" => myip(), "login_attempts" => 0, "time_request" => time(), "time_session" => time(), "device" => $Mobile_Detect->getUserAgent()], " `id` = '" . $getUser["id"] . "' ");
@@ -395,6 +395,12 @@ if(isset($_POST["action"])) {
         if(empty($_POST["email"])) {
             exit(json_encode(["status" => "error", "msg" => __("Vui lòng nhập địa chỉ Email")]));
         }
+        // Password-reset links must never depend on Host or forwarded headers. Fail closed uniformly.
+        $resetOrigin = orbit_canonical_origin();
+        if($resetOrigin === "") {
+            error_log('[orbit-auth] password reset disabled: configure a valid HTTPS APP_URL origin');
+            exit(json_encode(["status" => "error", "msg" => __("Chức năng đặt lại mật khẩu chưa được cấu hình, vui lòng liên hệ Admin")]));
+        }
         /*
          * Do not reveal whether an address is registered: that answer let anyone turn the form into
          * an account-enumeration oracle. The response is the same either way; a registered address
@@ -408,32 +414,36 @@ if(isset($_POST["action"])) {
         if(time() - (int) $getUser["time_forgot_password"] < 60) {
             exit(json_encode(["status" => "success", "msg" => __("Nếu địa chỉ Email tồn tại trong hệ thống, bạn sẽ nhận được thư đặt lại mật khẩu trong ít phút.")]));
         }
-        $token = md5(random("QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 6) . time()) . md5(random("QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 55));
+        $token = bin2hex(random_bytes(32));
+        // Persist before sending: a fast mail client must not race an as-yet unstored token.
+        $isUpdate = $CMSNT->update("users", ["token_forgot_password" => $token, "time_forgot_password" => time()], " `id` = '" . (int) $getUser["id"] . "' ");
+        if(!$isUpdate) {
+            error_log('[orbit-auth] could not persist password reset token');
+            exit(json_encode(["status" => "success", "msg" => __("Nếu địa chỉ Email tồn tại trong hệ thống, bạn sẽ nhận được thư đặt lại mật khẩu trong ít phút.")]));
+        }
+        $resetLink = $resetOrigin . "/?action=reset-password&token=" . $token;
+        $resetDomain = parse_url($resetOrigin, PHP_URL_HOST);
         if($CMSNT->site("email_temp_subject_forgot_password") != "") {
             $content = $CMSNT->site("email_temp_content_forgot_password");
-            $content = str_replace("{domain}", $_SERVER["SERVER_NAME"], $content);
+            $content = str_replace("{domain}", $resetDomain, $content);
             $content = str_replace("{title}", $CMSNT->site("title"), $content);
             $content = str_replace("{username}", $getUser["username"], $content);
-            $content = str_replace("{link}", "<a target=\"_blank\" href=\"" . base_url("?action=reset-password&token=" . $token) . "\">" . base_url("?action=reset-password&token=" . $token) . "</a>", $content);
+            $content = str_replace("{link}", "<a target=\"_blank\" href=\"" . $resetLink . "\">" . $resetLink . "</a>", $content);
             $content = str_replace("{ip}", myip(), $content);
             $content = str_replace("{device}", $Mobile_Detect->getUserAgent(), $content);
             $content = str_replace("{time}", gettime(), $content);
             $subject = $CMSNT->site("email_temp_subject_forgot_password");
-            $subject = str_replace("{domain}", $_SERVER["SERVER_NAME"], $subject);
+            $subject = str_replace("{domain}", $resetDomain, $subject);
             $subject = str_replace("{title}", $CMSNT->site("title"), $subject);
             $subject = str_replace("{username}", $getUser["username"], $subject);
-            $subject = str_replace("{link}", "<a target=\"_blank\" href=\"" . base_url("?action=reset-password&token=" . $token) . "\">" . base_url("?action=reset-password&token=" . $token) . "</a>", $subject);
+            $subject = str_replace("{link}", "<a target=\"_blank\" href=\"" . $resetLink . "\">" . $resetLink . "</a>", $subject);
             $subject = str_replace("{ip}", myip(), $subject);
             $subject = str_replace("{device}", $Mobile_Detect->getUserAgent(), $subject);
             $subject = str_replace("{time}", gettime(), $subject);
             $bcc = $CMSNT->site("title");
             sendCSM($getUser["email"], $getUser["username"], $subject, $content, $bcc);
         }
-        $isUpdate = $CMSNT->update("users", ["token_forgot_password" => $token, "time_forgot_password" => time()], " `id` = '" . $getUser["id"] . "' ");
-        if($isUpdate) {
-            exit(json_encode(["status" => "success", "msg" => __("Vui lòng kiểm tra Email của bạn để hoàn tất quá trình đặt lại mật khẩu")]));
-        }
-        exit(json_encode(["status" => "error", "msg" => __("Có lỗi hệ thống, vui lòng liên hệ Developer")]));
+        exit(json_encode(["status" => "success", "msg" => __("Nếu địa chỉ Email tồn tại trong hệ thống, bạn sẽ nhận được thư đặt lại mật khẩu trong ít phút.")]));
     }
     if($_POST["action"] == "ChangePassword") {
         if($CMSNT->site("status_demo") != 0) {
@@ -465,9 +475,12 @@ if(isset($_POST["action"])) {
             exit(json_encode(["status" => "error", "msg" => __("Xác nhận mật khẩu không chính xác")]));
         }
         $password = isset($_POST["newpassword"]) && is_string($_POST["newpassword"]) ? $_POST["newpassword"] : "";
+        $resetToken = $token;
         $token = random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 64) . time() . md5(random("QWERTYUIOPASDGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789", 32));
-        $isUpdate = $CMSNT->update("users", ["token_forgot_password" => NULL, "password" => TypePassword($password), "token" => $token], " `id` = '" . $getUser["id"] . "' ");
-        if($isUpdate) {
+        // Claim the same unexpired token once, even if two requests both read it concurrently.
+        $isUpdate = $CMSNT->update("users", ["token_forgot_password" => NULL, "password" => TypePassword($password), "token" => $token],
+            " `id` = '" . (int) $getUser["id"] . "' AND `token_forgot_password` = '" . $resetToken . "' AND `banned` = 0 AND `time_forgot_password` > 0 AND `time_forgot_password` >= '" . (time() - 900) . "' ");
+        if($isUpdate && $CMSNT->affectedRows() === 1) {
             $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Khôi phục lại mật khẩu")]);
             $my_text = $CMSNT->site("noti_action");
             $my_text = str_replace("{domain}", $_SERVER["SERVER_NAME"], $my_text);

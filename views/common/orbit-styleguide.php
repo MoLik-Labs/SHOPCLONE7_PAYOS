@@ -70,7 +70,7 @@ orbit_chart_assets();
   <section class="card">
     <div class="card__header"><h2 class="card__title">Typography</h2><span class="pill">base.css</span></div>
     <div class="card__body">
-      <h1>Heading 1 — the page promise</h1>
+      <p class="styleguide-h1">Heading 1 — the page promise</p>
       <h2>Heading 2 — a section</h2>
       <h3>Heading 3 — a group</h3>
       <p class="lead">Lead paragraph for the one sentence that matters most on a screen.</p>
@@ -124,11 +124,13 @@ orbit_chart_assets();
         </div>
         <div>
           <div class="search">
-            <input class="input" type="search" placeholder="Search products…">
+            <label class="sr-only" for="styleguide-search">Search products</label>
+            <input class="input" id="styleguide-search" type="search" placeholder="Search products…">
             <button class="btn btn--primary" type="button">Search</button>
           </div>
           <div class="copy-row" style="margin-top: var(--space-4)">
-            <input class="input" value="ORBIT-8F2KD-…-QW" readonly>
+            <label class="sr-only" for="styleguide-copy">Example licence key</label>
+            <input class="input" id="styleguide-copy" value="ORBIT-8F2KD-…-QW" readonly>
             <button class="btn btn--ghost" type="button" data-copy>Copy</button>
           </div>
           <p class="field__help">Copy needs JavaScript; without it the value is still selectable.</p>
