@@ -747,9 +747,12 @@ assert_clean("api guide", $page["html"]);
 assert_private("api guide", $page["html"]);
 check("api guide does not redirect while the owner keeps the API on", $page["redirect"] === null);
 check("api guide shows the customer's own key", strpos($page["html"], "0123456789abcdef0123456789abcdef") !== false);
-check("api guide builds endpoints from the key",
-    strpos($page["html"], "api/profile.php?api_key=0123456789abcdef0123456789abcdef") !== false
-    && strpos($page["html"], "api/products.php?api_key=") !== false);
+check("api guide uses header credentials without placing the key in URLs",
+    strpos($page["html"], "api/profile.php") !== false
+    && strpos($page["html"], "api/products.php") !== false
+    && strpos($page["html"], "X-API-Key") !== false
+    && strpos($page["html"], "?api_key=0123456789abcdef0123456789abcdef") === false
+    && strpos($page["html"], "?apikey=0123456789abcdef0123456789abcdef") === false);
 check("api guide offers a copy button per field, not a clipboard CDN",
     substr_count($page["html"], "data-copy=\"#") >= 5 && strpos($page["html"], "clipboard") === false);
 check("api guide documents the buy contract that exists",

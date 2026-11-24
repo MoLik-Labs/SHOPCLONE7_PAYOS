@@ -23,31 +23,36 @@ if (!isset($getUser) || !is_array($getUser)) {
     $getUser = store_current_user();
 }
 
+// This page contains a live credential; prevent shared or browser caches storing it.
+if (!headers_sent()) {
+    header("Cache-Control: no-store, private");
+    header("Pragma: no-cache");
+}
 $storeApiKey = (string) $getUser["api_key"];
 $storeApiReady = $storeApiKey !== "";
 $storeApiEndpoints = array(
     array(
         "method" => "GET",
         "label" => __("Thông tin tài khoản"),
-        "url" => BASE_URL("api/profile.php?api_key=" . urlencode($storeApiKey)),
+        "url" => BASE_URL("api/profile.php"),
         "id" => "api-profile",
     ),
     array(
         "method" => "GET",
         "label" => __("Danh sách chuyên mục và sản phẩm"),
-        "url" => BASE_URL("api/products.php?api_key=" . urlencode($storeApiKey)),
+        "url" => BASE_URL("api/products.php"),
         "id" => "api-products",
     ),
     array(
         "method" => "GET",
         "label" => __("Chi tiết một sản phẩm"),
-        "url" => BASE_URL("api/product.php?api_key=" . urlencode($storeApiKey) . "&product=3"),
+        "url" => BASE_URL("api/product.php?product=3"),
         "id" => "api-product",
     ),
     array(
         "method" => "GET",
         "label" => __("Mã đơn đã tạo (trạng thái và nội dung)"),
-        "url" => BASE_URL("api/api.php?apikey=" . urlencode($storeApiKey) . "&action=get-order-detail&order_id=ORD123"),
+        "url" => BASE_URL("api/api.php?action=get-order-detail&order_id=ORD123"),
         "id" => "api-order-detail",
     ),
 );
@@ -98,7 +103,7 @@ store_shell_open($storeShell);
         <h2 class="panel__title">Đọc dữ liệu</h2>
       </div>
       <div class="panel__body">
-        <p class="muted">Mọi yêu cầu gửi khoá qua tham số <code class="mono">api_key</code>. Kết quả trả về JSON.</p>
+        <p class="muted">Gửi khoá trong header <code class="mono">X-API-Key</code> qua HTTPS từ máy chủ của bạn, không đặt khoá trong URL hay mã nguồn công khai. Kết quả trả về JSON.</p>
 <?php foreach ($storeApiEndpoints as $storeEndpoint) { ?>
         <div class="field">
           <label class="field__label" for="<?php echo store_e($storeEndpoint["id"]); ?>">
@@ -123,17 +128,17 @@ store_shell_open($storeShell);
         <div class="field">
           <p class="field__label">
             <span class="pill mono">GET</span>
-            <span class="mono mono--wrap"><?php echo store_e(BASE_URL("api/api.php?apikey=" . urlencode($storeApiKey) . "&action=create-order&service_id=3&amount=1")); ?></span>
+            <span class="mono mono--wrap"><?php echo store_e(BASE_URL("api/api.php?action=create-order&service_id=3&amount=1")); ?></span>
           </p>
           <div class="copy-row">
             <label class="sr-only" for="api-buy"><?php echo store_e(__("Địa chỉ tạo đơn hàng")); ?></label>
             <input class="input mono" id="api-buy" type="text" readonly
-              value="<?php echo store_e(BASE_URL("api/api.php?apikey=" . urlencode($storeApiKey) . "&action=create-order&service_id=3&amount=1")); ?>">
+              value="<?php echo store_e(BASE_URL("api/api.php?action=create-order&service_id=3&amount=1")); ?>">
             <button class="btn btn--ghost" type="button" data-copy="#api-buy">Sao chép</button>
           </div>
         </div>
         <dl class="kv">
-          <dt><span class="mono">apikey</span></dt><dd>Khoá API ở trên (<span class="mono">api_key</span> cũng được chấp nhận)</dd>
+          <dt><span class="mono">X-API-Key</span></dt><dd>Khoá API trong header của yêu cầu HTTPS</dd>
           <dt><span class="mono">action</span></dt><dd><span class="mono">create-order</span></dd>
           <dt><span class="mono">service_id</span></dt><dd>ID sản phẩm cần mua (lấy từ danh sách ở trên)</dd>
           <dt><span class="mono">amount</span></dt><dd>Số lượng cần mua, trong khoảng min–max của sản phẩm</dd>
@@ -147,7 +152,7 @@ store_shell_open($storeShell);
     "order_id": "JF465f728224ce11",
     "data": "1000040304952|GUTJXYIFPWLHCNDOMBRKVAQESZ\n1000087676467|IVMRLABECWTQYUXHPOFNJDSZGK"
 }</pre>
-        <p class="field__hint">Giữ <span class="mono">order_id</span> để tra cứu đơn. Hệ thống không gửi lại tài khoản đã bán, nên hãy lưu phản hồi ngay khi nhận. Nếu nhà cung cấp chưa trả đơn trong thời hạn, đơn được hoàn tiền và phản hồi là <span class="mono">"code": 201</span>.</p>
+        <p class="field__hint">Giữ <span class="mono">order_id</span> và bảo vệ dữ liệu đã giao. Nếu mất phản hồi hoặc nhà cung cấp chậm, không tự động gọi lại: kiểm tra lịch sử đơn và liên hệ hỗ trợ để đối soát.</p>
       </div>
     </div>
   </div>

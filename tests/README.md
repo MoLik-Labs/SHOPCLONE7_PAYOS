@@ -53,6 +53,16 @@ PHP warning or a missing asset, and parses the inline PayPal button script it re
 `tools/dev/paypal-js.php` with `node --check`. A suite that cannot run (database or sub-process missing) is reported
 as **NOT RUN**, never as passed.
 
+## API credential and endpoint fixtures
+
+`node tools/dev/phpcl.mjs tests/api_credentials_test.php` checks header precedence and compatibility
+flags. `node tests/js/api_integrations_test.mjs` executes real API scripts in isolated PHP-WASM
+subprocesses against a fake DB. To run the latter with native PHP instead, set `ORBIT_TEST_PHP` to
+an executable PHP 7.4/8.2 path (with JSON enabled). These do not validate real SQL, concurrency,
+TLS/proxy header forwarding or actual HTTP caching. For a local fake-DB HTTP probe, run
+`ORBIT_TEST_PHP=/path/to/native/php node tests/manual/api_http_probe.mjs`. This uses PHP's built-in
+server, not Apache or a proxy. See `docs/frontend/34-api-integration-review.md`.
+
 ## Local database integration (destructive fixture data only)
 
 Tests below require a native PHP with `mysqli`, `pdo_mysql`, and real Composer dependencies. Create

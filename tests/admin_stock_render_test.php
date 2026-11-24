@@ -29,6 +29,14 @@ $checks = [
     'type is escaped' => strpos($html, '&lt;script&gt;alert(4)&lt;/script&gt;') !== false,
     'no injected live HTML' => strpos($html, '<script>') === false && strpos($html, '<svg ') === false && strpos($html, '<img src=x') === false,
     'TXT export separates accounts by newline' => strpos($exportSource, "var dataString = selectedData.join('\\\\n');") !== false,
+    'stock endpoint is key-free' => strpos($source, 'base_url("api/importAccount.php")') !== false
+        && strpos($source, 'api/importAccount.php?code=') === false,
+    'key rotation does not rebuild a credential URL' => strpos($source, 'document.getElementById(\\"api_key\\").textContent = result.api_key') !== false
+        && strpos($source, 'document.getElementById(\\"url_api\\").value =') === false,
+    'live key is escaped and page marked no-store' => strpos($source, 'htmlspecialchars((string) $getUser["api_key"]') !== false
+        && strpos($source, 'Cache-Control: no-store, private') !== false,
+    'import directions require header and POST body' => strpos($source, 'X-API-Key') !== false
+        && strpos($source, 'Gửi POST form qua HTTPS') !== false,
 ];
 $failed=0; foreach ($checks as $name=>$ok) { echo ($ok ? 'PASS  ' : 'FAIL  ') . $name . "\n"; if (!$ok) { ++$failed; } }
 echo count($checks) . " checks, $failed failures\n"; exit($failed ? 1 : 0);
