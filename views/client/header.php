@@ -3,6 +3,7 @@
 if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
+require_once __DIR__ . "/../../libs/brand_identity.php";
 /* Baseline hardening headers; harmless for every rendered page. */
 if(function_exists("orbit_security_headers")) {
     orbit_security_headers();
@@ -36,7 +37,7 @@ echo isset($body["image"]) ? $body["image"] : BASE_URL($CMSNT->site("image"));
 echo "\" />\n    <meta name=\"twitter:image:alt\" content=\"";
 echo $body["title"];
 echo "\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"";
-echo BASE_URL($CMSNT->site("favicon"));
+echo htmlspecialchars(BASE_URL(orbit_brand_favicon($CMSNT->site("favicon"))), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
 echo "\" />\n    <style>\n    :root {\n        --primary: ";
 echo $CMSNT->site("theme_color");
 echo ";\n    }\n    </style>\n    <style>\n    :root {\n        --primary1: ";

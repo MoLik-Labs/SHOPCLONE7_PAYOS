@@ -297,7 +297,7 @@ if($_POST["action"] == "logoutALL") {
     $CMSNT->insert("logs", ["user_id" => $getUser["id"], "ip" => myip(), "device" => $Mobile_Detect->getUserAgent(), "createdate" => gettime(), "action" => __("Log out all members on the system")]);
     if($CMSNT->site("email") != "") {
         $chu_de = "Cảnh báo bảo mật website " . $CMSNT->site("title");
-        $noi_dung = "\nHệ thống phát hiện <b>" . $getUser["username"] . "</b> IP <b style=\"color:red;\">" . myip() . "</b> vừa thực hiện đăng xuất tất cả tài khoản trên hệ thống.<br>\nNếu không phải bạn vui lòng liên hệ <a target=\"_blank\" href=\"https://www.cmsnt.co/\">CMSNT.CO</a> để hỗ trợ kiểm tra an toàn cho quý khách.<br>\n<br>\n<ul>\n<li>Thời gian: " . gettime() . "</li>\n<li>IP: " . myip() . "</li>\n<li>Thiết bị: " . $Mobile_Detect->getUserAgent() . "</li>\n</ul>";
+        $noi_dung = "\nHệ thống phát hiện <b>" . $getUser["username"] . "</b> IP <b style=\"color:red;\">" . myip() . "</b> vừa thực hiện đăng xuất tất cả tài khoản trên hệ thống.<br>\nNếu bạn không thực hiện thao tác này, hãy kiểm tra nhật ký và liên hệ quản trị viên website ngay.<br>\n<br>\n<ul>\n<li>Thời gian: " . gettime() . "</li>\n<li>IP: " . myip() . "</li>\n<li>Thiết bị: " . $Mobile_Detect->getUserAgent() . "</li>\n</ul>";
         $bcc = $CMSNT->site("title");
         sendCSM($CMSNT->site("email"), $getUser["username"], $chu_de, $noi_dung, $bcc);
     }

@@ -6,8 +6,8 @@ if(!defined("IN_SITE")) {
 echo "\n";
 echo $CMSNT->site("script_footer_admin");
 echo "\n\n\n<!-- Footer Start -->\n<footer class=\"footer mt-auto py-3 bg-white text-center\">\n    <div class=\"container\">\n        <span class=\"text-muted\"> Copyright © <span id=\"year\"></span> <a href=\"#\"\n                class=\"text-dark fw-semibold\">";
-echo $CMSNT->site("title");
-echo "</a>.\n            Software by <a href=\"https://www.cmsnt.co/\">\n                <span class=\"fw-semibold text-primary text-decoration-underline\">CMSNT.CO</span> 🇻🇳\n            </a> All\n            rights\n            reserved\n        </span>\n";
+echo htmlspecialchars((string) $CMSNT->site("title"), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
+echo "</a> · By NggKhaiz\n        </span>\n";
 /*
  * The footer language switcher is Google Translate's widget. Only shops that chose the
  * `gtranslate` language mode load it — the same rule the storefront nav follows — so every other

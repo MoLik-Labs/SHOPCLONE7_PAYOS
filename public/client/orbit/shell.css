@@ -58,6 +58,11 @@
   font-weight: var(--weight-bold);
 }
 
+.topbar__mark--image {
+  background: transparent;
+  object-fit: contain;
+}
+
 .topbar__nav {
   min-width: 0;
 }

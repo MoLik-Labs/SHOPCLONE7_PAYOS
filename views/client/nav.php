@@ -3,6 +3,9 @@
 if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
+require_once __DIR__ . "/../../libs/brand_identity.php";
+$orbitLegacyLogo = orbit_brand_logo($CMSNT->site("logo_light"), $CMSNT->site("logo_dark"));
+if ($orbitLegacyLogo === "") { $orbitLegacyLogo = "assets/brand/orbit-wordmark-dark.png"; }
 require_once __DIR__ . '/../../libs/payos.php';
 $payosNavEnabled = (bool) payos_config()['enabled'];
 require_once __DIR__ . '/../../libs/gtf.php';
@@ -54,11 +57,11 @@ echo __("Liên Hệ");
 echo "</a></li>\n                    </ul>\n                </div>\n            </div>\n        </div>\n    </div>\n    <header class=\"header-part\">\n        <div class=\"container\">\n            <div class=\"header-content\">\n                <div class=\"header-media-group\">\n                    <button class=\"header-user\"><i class=\"fa-solid fa-bars\"></i></button>\n                    <a href=\"";
 echo base_url();
 echo "\">\n                        <img src=\"";
-echo BASE_URL($CMSNT->site("logo_light"));
+echo htmlspecialchars(BASE_URL($orbitLegacyLogo), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
 echo "\" alt=\"logo\"></a>\n                    <button class=\"header-src\"><i class=\"fas fa-search\"></i></button>\n                </div>\n                <a href=\"";
 echo base_url();
 echo "\" class=\"header-logo\"><img src=\"";
-echo BASE_URL($CMSNT->site("logo_light"));
+echo htmlspecialchars(BASE_URL($orbitLegacyLogo), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
 echo "\"\n                        alt=\"logo\"></a>\n                <form class=\"header-form\" method=\"GET\" action=\"";
 echo base_url();
 echo "\">\n                    <input type=\"hidden\" name=\"action\" value=\"home\">\n                    <input type=\"text\" name=\"keyword\" value=\"";
@@ -424,7 +427,7 @@ foreach (($payosNavEnabled ? [] : $CMSNT->get_list(" SELECT * FROM `payment_manu
 echo "        </ul>\n    </aside>\n    <aside class=\"nav-sidebar\">\n        <div class=\"nav-header\"><a href=\"";
 echo base_url();
 echo "\"><img src=\"";
-echo BASE_URL($CMSNT->site("logo_light"));
+echo htmlspecialchars(BASE_URL($orbitLegacyLogo), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
 echo "\"\n                    alt=\"logo\"></a><button class=\"nav-close\"><i class=\"icofont-close\"></i></button></div>\n        <div class=\"nav-content\">\n            <div class=\"nav-btn\">\n                ";
 if(isset($getUser)) {
     echo "                <a href=\"";

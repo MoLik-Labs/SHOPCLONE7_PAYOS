@@ -30,6 +30,7 @@
 if (!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
+require_once __DIR__ . "/../../libs/brand_identity.php";
 
 if (!function_exists("store_e")) {
     function store_e($value)
@@ -218,7 +219,7 @@ if (!function_exists("store_shell_config")) {
             "desc" => store_site("description", $cmsnt),
             "keyword" => store_site("keywords", $cmsnt),
             "image" => store_site("image", $cmsnt),
-            "favicon" => store_site("favicon", $cmsnt),
+            "favicon" => orbit_brand_favicon(store_site("favicon", $cmsnt)),
             "theme_color" => store_site("theme_color", $cmsnt),
             "lang" => "vi",
             "nav" => array(),
@@ -306,15 +307,13 @@ if (!function_exists("store_brand_html")) {
         if ($title === "") {
             $title = (string) $o["title"];
         }
-        $logo = store_site("logo_dark", $cmsnt);
-        if ($logo === "") {
-            $logo = store_site("logo_light", $cmsnt);
-        }
+        $logo = orbit_brand_logo(store_site("logo_dark", $cmsnt), store_site("logo_light", $cmsnt));
         if ($logo !== "") {
             return '<img class="topbar__logo" src="' . store_e(BASE_URL($logo)) . '" alt="'
                 . store_e($title) . '" width="132" height="32">';
         }
-        return '<span class="topbar__mark" aria-hidden="true">' . store_e(store_first_char($title)) . '</span>'
+        return '<img class="topbar__mark topbar__mark--image" src="' . store_e(BASE_URL('assets/brand/orbit-icon.png'))
+            . '" alt="" width="32" height="32" aria-hidden="true">'
             . '<span class="topbar__name">' . store_e($title) . '</span>';
     }
 }
