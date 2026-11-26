@@ -570,7 +570,7 @@ if (!is_dir($outDir . "/assets/music")) {
 
 $copied = array();
 foreach (array("tokens.css", "base.css", "components.css", "shell.css", "store.css", "chart.css", "music-player.css",
-               "chart.js", "table.js", "music-player.js", "store.js") as $asset) {
+               "chart.js", "table.js", "music-player.js", "store.js", "theme.js") as $asset) {
     $source = $root . "/public/client/orbit/" . $asset;
     if (is_file($source) && copy($source, $assetsDir . "/" . $asset)) {
         $copied[] = $asset;

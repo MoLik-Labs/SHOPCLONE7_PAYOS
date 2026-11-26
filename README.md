@@ -1,11 +1,11 @@
-# Orbit Office — shop source
+# MoLik Studio — shop source
 
 A Vietnamese digital-goods shop: accounts, licences and top-up cards, sold from a PHP monolith with
 MySQL. The storefront, account area and money paths were rebuilt on one design system ("Orbit") on top
 of the CMSNT `SHOPCLONE7` codebase; the CMSNT licence layer is kept intact and is **not** to be
 removed.
 
-**By NggKhaiz.**
+**Nhận diện sản phẩm: MoLik Studio.**
 
 > Status: work in progress. The application has not been validated against the target hosting or a
 > real shop database. Nothing has been deployed by the agent; no live payment or licence call was made.
@@ -251,8 +251,8 @@ These are tracked, documented and **not** silently assumed to be fine:
 
 This is a licensed CMSNT product. Keep the licence check and the attribution as the owner decided:
 
-- product identity: **Orbit Office**;
-- footer credit **“By NggKhaiz”** is allowed;
+- product identity: **MoLik Studio**;
+- footer credit: **“MoLik Studio”**;
 - the CMSNT licence verification must not be removed, bypassed or stubbed, and `install.php` /
   `update.php` must not be used to strip it.
 

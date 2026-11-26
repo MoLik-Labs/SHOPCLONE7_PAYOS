@@ -321,6 +321,19 @@
   text-decoration: underline;
 }
 
+.appearance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) 0;
+  border-top: var(--hairline);
+}
+.appearance label { display: block; color: var(--text); font-weight: var(--weight-semibold); }
+.appearance p { margin: var(--space-1) 0 0; color: var(--text-muted); font-size: var(--text-sm); }
+.appearance select { width: min(100%, 240px); }
+
 .footer__legal {
   display: flex;
   flex-wrap: wrap;

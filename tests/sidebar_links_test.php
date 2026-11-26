@@ -133,9 +133,8 @@ $client = render_sidebar($root . "/views/client/sidebar.php");
 
 check("the admin sidebar renders", strlen($admin) > 5000, strlen($admin) . " bytes");
 check("admin logo assets use Orbit identity in both navigation areas",
-    substr_count($admin, 'assets/brand/orbit-wordmark-') === 6
-    && substr_count($admin, 'assets/brand/orbit-icon.png') === 2
-    && substr_count($admin, 'assets/brand/orbit-icon-light.png') === 4
+    substr_count($admin, 'assets/brand/molik-wordmark-') === 6
+    && substr_count($admin, 'assets/brand/molik-icon.svg') === 6
     && stripos($admin, 'assets/img/cmsnt') === false && stripos($admin, 'icon cmsnt') === false);
 check("the sales link is printed exactly once", substr_count($admin, 'action=sales"') === 1,
     substr_count($admin, 'action=sales"') . " occurrence(s)");

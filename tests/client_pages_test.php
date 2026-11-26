@@ -289,8 +289,8 @@ check("no third-party script or font",
 check("the product page loads the store shell", strpos($html, 'data-theme="light"') !== false
     && strpos($html, "store.css") !== false);
 preg_match('~<span class="topbar__name">([^<]*)</span>~', $html, $brandName);
-check("the header keeps the shop name, not the product name",
-    isset($brandName[1]) && $brandName[1] === "Orbit Shop");
+check("the header keeps the fixed studio name, not the product name",
+    isset($brandName[1]) && $brandName[1] === "MoLik Studio");
 
 /* --- product: signed in -------------------------------------------------- */
 echo "\nproduct (signed in)\n";

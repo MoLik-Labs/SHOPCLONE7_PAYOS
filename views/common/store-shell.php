@@ -249,6 +249,8 @@ if (!function_exists("store_shell_config")) {
             }
             $defaults[$key] = $value;
         }
+        // Branding is fixed by the product, not a setting or view override.
+        $defaults["favicon"] = orbit_brand_favicon("");
         if ($withNav && empty($defaults["nav"])) {
             $defaults["nav"] = store_nav_default($cmsnt);
         }
@@ -298,23 +300,9 @@ if (!function_exists("store_footer_default")) {
 if (!function_exists("store_brand_html")) {
     function store_brand_html($o, $cmsnt = null)
     {
-        if ((string) $o["brand_html"] !== "") {
-            return $o["brand_html"];
-        }
-        /* The bar belongs to the shop, not to the page: a product called "Netflix…" must not rename the
-           header. Fall back to the page title only when the owner has not set a shop name. */
-        $title = trim((string) store_site("title", $cmsnt));
-        if ($title === "") {
-            $title = (string) $o["title"];
-        }
-        $logo = orbit_brand_logo(store_site("logo_dark", $cmsnt), store_site("logo_light", $cmsnt));
-        if ($logo !== "") {
-            return '<img class="topbar__logo" src="' . store_e(BASE_URL($logo)) . '" alt="'
-                . store_e($title) . '" width="132" height="32">';
-        }
-        return '<img class="topbar__mark topbar__mark--image" src="' . store_e(BASE_URL('assets/brand/orbit-icon.png'))
+        return '<img class="topbar__mark topbar__mark--image" src="' . store_e(BASE_URL('assets/brand/molik-icon.svg'))
             . '" alt="" width="32" height="32" aria-hidden="true">'
-            . '<span class="topbar__name">' . store_e($title) . '</span>';
+            . '<span class="topbar__name">MoLik Studio</span>';
     }
 }
 
@@ -404,9 +392,11 @@ if (!function_exists("store_shell_open")) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="<?php echo store_e(store_asset("public/client/orbit/theme.js")); ?>"></script>
 <?php if (!empty($o["noindex"])) { ?><meta name="robots" content="noindex, nofollow">
 <?php } ?>
 <title><?php echo store_e($title); ?></title>
+<meta name="author" content="MoLik Studio">
 <?php if ((string) $o["desc"] !== "") { ?><meta name="description" content="<?php echo store_e($o["desc"]); ?>">
 <?php } ?>
 <?php if ((string) $o["keyword"] !== "") { ?><meta name="keywords" content="<?php echo store_e($o["keyword"]); ?>">
@@ -536,7 +526,6 @@ if (!function_exists("store_shell_close")) {
         $o = store_shell_config($overrides, false);
         $cmsnt = isset($GLOBALS["CMSNT"]) ? $GLOBALS["CMSNT"] : null;
         $year = date("Y");
-        $copyright = store_site("copyright_footer", $cmsnt);
         /* The legal line names the shop, never the page: a caller that passes "Nạp tiền | Shop"
            as the document title must not make the footer claim the shop is called "Nạp tiền". */
         $footerTitle = trim((string) store_site("title", $cmsnt));
@@ -580,11 +569,19 @@ if (!function_exists("store_shell_close")) {
 <?php } ?>
       </div>
     </div>
+    <div class="appearance">
+      <div><label for="appearance-theme">Giao diện</label><p id="appearance-status">Lựa chọn được lưu trên trình duyệt này.</p></div>
+      <select class="select" id="appearance-theme" aria-describedby="appearance-status" disabled>
+        <option value="light">Sáng · nguyên bản</option>
+        <option value="latte">Catppuccin Latte</option>
+        <option value="mocha">Catppuccin Mocha</option>
+        <option value="dark">Tối · xanh rừng</option>
+      </select>
+      <noscript><span>Bật JavaScript để chọn giao diện.</span></noscript>
+    </div>
     <div class="footer__legal">
-      <p>© <?php echo store_e($year); ?> <?php echo store_e($footerTitle); ?><?php
-        echo $copyright !== "" ? " · " . store_e($copyright) : "";
-      ?></p>
-      <p class="footer__credit">Thiết kế &amp; vận hành: <strong>Orbit Office</strong></p>
+      <p>© <?php echo store_e($year); ?> <?php echo store_e($footerTitle); ?></p>
+      <p class="footer__credit">Sản phẩm bởi <strong>MoLik Studio</strong></p>
       <ul class="footer__legal-links">
         <li><a href="<?php echo BASE_URL("client/policy"); ?>">Chính sách</a></li>
         <li><a href="<?php echo BASE_URL("client/faq"); ?>">FAQ</a></li>

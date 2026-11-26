@@ -144,6 +144,7 @@
   --warn: #a15c07;
   --warn-soft: #fbf0dd;
   --danger: #b42318;
+  --danger-contrast: #ffffff;
   --danger-soft: #fbe9e7;
   --info: #1d4ed8;
   --info-soft: #e8edfb;
@@ -188,7 +189,7 @@
   --border-strong: #3d4f45;
   --text: #eef2ee;
   --text-muted: #a9b5ac;
-  --text-faint: #7f8d84;
+  --text-faint: #a9b5ac;
   --accent: #4cc59a;
   --accent-strong: #35a97f;
   --accent-soft: rgba(76, 197, 154, 0.14);
@@ -198,6 +199,7 @@
   --warn: #e0a458;
   --warn-soft: rgba(224, 164, 88, 0.14);
   --danger: #f0786f;
+  --danger-contrast: #171512;
   --danger-soft: rgba(240, 120, 111, 0.14);
   --info: #8aabff;
   --info-soft: rgba(138, 171, 255, 0.14);
@@ -206,6 +208,31 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   --ring: 0 0 0 3px rgba(143, 217, 187, 0.3);
+}
+
+/* Palettes use Catppuccin Latte/Mocha colours; semantic text and controls remain distinct. */
+:root[data-theme="latte"] {
+  color-scheme: light;
+  --bg: #eff1f5; --surface: #ffffff; --surface-2: #e6e9ef; --surface-3: #dce0e8;
+  --border: #bcc0cc; --border-strong: #9ca0b0;
+  --text: #4c4f69; --text-muted: #5c5f77; --text-faint: #62667d;
+  --accent: #7046a3; --accent-strong: #583583; --accent-soft: #eee7f7; --accent-contrast: #ffffff;
+  --ok: #386641; --ok-soft: #e2f0e1; --warn: #8b5306; --warn-soft: #f8ecd8;
+  --danger: #b42318; --danger-contrast: #ffffff; --danger-soft: #f9e6e5;
+  --info: #1e53a2; --info-soft: #e2eafa; --focus: #7046a3;
+  --overlay: rgba(31, 30, 46, .55); --ring: 0 0 0 3px rgba(112, 70, 163, .3);
+}
+:root[data-theme="mocha"] {
+  color-scheme: dark;
+  --bg: #1e1e2e; --surface: #242437; --surface-2: #313244; --surface-3: #45475a;
+  --border: #585b70; --border-strong: #7f849c;
+  --text: #cdd6f4; --text-muted: #bac2de; --text-faint: #a6adc8;
+  --accent: #cba6f7; --accent-strong: #b4befe; --accent-soft: #403750; --accent-contrast: #1e1e2e;
+  --ok: #a6e3a1; --ok-soft: #314338; --warn: #f9e2af; --warn-soft: #4a4035;
+  --danger: #f38ba8; --danger-contrast: #1e1e2e; --danger-soft: #4b3544;
+  --info: #89b4fa; --info-soft: #303c52; --focus: #cba6f7;
+  --overlay: rgba(0, 0, 0, .66); --shadow-sm: 0 1px 2px rgba(0, 0, 0, .35);
+  --shadow: 0 12px 32px rgba(0, 0, 0, .4); --ring: 0 0 0 3px rgba(203, 166, 247, .35);
 }
 
 @media (max-width: 720px) {

@@ -4,8 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 require_once __DIR__ . "/../../libs/brand_identity.php";
-$orbitLegacyLogo = orbit_brand_logo($CMSNT->site("logo_light"), $CMSNT->site("logo_dark"));
-if ($orbitLegacyLogo === "") { $orbitLegacyLogo = "assets/brand/orbit-wordmark-dark.png"; }
+$orbitLegacyLogo = "assets/brand/molik-wordmark-dark.svg";
 require_once __DIR__ . '/../../libs/payos.php';
 $payosNavEnabled = (bool) payos_config()['enabled'];
 require_once __DIR__ . '/../../libs/gtf.php';

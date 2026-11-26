@@ -255,7 +255,7 @@ check("the enabled payment method is offered", strpos($html, "Ngân hàng") !== 
 check("a disabled method is not offered", stripos($html, "MOMO") === false);
 check("contact details come from settings", strpos($html, "0909 123 456") !== false
     && strpos($html, "support@orbit.example") !== false);
-check("the owner credit is present", strpos($html, "Orbit Office") !== false);
+check("the studio credit is present", strpos($html, "MoLik Studio") !== false);
 
 /* --- no invented trust signals ------------------------------------------- */
 check("no hardcoded star rating", strpos($html, "icofont-star") === false

@@ -4,8 +4,7 @@ if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
 require_once __DIR__ . "/../../libs/brand_identity.php";
-$orbitLegacyLogo = orbit_brand_logo($CMSNT->site("logo_light"), $CMSNT->site("logo_dark"));
-if ($orbitLegacyLogo === "") { $orbitLegacyLogo = "assets/brand/orbit-wordmark-light.png"; }
+$orbitLegacyLogo = "assets/brand/molik-wordmark-light.svg";
 echo "\n\n";
 if($CMSNT->site("widget_phone1_status") == 1) {
     echo "<div class=\"hotline-phone-ring-wrap\">\n    <div class=\"hotline-phone-ring\">\n        <div class=\"hotline-phone-ring-circle\"></div>\n        <div class=\"hotline-phone-ring-circle-fill\"></div>\n        <div class=\"hotline-phone-ring-img-circle\">\n            <a href=\"tel:";
@@ -75,9 +74,9 @@ echo base_url("client/document-api");
 echo "\">";
 echo __("Tài liệu API");
 echo "</a></li>\n                        </ul>\n                    </div>\n                </div>\n            </div>\n        </div>\n        <div class=\"row\">\n            <div class=\"col-12\">\n                <div class=\"footer-bottom\">\n                    <p class=\"footer-copytext\">© All Copyrights Reserved by <a href=\"#\">";
-echo $CMSNT->site("title");
+echo htmlspecialchars((string) $CMSNT->site("title"), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
 echo "</a>\n                        | ";
-echo $CMSNT->site("copyright_footer");
+echo "MoLik Studio";
 echo "</p>\n                    <div class=\"footer-card\">\n                        ";
 echo $CMSNT->site("footer_card");
 echo "\n\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</footer>\n<script src=\"";

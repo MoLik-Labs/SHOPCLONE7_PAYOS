@@ -100,14 +100,14 @@ check("the meta description is escaped", strpos($head, "&amp; &lt;b&gt;bold&lt;/
 check("a nav entry without an href is skipped", strpos($head, "ignored") === false
     && substr_count($head, 'href="https://shop.example/client/home"') === 3 /* brand + desktop + mobile sheet */);
 check("the current page is marked for assistive tech", strpos($head, 'aria-current="page"') !== false);
-check("the favicon and theme colour come from the CMS", strpos($head, "public/uploads/fav.png") !== false && strpos($head, "#123456") !== false);
+check("the fixed studio favicon and configured theme colour are present", strpos($head, "assets/brand/molik-icon.svg") !== false && strpos($head, "#123456") !== false);
 check("a relative OG image is resolved through BASE_URL", strpos($head, "https://shop.example/public/uploads/og.png") !== false);
 check("page-owned head markup is passed through raw (documented contract)", strpos($head, '<link rel="stylesheet" href="https://shop.example/x.css">') !== false);
 check("the skip link points at the main landmark", strpos($head, 'class="skip-link" href="#main"') !== false);
 check("the main landmark carries the id", strpos($head, '<main id="main"') !== false);
-check("the shell links the five design-system stylesheets", substr_count($head, "public/client/orbit/") === 5
-    && strpos($head, "store.css") !== false);
-check("every stylesheet carries a cache-busting version", substr_count($head, "?v=") === 5);
+check("the shell links the five design-system stylesheets and theme script", substr_count($head, "public/client/orbit/") === 6
+    && strpos($head, "store.css") !== false && strpos($head, "theme.js") !== false);
+check("stylesheets and theme script carry cache-busting versions", substr_count($head, "?v=") === 6);
 check("no third-party request appears in the shell head", strpos($head, "cdn") === false && strpos($head, "cdn.jsdelivr") === false);
 
 /* --- footer --------------------------------------------------------------- */
