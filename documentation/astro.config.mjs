@@ -32,7 +32,8 @@ export default defineConfig({
         { label: 'Xác thực', slug: 'api/xac-thuc' },
         { label: 'Đọc dữ liệu', slug: 'api/du-lieu' },
         { label: 'Nhập kho', slug: 'api/nhap-kho' },
-        { label: 'Tạo & tra cứu đơn', slug: 'api/don-hang' }
+        { label: 'Tạo & tra cứu đơn', slug: 'api/don-hang' },
+        { label: 'Tham chiếu kỹ thuật & debug', link: '/reference/' }
       ] },
       { label: 'Phát triển', items: [
         { label: 'Kiểm thử', slug: 'phat-trien/kiem-thu' },
