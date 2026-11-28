@@ -581,7 +581,7 @@ if (!function_exists("store_shell_close")) {
     </div>
     <div class="footer__legal">
       <p>© <?php echo store_e($year); ?> <?php echo store_e($footerTitle); ?></p>
-      <p class="footer__credit">Sản phẩm bởi <strong>MoLik Studio</strong></p>
+      <p class="footer__credit">Sản phẩm bởi <a href="<?php echo store_e(orbit_brand_url()); ?>"><strong>MoLik Studio</strong></a></p>
       <ul class="footer__legal-links">
         <li><a href="<?php echo BASE_URL("client/policy"); ?>">Chính sách</a></li>
         <li><a href="<?php echo BASE_URL("client/faq"); ?>">FAQ</a></li>

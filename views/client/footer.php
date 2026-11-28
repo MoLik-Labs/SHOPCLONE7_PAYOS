@@ -76,7 +76,7 @@ echo __("Tài liệu API");
 echo "</a></li>\n                        </ul>\n                    </div>\n                </div>\n            </div>\n        </div>\n        <div class=\"row\">\n            <div class=\"col-12\">\n                <div class=\"footer-bottom\">\n                    <p class=\"footer-copytext\">© All Copyrights Reserved by <a href=\"#\">";
 echo htmlspecialchars((string) $CMSNT->site("title"), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
 echo "</a>\n                        | ";
-echo "MoLik Studio";
+echo '<a href="' . htmlspecialchars(orbit_brand_url(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">MoLik Studio</a>';
 echo "</p>\n                    <div class=\"footer-card\">\n                        ";
 echo $CMSNT->site("footer_card");
 echo "\n\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</footer>\n<script src=\"";

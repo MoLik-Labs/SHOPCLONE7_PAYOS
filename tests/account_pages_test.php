@@ -458,7 +458,10 @@ function assert_clean($label, $html)
 {
     check($label . " — no leaked PHP", strpos($html, "<?php") === false && strpos($html, "<?=") === false);
     check($label . " — no inline style attribute", preg_match('/\sstyle="/', $html) === 0);
-    check($label . " — no third-party host", preg_match('#(src|href)="https?://(?!shop\.example)[^"]+#', $html) === 0);
+    // The one owner-approved GitHub credit is a navigation link, not a loaded resource.
+    // Remove only that exact anchor; all other external href/src values still fail this check.
+    $withoutCredit = str_replace('<a href="https://github.com/MoLik-Labs"><strong>MoLik Studio</strong></a>', '', $html);
+    check($label . " — no unexpected third-party host", preg_match('#(src|href)="https?://(?!shop\.example)[^"]+#', $withoutCredit) === 0);
     check($label . " — exactly one h1", preg_match_all('/<h1[ >]/', $html) === 1);
     check($label . " — shareable shell", strpos($html, 'class="topbar"') !== false && strpos($html, 'class="footer"') !== false);
     check($label . " — skip link", strpos($html, 'class="skip-link"') !== false);

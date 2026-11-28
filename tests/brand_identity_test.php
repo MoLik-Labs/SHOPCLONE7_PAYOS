@@ -26,7 +26,9 @@ $checks = [
     'brand fields explicitly locked' => orbit_brand_setting_locked('author') && orbit_brand_setting_locked('copyright_footer') && orbit_brand_setting_locked('logo_dark') && !orbit_brand_setting_locked('smtp_status'),
     'branding uploads are not accepted by theme form' => strpos($theme,'check_img("logo_light")') === false && strpos($theme,'check_img("logo_dark")') === false && strpos($theme,'check_img("favicon")') === false,
     'brand assets exist' => is_file(__DIR__.'/../assets/brand/molik-icon.svg') && is_file(__DIR__.'/../assets/brand/molik-wordmark-dark.svg') && is_file(__DIR__.'/../assets/brand/molik-wordmark-light.svg'),
-    'footer does not inject a speculative external studio link' => strpos($footer,'href="https://molik') === false,
+    'footer credit links to the fixed official studio GitHub' => strpos($footer,'href="https://github.com/MoLik-Labs"') !== false,
+    'studio URL is not read from settings' => function_exists('orbit_brand_url') && orbit_brand_url() === 'https://github.com/MoLik-Labs',
+    'admin and legacy client credit use the fixed link' => strpos($adminFooter, 'orbit_brand_url()') !== false && strpos(file_get_contents(__DIR__.'/../views/client/footer.php'), 'orbit_brand_url()') !== false,
 ];
 $fail = 0; foreach ($checks as $name=>$ok) { echo ($ok ? 'PASS ' : 'FAIL ') . $name . "\n"; if (!$ok) ++$fail; }
 echo count($checks) . " checks, $fail failures\n"; exit($fail ? 1 : 0);

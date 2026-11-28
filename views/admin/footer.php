@@ -3,11 +3,12 @@
 if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
+require_once __DIR__ . "/../../libs/brand_identity.php";
 echo "\n";
 echo $CMSNT->site("script_footer_admin");
 echo "\n\n\n<!-- Footer Start -->\n<footer class=\"footer mt-auto py-3 bg-white text-center\">\n    <div class=\"container\">\n        <span class=\"text-muted\"> Copyright © <span id=\"year\"></span> <a href=\"#\"\n                class=\"text-dark fw-semibold\">";
 echo htmlspecialchars((string) $CMSNT->site("title"), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
-echo "</a> · MoLik Studio\n        </span>\n";
+echo "</a> · <a href=\"" . htmlspecialchars(orbit_brand_url(), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8") . "\">MoLik Studio</a>\n        </span>\n";
 /*
  * The footer language switcher is Google Translate's widget. Only shops that chose the
  * `gtranslate` language mode load it — the same rule the storefront nav follows — so every other

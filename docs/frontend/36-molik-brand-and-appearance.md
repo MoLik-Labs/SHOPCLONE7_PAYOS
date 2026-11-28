@@ -8,8 +8,8 @@ rebuilt storefront are code-owned. The admin sidebar, footer and remaining legac
 MoLik Studio as well. The settings page no longer presents a mutable author and refuses these known
 branding setting keys; the theme upload handler no longer accepts logo/favicon uploads. Existing
 settings and uploaded files are not deleted. Operational shop name, contact information and business
-links still serve the shop and are not replaced with invented studio links. No official MoLik Studio
-URL was provided, so no new external attribution link was invented.
+links still serve the shop and are not replaced with invented studio links. The studio credit links to
+the owner-provided GitHub organization `https://github.com/MoLik-Labs`, fixed in code and not a setting.
 
 This is a UI and ordinary-settings restriction, **not tamper-proof enforcement**: a hosting operator
 or administrator with arbitrary HTML/JS/custom-code or database/file access may change rendered output.
