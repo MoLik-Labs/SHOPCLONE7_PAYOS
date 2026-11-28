@@ -10,7 +10,10 @@
     "dev": "astro dev --host 0.0.0.0",
     "build": "astro build",
     "preview": "astro preview --host 0.0.0.0",
-    "check": "astro check"
+    "check": "astro check",
+    "lint:content": "nimbus-docs lint --rule nimbus/single-h1 && nimbus-docs lint --rule nimbus/bare-url",
+    "check:links": "node scripts/check-links.mjs",
+    "test:links": "node scripts/test-check-links.mjs"
   },
   "dependencies": {
     "@astrojs/starlight": "0.43.2",
@@ -19,6 +22,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.6",
+    "@cloudflare/nimbus-docs": "0.20.2",
+    "parse5": "8.1.1",
     "typescript": "5.9.3"
   }
 }

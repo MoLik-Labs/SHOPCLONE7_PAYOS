@@ -3,7 +3,7 @@ title: Trang docs & GitHub Pages
 description: Xây dựng và phát hành trang tài liệu Starlight.
 ---
 
-Trang này được dựng bằng Astro + Starlight trong thư mục `documentation/`, tách khỏi ứng dụng PHP. Tìm kiếm chạy trên chỉ mục tĩnh được tạo lúc build; không cần server backend.
+Trang này dùng Astro + Starlight cho giao diện và điều hướng, cùng công cụ lint của Nimbus để kiểm tra nội dung MDX; hai framework không được chồng làm giao diện. Trang nằm trong `documentation/`, tách khỏi ứng dụng PHP. Tìm kiếm chạy trên chỉ mục tĩnh được tạo lúc build; không cần server backend.
 
 ## Chạy cục bộ
 
@@ -17,10 +17,13 @@ Mở địa chỉ dev server và thêm đường dẫn cơ sở `/SHOPCLONE7_PAY
 ```bash
 npm run check --prefix documentation
 npm run build --prefix documentation
+npm run lint:content --prefix documentation
+npm run test:links --prefix documentation
+npm run check:links --prefix documentation
 npm run preview --prefix documentation
 ```
 
-Trang dùng Node 22.23.4 trở lên (khuyến nghị Node 24 LTS). Nội dung nằm trong `documentation/src/content/docs/`; điều hướng và `base` nằm trong `documentation/astro.config.mjs`. Đường dẫn project Pages dự kiến là `https://molik-labs.github.io/SHOPCLONE7_PAYOS/` sau khi triển khai thành công.
+Trang dùng Node 22.23.4 trở lên (khuyến nghị Node 24 LTS). Nội dung dùng MDX trong `documentation/src/content/docs/`; Nimbus kiểm tra các quy tắc một H1 và URL trần. Bộ kiểm tra riêng xác minh liên kết nội bộ sau build, không kiểm tra liên kết ngoài; điều hướng và `base` nằm trong `documentation/astro.config.mjs`. Đường dẫn project Pages dự kiến là `https://molik-labs.github.io/SHOPCLONE7_PAYOS/` sau khi triển khai thành công.
 
 ## Triển khai
 

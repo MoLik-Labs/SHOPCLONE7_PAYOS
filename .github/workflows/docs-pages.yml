@@ -37,6 +37,9 @@ jobs:
         run: |
           npm run check --prefix documentation
           npm run build --prefix documentation
+          npm run lint:content --prefix documentation
+          npm run test:links --prefix documentation
+          npm run check:links --prefix documentation
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3

@@ -3,32 +3,32 @@ title: Tài liệu MoLik Shop
 description: Cài đặt, vận hành và tích hợp cửa hàng một cách rõ ràng và an toàn.
 template: splash
 hero:
-  tagline: Từ môi trường thử nghiệm đến vận hành hàng ngày — bắt đầu đúng bước, hiểu rõ giới hạn và tích hợp tự tin hơn.
+  tagline: Tìm đúng hướng dẫn cho công việc của bạn — từ thiết lập cửa hàng đến vận hành và tích hợp API.
   actions:
-    - text: Bắt đầu tại đây
+    - text: Bắt đầu với MoLik Shop
       link: ./bat-dau/tong-quan/
       icon: right-arrow
-    - text: Xem API
+    - text: Tìm hiểu API
       link: ./api/xac-thuc/
       variant: minimal
 ---
 
-import { Card, CardGrid, Steps, Aside } from '@astrojs/starlight/components';
+import { LinkCard, CardGrid, Steps, Aside } from '@astrojs/starlight/components';
 
-<Aside type="caution" title="Trạng thái dự án">
+<Aside type="caution" title="Bắt đầu an toàn">
 Dự án vẫn đang hoàn thiện. Chưa xác minh toàn bộ schema, môi trường hosting và thanh toán thực tế. Không coi tài liệu này là phê duyệt đưa vào production.
 </Aside>
 
-## Bạn đang tìm gì?
+## Bạn muốn làm gì?
 
 <CardGrid>
-  <Card title="Cài đặt & cấu hình" icon="rocket">Chuẩn bị môi trường, bản sao database và cấu hình HTTPS trước khi thử nghiệm. [Xem cài đặt](./bat-dau/cai-dat/).</Card>
-  <Card title="Vận hành cửa hàng" icon="setting">Kiểm tra giao diện, thanh toán, đối soát và xử lý các trạng thái chưa rõ. [Xem vận hành](./van-hanh/checklist/).</Card>
-  <Card title="Tích hợp API" icon="open-book">Đọc dữ liệu và nhập kho với header API key, kèm các giới hạn cần biết. [Xem API](./api/xac-thuc/).</Card>
-  <Card title="Phát triển an toàn" icon="pencil">Chạy kiểm thử fixture, hiểu các phần chưa được xác minh và đóng góp tài liệu. [Xem kiểm thử](./phat-trien/kiem-thu/).</Card>
+  <LinkCard title="Thiết lập cửa hàng" description="Chuẩn bị staging, database, HTTPS và cấu hình." href="./bat-dau/cai-dat/" />
+  <LinkCard title="Vận hành an toàn" description="Kiểm tra giao diện, thanh toán và quy trình đối soát." href="./van-hanh/checklist/" />
+  <LinkCard title="Kết nối API" description="Xác thực bằng header, đọc dữ liệu và nhập kho." href="./api/xac-thuc/" />
+  <LinkCard title="Phát triển & kiểm thử" description="Chạy fixture, hiểu giới hạn và đóng góp tài liệu." href="./phat-trien/kiem-thu/" />
 </CardGrid>
 
-## Một lộ trình ngắn
+## Lộ trình cho người mới
 
 <Steps>
 1. Đọc [tổng quan](./bat-dau/tong-quan/) để xác định phạm vi và các điều kiện còn thiếu.
