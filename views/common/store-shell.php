@@ -30,6 +30,7 @@
 if (!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
+require_once __DIR__ . "/../../libs/brand_identity.php";
 
 if (!function_exists("store_e")) {
     function store_e($value)
@@ -103,7 +104,7 @@ if (!function_exists("store_nav_default")) {
         $action = isset($_GET["action"]) ? (string) $_GET["action"] : "";
         $recharge = is_array($methods) ? $methods : store_payment_methods($cmsnt);
         $rechargeHref = !empty($recharge) ? $recharge[0]["href"] : BASE_URL("client/login");
-        return array(
+        $nav = array(
             array("label" => "Sản phẩm", "href" => BASE_URL("client/home") . "#san-pham",
                 "current" => $action === "home"),
             array("label" => "Danh mục", "href" => BASE_URL("client/home") . "#danh-muc"),
@@ -218,7 +219,7 @@ if (!function_exists("store_shell_config")) {
             "desc" => store_site("description", $cmsnt),
             "keyword" => store_site("keywords", $cmsnt),
             "image" => store_site("image", $cmsnt),
-            "favicon" => store_site("favicon", $cmsnt),
+            "favicon" => orbit_brand_favicon(store_site("favicon", $cmsnt)),
             "theme_color" => store_site("theme_color", $cmsnt),
             "lang" => "vi",
             "nav" => array(),
@@ -248,6 +249,8 @@ if (!function_exists("store_shell_config")) {
             }
             $defaults[$key] = $value;
         }
+        // Branding is fixed by the product, not a setting or view override.
+        $defaults["favicon"] = orbit_brand_favicon("");
         if ($withNav && empty($defaults["nav"])) {
             $defaults["nav"] = store_nav_default($cmsnt);
         }
@@ -297,25 +300,9 @@ if (!function_exists("store_footer_default")) {
 if (!function_exists("store_brand_html")) {
     function store_brand_html($o, $cmsnt = null)
     {
-        if ((string) $o["brand_html"] !== "") {
-            return $o["brand_html"];
-        }
-        /* The bar belongs to the shop, not to the page: a product called "Netflix…" must not rename the
-           header. Fall back to the page title only when the owner has not set a shop name. */
-        $title = trim((string) store_site("title", $cmsnt));
-        if ($title === "") {
-            $title = (string) $o["title"];
-        }
-        $logo = store_site("logo_dark", $cmsnt);
-        if ($logo === "") {
-            $logo = store_site("logo_light", $cmsnt);
-        }
-        if ($logo !== "") {
-            return '<img class="topbar__logo" src="' . store_e(BASE_URL($logo)) . '" alt="'
-                . store_e($title) . '" width="132" height="32">';
-        }
-        return '<span class="topbar__mark" aria-hidden="true">' . store_e(store_first_char($title)) . '</span>'
-            . '<span class="topbar__name">' . store_e($title) . '</span>';
+        return '<img class="topbar__mark topbar__mark--image" src="' . store_e(BASE_URL('assets/brand/molik-icon.svg'))
+            . '" alt="" width="32" height="32" aria-hidden="true">'
+            . '<span class="topbar__name">MoLik Studio</span>';
     }
 }
 
@@ -332,14 +319,20 @@ if (!function_exists("store_pager")) {
             return "";
         }
         $href = function ($number) use ($query, $path) {
-            $params = array();
+            /* Apache's pretty-route rewrites replace the incoming query string. Generate a direct
+               index URL for client pages, with the route fixed by the caller rather than the query. */
+            $clientPath = preg_match('~^client/([A-Za-z0-9-]+)$~', (string) $path, $route);
+            $params = $clientPath ? array("module" => "client", "action" => $route[1]) : array();
             foreach ($query as $key => $value) {
+                if ($clientPath && ($key === "module" || $key === "action")) {
+                    continue;
+                }
                 if (is_scalar($value) && (string) $value !== "") {
                     $params[$key] = (string) $value;
                 }
             }
             $params["page"] = (int) $number;
-            return BASE_URL($path) . "?" . http_build_query($params);
+            return BASE_URL($clientPath ? "index.php" : $path) . "?" . http_build_query($params);
         };
         $out = '<nav class="pager" aria-label="Phân trang">';
         if ($page > 1) {
@@ -386,7 +379,7 @@ if (!function_exists("store_shell_open")) {
             $favicon = BASE_URL($favicon);
         }
         $user = store_current_user();
-        $searchAction = BASE_URL("client/home");
+        $searchAction = BASE_URL("index.php");
         $styles = array(
             "public/client/orbit/tokens.css",
             "public/client/orbit/base.css",
@@ -399,9 +392,11 @@ if (!function_exists("store_shell_open")) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="<?php echo store_e(store_asset("public/client/orbit/theme.js")); ?>"></script>
 <?php if (!empty($o["noindex"])) { ?><meta name="robots" content="noindex, nofollow">
 <?php } ?>
 <title><?php echo store_e($title); ?></title>
+<meta name="author" content="MoLik Studio">
 <?php if ((string) $o["desc"] !== "") { ?><meta name="description" content="<?php echo store_e($o["desc"]); ?>">
 <?php } ?>
 <?php if ((string) $o["keyword"] !== "") { ?><meta name="keywords" content="<?php echo store_e($o["keyword"]); ?>">
@@ -444,6 +439,8 @@ if (!function_exists("store_shell_open")) {
     </nav>
 <?php if (!empty($o["search"])) { ?>
     <form class="topbar__search" role="search" action="<?php echo store_e($searchAction); ?>" method="get">
+      <input type="hidden" name="module" value="client">
+      <input type="hidden" name="action" value="home">
       <label class="sr-only" for="site-search">Tìm sản phẩm</label>
       <input class="input" id="site-search" type="search" name="keyword" value="<?php echo store_e($o["search_value"]); ?>" placeholder="Tìm sản phẩm…" autocomplete="off">
       <button class="btn btn--ghost btn--icon" type="submit" aria-label="Tìm">
@@ -483,6 +480,8 @@ if (!function_exists("store_shell_open")) {
     </nav>
 <?php if (!empty($o["search"])) { ?>
     <form class="topbar__search" role="search" action="<?php echo store_e($searchAction); ?>" method="get">
+      <input type="hidden" name="module" value="client">
+      <input type="hidden" name="action" value="home">
       <label class="sr-only" for="site-search-mobile">Tìm sản phẩm</label>
       <input class="input" id="site-search-mobile" type="search" name="keyword" placeholder="Tìm sản phẩm…" autocomplete="off">
       <button class="btn btn--ghost" type="submit">Tìm</button>
@@ -527,7 +526,6 @@ if (!function_exists("store_shell_close")) {
         $o = store_shell_config($overrides, false);
         $cmsnt = isset($GLOBALS["CMSNT"]) ? $GLOBALS["CMSNT"] : null;
         $year = date("Y");
-        $copyright = store_site("copyright_footer", $cmsnt);
         /* The legal line names the shop, never the page: a caller that passes "Nạp tiền | Shop"
            as the document title must not make the footer claim the shop is called "Nạp tiền". */
         $footerTitle = trim((string) store_site("title", $cmsnt));
@@ -571,11 +569,19 @@ if (!function_exists("store_shell_close")) {
 <?php } ?>
       </div>
     </div>
+    <div class="appearance">
+      <div><label for="appearance-theme">Giao diện</label><p id="appearance-status">Lựa chọn được lưu trên trình duyệt này.</p></div>
+      <select class="select" id="appearance-theme" aria-describedby="appearance-status" disabled>
+        <option value="light">Sáng · nguyên bản</option>
+        <option value="latte">Catppuccin Latte</option>
+        <option value="mocha">Catppuccin Mocha</option>
+        <option value="dark">Tối · xanh rừng</option>
+      </select>
+      <noscript><span>Bật JavaScript để chọn giao diện.</span></noscript>
+    </div>
     <div class="footer__legal">
-      <p>© <?php echo store_e($year); ?> <?php echo store_e($footerTitle); ?><?php
-        echo $copyright !== "" ? " · " . store_e($copyright) : "";
-      ?></p>
-      <p class="footer__credit">Thiết kế &amp; vận hành: <strong>Orbit Office</strong></p>
+      <p>© <?php echo store_e($year); ?> <?php echo store_e($footerTitle); ?></p>
+      <p class="footer__credit">Sản phẩm bởi <a href="<?php echo store_e(orbit_brand_url()); ?>"><strong>MoLik Studio</strong></a></p>
       <ul class="footer__legal-links">
         <li><a href="<?php echo BASE_URL("client/policy"); ?>">Chính sách</a></li>
         <li><a href="<?php echo BASE_URL("client/faq"); ?>">FAQ</a></li>

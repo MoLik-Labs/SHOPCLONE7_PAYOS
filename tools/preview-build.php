@@ -482,24 +482,23 @@ $pages["payment.html"] = array(
    The page prints full endpoint URLs, and BASE_URL turns every route into an inert #preview-… anchor so
    a click cannot 404 inside the folder. An input value is text, not a link, so put a readable example
    host back for this one page — otherwise the documentation shows the preview's own plumbing. */
-$apiPreviewKey = "9f4c1d2a7b6e8c05d3a1f9e7b2c4d608";
 $apiPreviewHost = "https://shop.orbit.example";
 $apiPreviewHtml = preview_render($root, "views/client/document-api.php", array("login" => "tok"),
     array("module" => "client", "action" => "document-api"), $fixtures);
 $apiPreviewHtml = str_replace(
     array(
-        "#preview-api-profile-php-api-key-" . $apiPreviewKey,
-        "#preview-api-products-php-api-key-" . $apiPreviewKey,
-        "#preview-api-product-php-api-key-" . $apiPreviewKey . "-product-3",
-        "#preview-api-api-php-apikey-" . $apiPreviewKey . "-action-get-order-detail-order-id-ORD123",
-        "#preview-api-api-php-apikey-" . $apiPreviewKey . "-action-create-order-service-id-3-amount-1",
+        "#preview-api-profile-php",
+        "#preview-api-products-php",
+        "#preview-api-product-php-product-3",
+        "#preview-api-api-php-action-get-order-detail-order-id-ORD123",
+        "#preview-api-api-php-action-create-order-service-id-3-amount-1",
     ),
     array(
-        $apiPreviewHost . "/api/profile.php?api_key=" . $apiPreviewKey,
-        $apiPreviewHost . "/api/products.php?api_key=" . $apiPreviewKey,
-        $apiPreviewHost . "/api/product.php?api_key=" . $apiPreviewKey . "&product=3",
-        $apiPreviewHost . "/api/api.php?apikey=" . $apiPreviewKey . "&action=get-order-detail&order_id=ORD123",
-        $apiPreviewHost . "/api/api.php?apikey=" . $apiPreviewKey . "&action=create-order&service_id=3&amount=1",
+        $apiPreviewHost . "/api/profile.php",
+        $apiPreviewHost . "/api/products.php",
+        $apiPreviewHost . "/api/product.php?product=3",
+        $apiPreviewHost . "/api/api.php?action=get-order-detail&order_id=ORD123",
+        $apiPreviewHost . "/api/api.php?action=create-order&service_id=3&amount=1",
     ),
     $apiPreviewHtml
 );
@@ -571,7 +570,7 @@ if (!is_dir($outDir . "/assets/music")) {
 
 $copied = array();
 foreach (array("tokens.css", "base.css", "components.css", "shell.css", "store.css", "chart.css", "music-player.css",
-               "chart.js", "table.js", "music-player.js", "store.js") as $asset) {
+               "chart.js", "table.js", "music-player.js", "store.js", "theme.js") as $asset) {
     $source = $root . "/public/client/orbit/" . $asset;
     if (is_file($source) && copy($source, $assetsDir . "/" . $asset)) {
         $copied[] = $asset;

@@ -6,8 +6,9 @@ configure, operate, monitor, reconcile and roll back the flow **after** the rele
 `12-staging-and-release-plan.md` are satisfied. It is written for the shop operator (daily work) and
 for the developer (configuration, migrations, failure handling).
 
-Reading order: `09-qa-test-matrix.md` (what was executed), `10-security-review.md` (findings, incl. the
-open P1 SEC-01), `12-staging-and-release-plan.md` (gates, prerequisites, rollback, verdict).
+Reading order: historical reports `09-qa-test-matrix.md` and `10-security-review.md`, the subsequent
+fixture retest `13-security-hardening-retest.md`, and `12-staging-and-release-plan.md` (release gates).
+The historical P1 operator override was changed, but the provider contract and release gates remain open.
 
 ---
 
@@ -19,7 +20,7 @@ open P1 SEC-01), `12-staging-and-release-plan.md` (gates, prerequisites, rollbac
 | Provider callback endpoint | **Reachable but harmless** — records an event, never credits; returns `503 not_configured` while no partner key is set | `api/callback-gtf-card.php` |
 | Reconciliation worker | **Inert** — refuses unless the channel is configured | `cron/gtf-card.php` |
 | Automatic crediting | **Locked** — a provider-confirmed card is parked as `REVIEW / credit_locked_pending_contract` | `GTF_ALLOW_CREDITING=false` |
-| Operator credit (admin UI "Cộng tiền") | **Refuses** while locked (throws a domain error) — this is by design, not a bug | `ajaxs/admin/gtf.php` → `GtfCardService::credit()` |
+| Operator credit | No direct amount override in the UI. The old action rechecks the provider and cannot directly credit a typed amount; it refuses while locked. | `ajaxs/admin/gtf.php` → `GtfCardService::adminCredit()` |
 | Bank transfer / top-up | **Not implemented** — no contract; every operation throws, worker is a no-op | `libs/gtf_bank.php`, `cron/gtf-bank.php` |
 | Database tables | **Not created** until the migration is run (the views show "migration not run" instead of failing) | `scripts/migrate-gtf.php` |
 | Legacy card path (`card24h()`), TheSieuRe, payOS | **Unchanged** by this work | — |
@@ -167,16 +168,16 @@ For each order, read `reason` and act:
 | `cannot_open_card_data` / `card_data_unavailable` | Stored card data could not be decrypted (see §6 rotation caveat) | Verify `SECRET_KEY`; if it was rotated, the card must be handled manually |
 | `submit_transport_unknown`, `check_unavailable` (status `UNKNOWN`) | Ambiguous outcome — the card **may** already be accepted | Never mark failed. Re-run reconciliation; escalate if it stays UNKNOWN beyond the agreed window |
 
-**Recording rule:** the admin actions (`card_credit`, `card_resolve`, `card_reconcile`) currently write a
-shop `logs` row only for the first two (SEC-06). Until that is fixed, every reconciliation action must
-also be recorded in the operating log/ticket with: order id, `request_id`, action, amount, actor, reason.
+**Recording rule:** these admin actions now attempt a shop `logs` insert, including reconciliation.
+That insert is separate from the money transaction and its success is not guaranteed; maintain a
+separate controlled operations log/ticket with order id, action, actor and reason. Never store secrets.
 
 ### 5.3 Manual actions (admin screen: *Nạp tiền → GachtheFast*)
 
 | Button | Effect | Caveat |
 | --- | --- | --- |
-| **Đối soát** | Re-queries the provider for that order and applies the outcome | Writes no `logs` row (SEC-06) — record it manually |
-| **Cộng tiền** | Operator credit for a review order | Refuses while crediting is locked. **After unlock: SEC-01 means the typed amount is what moves** — do not enable crediting until it is fixed; meanwhile always type the order's declared amount |
+| **Đối soát** | Re-queries the provider for that order and applies its outcome | A log insert is attempted separately; the contract and response authenticity remain unverified. |
+| **Cộng tiền** | Direct manual amount override removed from the UI | The legacy action only rechecks the provider; status 2 remains in review and cannot be manually credited by this action. |
 | **Đánh dấu lỗi** | Terminal `REJECTED`, wipes sealed data | Only when the card is genuinely invalid/settled outside the system |
 
 ### 5.4 What "ambiguous" means (and why nothing auto-fails)
@@ -325,7 +326,7 @@ because the GTF additions are additive lines.
 | --- | --- | --- |
 | `503 not_configured` on the callback URL | `GTF_PARTNER_KEY` not set | expected before S2; after S2 re-check the env and the provider's callback registration |
 | Nav link/page missing | `GTF_CARD_ENABLED=false` (or `GTF_API_BASE`/`GTF_CARD_REQUEST_FORMAT` blank) | expected; see §3 |
-| "Cộng tiền" fails with a domain error | crediting locked (`GTF_ALLOW_CREDITING=false`) | expected fail-closed behaviour |
+| Legacy `card_credit` action fails | locked or order is not in a checked review state | Expected fail-closed behaviour; the admin UI no longer exposes a direct credit button. |
 | Admin page shows "Chưa chạy migration GachtheFast" | tables missing | run §4 (after approval) |
 | Orders stuck at `CREATING`/`PENDING` | worker not scheduled, or provider unreachable | run `php cron/gtf-card.php`, read the counters and the error log |
 | Orders piling at `UNKNOWN` | provider/network trouble | check provider status; they will retry; reconcile manually if urgent |

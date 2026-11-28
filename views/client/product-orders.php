@@ -104,7 +104,9 @@ if ($storeFrom !== "" || $storeTo !== "") {
     $storePagerQuery["time"] = (string) $_GET["time"];
 }
 $storePageHref = function ($page) use ($storePagerQuery) {
-    return BASE_URL("product-orders") . "?" . http_build_query(array_merge($storePagerQuery, array("page" => (int) $page)));
+    return BASE_URL("index.php") . "?" . http_build_query(array_merge(
+        array("module" => "client", "action" => "product-orders"), $storePagerQuery, array("page" => (int) $page)
+    ));
 };
 
 $storeShell = array(
@@ -135,7 +137,9 @@ store_shell_open($storeShell);
     </div>
     <?php } ?>
 
-    <form class="toolbar orders-filter" method="get" action="<?php echo store_e(BASE_URL("product-orders")); ?>">
+    <form class="toolbar orders-filter" method="get" action="<?php echo store_e(BASE_URL("index.php")); ?>">
+      <input type="hidden" name="module" value="client">
+      <input type="hidden" name="action" value="product-orders">
       <div class="field">
         <label class="field__label" for="order-code">Mã đơn hàng</label>
         <input class="input" id="order-code" type="text" name="trans_id" autocomplete="off"

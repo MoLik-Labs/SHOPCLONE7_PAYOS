@@ -24,7 +24,7 @@ class DB
     public function site($key)
     {
         $map = array(
-            "title" => "Orbit Shop",
+            "title" => "MoLik Studio",
             "description" => "Shop bán tài khoản & licence",
             "keywords" => "shop, licence",
             "currency" => "VND",
@@ -639,7 +639,7 @@ if (!function_exists("preview_fixtures")) {
                 "content" => base64_encode(
                     "<p><strong>Ngân hàng:</strong> Vietcombank — Chi nhánh Sài Gòn</p>"
                     . "<p><strong>Số tài khoản:</strong> 0000 1111 2222 3333</p>"
-                    . "<p><strong>Chủ tài khoản:</strong> ORBIT OFFICE</p>"
+                    . "<p><strong>Chủ tài khoản:</strong> TÀI KHOẢN MẪU</p>"
                     . "<p><strong>Nội dung chuyển khoản:</strong> {username} - {id}</p>"
                     . "<p>Ghi đúng nội dung để hệ thống đối chiếu. Sau khi chuyển, gửi ảnh giao dịch cho "
                     . "<a href=\"mailto:{email}\">{email}</a> nếu số dư chưa cập nhật trong 15 phút.</p>"

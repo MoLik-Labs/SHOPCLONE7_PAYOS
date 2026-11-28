@@ -287,10 +287,12 @@ check("no third-party script or font", stripos($html, "cdnjs") === false && stri
     && stripos($html, "fonts.googleapis") === false);
 check("the page loads the store shell", strpos($html, 'data-theme="light"') !== false && strpos($html, "store.css") !== false);
 
-/* filter form is a clean GET to the rewritten route */
-check("the filter posts back to /product-orders with a real query",
-    strpos($html, 'action="https://shop.example/product-orders"') !== false
+/* GET filters must reach index.php directly: Apache pretty rewrites drop incoming query strings. */
+check("order filters submit to the index with an explicit route",
+    strpos($html, 'action="https://shop.example/index.php"') !== false
+    && strpos($html, 'name="action" value="product-orders"') !== false
     && strpos($html, 'name="trans_id"') !== false && strpos($html, 'type="date"') !== false);
+check("order pagination uses the index route", strpos($html, 'index.php?module=client&amp;action=product-orders&amp;') !== false);
 
 /* --- one order ----------------------------------------------------------- */
 
@@ -302,6 +304,9 @@ check("one h1 on the order", substr_count($detail, "<h1") === 1);
 check("the order code is the heading", strpos($detail, "#A1B2C3") !== false);
 check("the account rows are printed", strpos($detail, "user1@example.com|pass-1") !== false
     && strpos($detail, "user2@example.com|pass-2") !== false);
+check("account filter submits the order id on the index route", strpos($detail, 'action="https://shop.example/index.php"') !== false
+    && strpos($detail, 'name="action" value="product-order"') !== false
+    && strpos($detail, 'name="trans_id" value="A1B2C3"') !== false);
 check("each account has a UID and a copy control", strpos($detail, "U001") !== false
     && substr_count($detail, "data-copy-value=") === 2);
 check("the delivery note from the product is printed", strpos($detail, "Đổi mật khẩu sau lần đăng nhập đầu tiên.") !== false);

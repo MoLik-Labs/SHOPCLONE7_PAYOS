@@ -7,6 +7,7 @@ $body = ["title" => "Settings", "desc" => "CMSNT Panel", "keyword" => "cmsnt, CM
 $body["header"] = "\n<!-- ckeditor -->\n<script src=\"" . BASE_URL("public/ckeditor/ckeditor.js") . "\"></script>\n<!-- Thêm CSS của CodeMirror -->\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/codemirror/lib/codemirror.min.css") . "\">\n\n<!-- Thêm JavaScript của CodeMirror -->\n<script src=\"" . BASE_URL("public/common/vendor/codemirror/lib/codemirror.min.js") . "\"></script>\n<link rel=\"stylesheet\" href=\"" . BASE_URL("public/common/vendor/codemirror/theme/monokai.min.css") . "\">\n<!-- Mode HTML mixed (hỗ trợ HTML, CSS và JS) -->\n<script src=\"" . BASE_URL("public/common/vendor/codemirror/mode/htmlmixed/htmlmixed.min.js") . "\"></script>\n<!-- Mode cho CSS -->\n<script src=\"" . BASE_URL("public/common/vendor/codemirror/mode/css/css.min.js") . "\"></script>\n<!-- Mode cho JavaScript -->\n<script src=\"" . BASE_URL("public/common/vendor/codemirror/mode/javascript/javascript.min.js") . "\"></script>\n<!-- Mode cho XML (cần cho HTML) -->\n<script src=\"" . BASE_URL("public/common/vendor/codemirror/mode/xml/xml.min.js") . "\"></script>\n\n";
 $body["footer"] = "\n \n";
 require_once __DIR__ . "/../../models/is_admin.php";
+require_once __DIR__ . "/../../libs/brand_identity.php";
 require_once __DIR__ . "/header.php";
 require_once __DIR__ . "/sidebar.php";
 require_once __DIR__ . "/nav.php";
@@ -110,7 +111,7 @@ if(isset($_POST["SaveSettings"])) {
         $knownSettings[(string) $settingRow["name"]] = true;
     }
     foreach ($_POST as $key => $value) {
-        if (!is_string($key) || !isset($knownSettings[$key]) || !is_scalar($value)) {
+        if (!is_string($key) || !isset($knownSettings[$key]) || orbit_brand_setting_locked($key) || !is_scalar($value)) {
             continue;
         }
         $CMSNT->update("settings", ["value" => (string) $value], " `name` = '" . addslashes($key) . "' ");
@@ -140,9 +141,7 @@ echo "</td>\n                                                                <td
 echo $CMSNT->site("keywords");
 echo "</textarea>\n                                                                </td>\n                                                            </tr>\n                                                            <tr>\n                                                                <td>";
 echo __("Author");
-echo "</td>\n                                                                <td>\n                                                                    <input type=\"text\" name=\"author\"\n                                                                        value=\"";
-echo $CMSNT->site("author");
-echo "\"\n                                                                        class=\"form-control\">\n                                                                </td>\n                                                            </tr>\n                                                            <tr>\n                                                                <td>";
+echo "</td>\n                                                                <td>MoLik Studio</td>\n                                                            </tr>\n                                                            <tr>\n                                                                <td>";
 echo __("Timezone");
 echo "</td>\n                                                                <td>\n                                                                    <input type=\"text\" name=\"timezone\"\n                                                                        value=\"";
 echo $CMSNT->site("timezone");

@@ -255,7 +255,7 @@ check("the enabled payment method is offered", strpos($html, "Ngân hàng") !== 
 check("a disabled method is not offered", stripos($html, "MOMO") === false);
 check("contact details come from settings", strpos($html, "0909 123 456") !== false
     && strpos($html, "support@orbit.example") !== false);
-check("the owner credit is present", strpos($html, "Orbit Office") !== false);
+check("the studio credit is present", strpos($html, "MoLik Studio") !== false);
 
 /* --- no invented trust signals ------------------------------------------- */
 check("no hardcoded star rating", strpos($html, "icofont-star") === false
@@ -336,6 +336,85 @@ check("no menu queries categories per parent any more", strpos($nav, "parent_id`
 check("both the megamenu and the mobile menu render the grouped tree",
     substr_count($nav, 'foreach ($navParents as $category)') === 2);
 check("the flat footer menu still lists the categories", strpos($nav, "parent_id` != 0") !== false);
+
+/* Regression: malformed legacy discount rows must agree in the hero and in the catalogue. */
+$CMSNT->products[0]["discount"] = 150;
+ob_start();
+include __DIR__ . "/../views/client/home.php";
+$discountHtml = ob_get_clean();
+$heroHtml = '';
+if (preg_match('~<aside class="hero__panel".*?</aside>~s', $discountHtml, $heroMatch)) {
+    $heroHtml = $heroMatch[0];
+}
+check("hero clamps an over-100 percent discount", strpos($heroHtml, '-60.000') === false
+    && strpos($heroHtml, 'đã giảm 150%') === false && strpos($heroHtml, 'đã giảm 100%') !== false
+    && preg_match('~Netflix 1 tháng.*?hero__item-price">\s*0đ\s*<small>đã giảm 100%</small>~s', $heroHtml) === 1);
+
+/* Request arrays must not trigger warnings or select an arbitrary page/category. */
+$_GET = array("page" => array("2"), "category" => array("1"), "keyword" => array("x"),
+    "slug" => array("x"), "sort" => array("name"));
+$requestWarnings = array();
+set_error_handler(function ($severity, $message) use (&$requestWarnings) { $requestWarnings[] = $message; return true; });
+$CMSNT->queries = array();
+ob_start();
+include __DIR__ . "/../views/client/home.php";
+$arrayHtml = ob_get_clean();
+restore_error_handler();
+$requestQuery = implode("\n", $CMSNT->queries);
+check("array request parameters fall back without warnings", empty($requestWarnings)
+    && strpos($requestQuery, "LIMIT 0,6") !== false && strpos($requestQuery, "`category_id` = 1") === false);
+
+$_GET = array("page" => "999");
+$CMSNT->queries = array();
+ob_start();
+include __DIR__ . "/../views/client/home.php";
+ob_end_clean();
+check("page beyond the last queries the last real page", strpos(implode("\n", $CMSNT->queries), "LIMIT 36,6") !== false);
+
+$_GET = array("page" => "2");
+$CMSNT->stock = array();
+ob_start();
+include __DIR__ . "/../views/client/home.php";
+$emptyPageHtml = ob_get_clean();
+check("an all-sold-out page explains this page is empty and retains pagination", strpos($emptyPageHtml, "Trang này chưa có sản phẩm còn hàng") !== false
+    && strpos($emptyPageHtml, "Thử chuyển sang trang khác") !== false
+    && strpos($emptyPageHtml, 'aria-label="Phân trang"') !== false);
+
+$CMSNT->products[0]["supplier_id"] = 123;
+$CMSNT->products[0]["api_stock"] = -1;
+ob_start();
+include __DIR__ . "/../views/client/home.php";
+$negativeStockHtml = ob_get_clean();
+check("negative supplier stock is hidden when sold-out products are hidden", strpos($negativeStockHtml, "Trang này chưa có sản phẩm còn hàng") !== false
+    && strpos($negativeStockHtml, 'class="product-card"') === false);
+$CMSNT->products[0]["supplier_id"] = 0;
+$CMSNT->products[0]["api_stock"] = 0;
+$CMSNT->stock = array("P1" => 10);
+$CMSNT->products[0]["slug"] = 'bad" onmouseover="alert(1)';
+$CMSNT->categories[0]["slug"] = 'category" onmouseover="alert(2)';
+ob_start();
+include __DIR__ . "/../views/client/home.php";
+$slugHtml = ob_get_clean();
+check("product and category slugs cannot inject HTML attributes", strpos($slugHtml, 'onmouseover="alert(') === false
+    && strpos($slugHtml, 'bad%22%20onmouseover%3D%22alert%281%29') !== false
+    && strpos($slugHtml, 'category%22%20onmouseover%3D%22alert%282%29') !== false);
+
+/* Pretty-route rewrites replace query strings in this repository's Apache configuration. */
+$pager = store_pager(1, 40, 6, array("keyword" => "test", "action" => "wrong"), "client/home");
+check("pager keeps route and filters on the index entry point", strpos($pager, 'index.php?module=client&amp;action=home&amp;keyword=test&amp;page=2') !== false);
+check("home sort submits to index with an explicit route", strpos($html, 'action="https://shop.example/index.php#san-pham"') !== false
+    && strpos($html, 'name="action" value="home"') !== false);
+check("both search forms submit an explicit home route", substr_count($html, 'name="action" value="home"') >= 3);
+
+/* The tools route is owner-controlled; navigation must reflect the switch on all shell pages. */
+$CMSNT->values["status_menu_tools"] = "1";
+$_GET = array("action" => "tool-2fa");
+$toolsNav = store_nav_default($CMSNT, array());
+$toolsItems = array_values(array_filter($toolsNav, function ($item) { return $item["href"] === BASE_URL("client/tools"); }));
+check("enabled tools are discoverable and current on a tool page", count($toolsItems) === 1 && $toolsItems[0]["current"] === true);
+$CMSNT->values["status_menu_tools"] = "0";
+$toolsNav = store_nav_default($CMSNT, array());
+check("disabled tools are absent from navigation", count(array_filter($toolsNav, function ($item) { return $item["href"] === BASE_URL("client/tools"); })) === 0);
 
 echo "\nstorefront_test: " . $pass . " passed, " . $fail . " failed\n";
 exit($fail > 0 ? 1 : 0);

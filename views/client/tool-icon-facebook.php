@@ -69,27 +69,45 @@ store_shell_open($storeShell);
 (function () {
   "use strict";
   var status = document.querySelector("[data-emoji-status]");
-  /* Fallback for browsers without the Clipboard API: a visually hidden textarea, styled by .sr-only
-     (no inline styles, so the page keeps a strict style-src policy open). */
+  /* The fallback only takes focus during the copy attempt, then returns it to the button. */
   var field = document.createElement("textarea");
   field.setAttribute("readonly", "");
+  field.setAttribute("tabindex", "-1");
+  field.setAttribute("aria-label", "Nội dung cần sao chép");
   field.className = "sr-only";
   document.body.appendChild(field);
   document.querySelectorAll("[data-emoji]").forEach(function (button) {
     button.addEventListener("click", function () {
       var value = button.getAttribute("data-emoji");
-      field.value = value;
-      field.select();
       var done = function () {
         if (status) {
           status.textContent = "Đã chép " + value;
         }
       };
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(value).then(done);
+      var fallback = function () {
+        var copied = false;
+        try {
+          field.value = value;
+          field.select();
+          copied = document.execCommand("copy");
+        } catch (error) {
+          copied = false;
+        }
+        button.focus();
+        if (copied) {
+          done();
+        } else if (status) {
+          status.textContent = "Không chép được. Kiểm tra quyền bộ nhớ tạm.";
+        }
+      };
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        try {
+          navigator.clipboard.writeText(value).then(done, fallback);
+        } catch (error) {
+          fallback();
+        }
       } else {
-        document.execCommand("copy");
-        done();
+        fallback();
       }
     });
   });

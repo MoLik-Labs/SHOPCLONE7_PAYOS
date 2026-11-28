@@ -171,7 +171,10 @@ store_shell_open($storeShell);
         </div>
 
         <form class="toolbar order-account-filter" method="get"
-          action="<?php echo store_e(BASE_URL("product-order/" . $order["trans_id"])); ?>">
+          action="<?php echo store_e(BASE_URL("index.php")); ?>">
+          <input type="hidden" name="module" value="client">
+          <input type="hidden" name="action" value="product-order">
+          <input type="hidden" name="trans_id" value="<?php echo store_e($order["trans_id"]); ?>">
           <div class="field">
             <label class="field__label" for="order-account">Tìm tài khoản</label>
             <input class="input" id="order-account" type="search" name="account" autocomplete="off"
@@ -224,11 +227,12 @@ store_shell_open($storeShell);
             "per_page" => $storeLimit,
             "page" => $storeState["page"],
             "href" => function ($page) use ($order, $storeLimit, $storeAccount) {
-                $query = array("limit" => $storeLimit, "page" => (int) $page);
+                $query = array("module" => "client", "action" => "product-order", "trans_id" => $order["trans_id"],
+                    "limit" => $storeLimit, "page" => (int) $page);
                 if ($storeAccount !== "") {
                     $query["account"] = $storeAccount;
                 }
-                return BASE_URL("product-order/" . $order["trans_id"]) . "?" . http_build_query($query);
+                return BASE_URL("index.php") . "?" . http_build_query($query);
             },
             "aria" => "Phân trang tài khoản",
             "labels" => array("summary" => "Trang %page%/%pages% · %total% tài khoản"),

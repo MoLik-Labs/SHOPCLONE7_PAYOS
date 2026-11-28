@@ -50,7 +50,7 @@ sheet without JavaScript, self-hosted fonts, no third-party request. Do not dupl
 | Breadcrumbs | `<nav aria-label="Đường dẫn"><ol class="breadcrumbs"><li>…</li></ol></nav>` — the component styles `li`, not the `nav` |
 | Blog list | `.blog-list` → `.blog-item` (+`__media`, `__body`, `__meta`, `__title`, `__desc`, `__more`), `.blog-side` for "Đọc nhiều" |
 | Money | `format_currency()` for money, `format_cash()` for counts |
-| Pager | `orbit_pagination()` from `views/common/pagination.php` (never `store_pager()`: its hrefs point at the home page) |
+| Pager | `orbit_pagination()` for explicit links, or `store_pager()` with the correct client path; preserve filters on the direct index route |
 
 Use the components that exist: `.btn` (`--primary`, `--ghost`, `--danger`, `--sm`, `--lg`, `--block`),
 `.field`/`.input`/`.select`, `.alert--ok|warn|danger`, `.pill`, `.kv`, `.breadcrumbs`, `.segmented`,
@@ -89,17 +89,22 @@ Use the components that exist: `.btn` (`--primary`, `--ghost`, `--danger`, `--sm
 ## 5. Verify before claiming done
 
 ```bash
-# 1. Render every page with sample data and run the class/asset checks
-node .harness/phpcl.mjs tools/preview-build.php
-# 2. Look at 1440, 768 and 390 px (the harness serves the preview over HTTP itself)
-LD_LIBRARY_PATH=/tmp/al2023/lib node .harness/browser.mjs /tmp/shots \
-    docs/frontend/preview/<page>.html --widths=1440,768,390
-# 3. Read the report: page overflow must be 0 bytes, console errors 0, failed requests 0
-#    (file:// shots always show a blocked font request — that is the harness, not the page)
-# 4. Run the page test and the whole sweep
-node .harness/phpcl.mjs tests/<page>_test.php
-bash .harness/run.sh "$PWD" .harness/specs/all.json
+# Render fixture pages outside the tracked documentation preview.
+node tools/dev/phpcl.mjs tools/preview-build.php --out=/tmp/shopclone7-preview
+# Prepare Chromium once (after npm install --prefix tools/dev), then audit and exercise fixtures.
+bash tools/dev/setup-chromium.sh
+LD_LIBRARY_PATH=/tmp/al2023/lib node tools/dev/browser-audit.cjs
+LD_LIBRARY_PATH=/tmp/al2023/lib node tools/dev/browser-interactions.cjs
+# Run the applicable page suite and the full regression gate.
+node tools/dev/phpcl.mjs tests/<page>_test.php
+bash tools/dev/run.sh
 ```
+
+The browser audit checks 1440 and 390 pixel fixture renders for document overflow, a single `h1`,
+simple form labels, named buttons, browser errors and failed HTTP requests. It is not an accessibility
+certification or a test of live routing, real database content, all interactions or payment providers.
+The interaction script explicitly simulates clipboard denial. The builder's default output modifies
+tracked preview files; use `--out` unless deliberately updating and reviewing that artifact.
 
 A page is not done until the rendered HTML has: one `h1`, no inline style, no third-party host, no
 PHP warning, a working empty state and a visible focus ring.
@@ -114,7 +119,7 @@ PHP warning, a working empty state and a visible focus ring.
 - The preview is a build artifact. Regenerate it after any view/CSS change before reviewing.
 - Owner HTML (FAQ, policy, manual) is not rewritten; style it with scoped `.page-content .prose …`
   rules. A plain `<h2>` inside running text inherits the page-title size unless `.prose h2` overrides it.
-- Screenshot `file://` pages and the font is CORS-blocked; `.harness/browser.mjs` serves the preview
+- Screenshot `file://` pages and the font is CORS-blocked; `tools/dev/browser.mjs` serves the preview
   over HTTP for exactly this reason.
 - The footer legal line must name the shop, not the page title: `store_shell_close()` resolves it from
   `site("title")` (bug found while reviewing `blogs.html`).

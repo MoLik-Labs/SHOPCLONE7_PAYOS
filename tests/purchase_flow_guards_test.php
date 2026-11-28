@@ -156,14 +156,14 @@ check_flow('the API counts delivered units, not requested ones, as sold',
 $api = (string) file_get_contents($root . '/api/api.php');
 check_flow('get-services returns every category, not the last one built',
     strpos($api, '"data" => $data_category') !== false);
-check_flow('the action API accepts api_key as well as apikey',
-    strpos($api, '$_GET["api_key"]') !== false && strpos($api, '$apiKey') !== false);
+check_flow('the action API accepts both legacy key names and header authentication',
+    strpos($api, 'orbit_api_credential(["apikey", "api_key"], false)') !== false);
 check_flow('a missing action no longer reaches an undefined index',
     strpos($api, '$apiAction = isset($_GET["action"])') !== false);
 
 $guide = (string) file_get_contents($root . '/views/client/document-api.php');
 check_flow('the API guide documents the create-order endpoint that exists',
-    strpos($guide, 'api/api.php?apikey=') !== false && strpos($guide, 'action=create-order') !== false);
+    strpos($guide, 'api/api.php?action=create-order') !== false && strpos($guide, 'X-API-Key') !== false);
 check_flow('the API guide no longer advertises a missing buy_product route',
     strpos($guide, 'api/buy_product') === false);
 

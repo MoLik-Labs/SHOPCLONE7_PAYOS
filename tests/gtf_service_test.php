@@ -24,8 +24,7 @@ if (PHP_SAPI !== "cli" && PHP_SAPI !== "phpdbg") {
  *   GTF_TEST_DB_USER=root GTF_TEST_DB_PASS=secret \
  *   php tests/gtf_service_test.php
  *
- * STATUS: NOT RUN. There is no PHP runtime and no MySQL server in the sandbox where this was
- * written, so this suite is UNEXECUTED until someone runs the command above.
+ * See docs/gachthefast/13-security-hardening-retest.md for the recorded isolated runs and limits.
  */
 
 if (!defined('IN_SITE')) {
@@ -133,10 +132,16 @@ final class FakeCardGateway implements GtfCardGateway
     public $checks = 0;
     public $lastCheckTelco = '';
     public $lastCheckAmount = '';
+    public $onSubmit = null;
 
     public function submit(string $telco, string $amount, string $code, string $serial, string $requestId): array
     {
         $this->submits++;
+        if ($this->onSubmit !== null) {
+            $hook = $this->onSubmit;
+            $this->onSubmit = null;
+            $hook($requestId);
+        }
         if ($this->submitError) {
             throw new RuntimeException('mock transport failure');
         }
@@ -195,7 +200,7 @@ $db->exec("CREATE TABLE `gtf_ledger` (`id` BIGINT NOT NULL AUTO_INCREMENT, `tran
     `reason` VARCHAR(255) NOT NULL DEFAULT '', `created_at` DATETIME NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `transid` (`transid`)) ENGINE=InnoDB");
 $db->exec("CREATE TABLE `gtf_events` (`id` BIGINT NOT NULL AUTO_INCREMENT, `flow` VARCHAR(16) NOT NULL, `order_id` BIGINT NULL,
     `direction` VARCHAR(16) NOT NULL, `event_key` CHAR(64) NOT NULL, `provider_status` VARCHAR(32) NULL, `provider_ref` VARCHAR(64) NULL,
-    `created_at` DATETIME NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `event_key` (`event_key`)) ENGINE=InnoDB");
+    `created_at` DATETIME NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `gtf_event_key` (`flow`,`order_id`,`direction`,`event_key`)) ENGINE=InnoDB");
 
 $cardGateway = new FakeCardGateway();
 $card = new GtfCardService($db, $cardGateway, gtf_config());
@@ -212,9 +217,7 @@ checkSame('a provider-confirmed card is parked, not credited', 'review', $card->
 checkSame('the parked order records why', 'credit_locked_pending_contract', $card->find($locked['request_id'])['reason']);
 checkSame('the wallet is untouched while crediting is locked', '0.00', wallet($db, 1));
 checkSame('no ledger row is written while crediting is locked', 0, countRows($db, 'gtf_ledger'));
-checkThrows('credit() refuses while the lock is closed', function () use ($card, $locked) {
-    $card->credit($card->find($locked['request_id']), '100000', 'provider_confirmed');
-});
+check('the internal credit routine cannot be called directly', (new ReflectionMethod('GtfCardService', 'credit'))->isPrivate());
 checkThrows('operator credit refuses while the lock is closed', function () use ($card, $locked) {
     $card->adminCredit((int) $card->find($locked['request_id'])['id'], '100000', 'manual');
 });
@@ -274,7 +277,7 @@ checkSame('a replayed callback is recognised', 'already_credited', $card->callba
 checkSame('a second replay is recognised', 'already_credited', $card->callback($replay));
 checkSame('the wallet is unchanged by replays', '100000.00', wallet($db, 1));
 checkSame('the ledger still has one row', 1, countRows($db, 'gtf_ledger'));
-checkSame('calling credit() again is a no-op', 'already_credited', $card->credit($card->find($created['request_id']), '100000', 'provider_confirmed'));
+checkSame('reconciling again is a no-op', 'already_credited', $card->reconcile($card->find($created['request_id']), true));
 
 // --- C5: callbacks are never trusted for money ------------------------------
 section('C5 a callback never decides money');
@@ -288,15 +291,45 @@ checkSame('a valid signature alone does not credit', 'pending', $card->callback(
 ]));
 checkSame('the wallet is untouched after the callback', $before, wallet($db, 1));
 checkSame('the order is still open', null, $card->find($second['request_id'])['credited_at']);
-checkThrows('a forged signature is rejected', function () use ($card, $second) {
-    $card->callback(['request_id' => $second['request_id'], 'callback_sign' => str_repeat('a', 32), 'code' => 'PIN9998887', 'serial' => 'SERI999888', 'status' => '1']);
-});
+$eventCount = countRows($db, 'gtf_events');
+$checkCount = $cardGateway->checks;
+for ($i = 0; $i < 20; ++$i) {
+    checkThrows('a forged signature is rejected', function () use ($card, $second, $i) {
+        $card->callback(['request_id' => $second['request_id'], 'callback_sign' => str_repeat('a', 32), 'code' => 'PIN9998887', 'serial' => 'SERI999888', 'status' => (string) $i]);
+    });
+}
+checkSame('forged callbacks do not write events', $eventCount, countRows($db, 'gtf_events'));
+checkSame('forged callbacks do not call the provider', $checkCount, $cardGateway->checks);
 checkSame('a forged callback credits nothing', $before, wallet($db, 1));
-checkSame('an unknown order is ignored', 'ignored', $card->callback([
-    'request_id' => 'ZZZZZZ1700000000', 'callback_sign' => GtfCardClient::sign('test-key', 'PIN9998887', 'SERI999888'),
-    'code' => 'PIN9998887', 'serial' => 'SERI999888', 'status' => '1',
+for ($i = 0; $i < 3; ++$i) {
+    checkSame('an unknown order is ignored', 'ignored', $card->callback([
+        'request_id' => 'ZZZZZZ1700000000', 'callback_sign' => GtfCardClient::sign('test-key', 'PIN9998887', 'SERI999888'),
+        'code' => 'PIN9998887', 'serial' => 'SERI999888', 'status' => '1',
+    ]));
+}
+checkSame('unknown orders do not create unbound events', $eventCount, countRows($db, 'gtf_events'));
+checkThrows('a signature for another card cannot trigger a check on this order', function () use ($card, $second) {
+    $card->callback(['request_id'=>$second['request_id'], 'callback_sign'=>GtfCardClient::sign('test-key', 'PINOTHER99', 'SEROTHER99'),
+        'code'=>'PINOTHER99', 'serial'=>'SEROTHER99', 'status'=>'1']);
+});
+checkSame('cross-card callback did not call the provider', $checkCount, $cardGateway->checks);
+checkSame('cross-card callback did not write an event', $eventCount, countRows($db, 'gtf_events'));
+for ($i = 0; $i < 5; ++$i) {
+    checkSame('immediate replay is throttled', 'busy', $card->callback(['request_id'=>$second['request_id'], 'callback_sign'=>GtfCardClient::sign('test-key', 'PIN9998887', 'SERI999888'),
+        'code'=>'PIN9998887', 'serial'=>'SERI999888', 'status'=>(string)$i, 'trans_id'=>'CHANGED'.$i]));
+}
+checkSame('tampered unsigned status and reference cannot amplify callback event writes', $eventCount, countRows($db, 'gtf_events'));
+checkSame('immediate callback replays do not amplify provider checks', $checkCount, $cardGateway->checks);
+$db->prepare('UPDATE gtf_card_orders SET provider_checked_at=DATE_SUB(NOW(), INTERVAL 20 SECOND) WHERE request_id=?')->execute([$second['request_id']]);
+checkSame('a later callback can be verified after the cooldown', 'pending', $card->callback([
+    'request_id'=>$second['request_id'], 'callback_sign'=>GtfCardClient::sign('test-key', 'PIN9998887', 'SERI999888'),
+    'code'=>'PIN9998887', 'serial'=>'SERI999888', 'status'=>'1',
 ]));
-check('callbacks are recorded for audit', countRows($db, 'gtf_events') >= 3);
+checkSame('a later callback triggers one new provider check', $checkCount + 1, $cardGateway->checks);
+checkSame('a later callback remains one audit event per order', $eventCount, countRows($db, 'gtf_events'));
+checkThrows('nested callback fields are rejected without a PHP warning', function () use ($card, $second) {
+    $card->callback(['request_id'=>$second['request_id'], 'callback_sign'=>['bad'], 'code'=>'PIN9998887', 'serial'=>'SERI999888']);
+});
 
 // --- C6: conflicts are parked ----------------------------------------------
 section('C6 amount conflicts and unbound answers are parked');
@@ -353,16 +386,18 @@ checkSame('the order is REJECTED', 'REJECTED', $card->find($holder['request_id']
 checkSame('nothing is credited', $before, wallet($db, 1));
 
 // --- C10: operator credit ----------------------------------------------------
-section('C10 an operator credit is idempotent');
+section('C10 an operator rechecks instead of choosing a credit amount');
 seed($db);
 $cardGateway->submitResult = ['status' => '99'];
 $parked = $card->create(1, ['telco' => 'VIETTEL', 'amount' => '100000', 'serial' => 'SERI121212', 'pin' => 'PIN1212121']);
 $cardGateway->checkResult = ['status' => '2', 'value' => '90000', 'amount' => '90000', 'declared_value' => '90000', 'request_id' => $parked['request_id']];
 checkSame('status 2 goes to manual review', 'review', $card->reconcile($card->find($parked['request_id']), true));
 $cardRow = $card->find($parked['request_id']);
-checkSame('the operator credit succeeds once', 'credited', $card->adminCredit((int) $cardRow['id'], '100000', 'checked by hand'));
-checkSame('the wallet receives the operator amount', '100000.00', wallet($db, 1));
-checkThrows('the operator credit cannot run twice', function () use ($card, $cardRow) {
+checkSame('operator cannot override ambiguous provider result', 'review', $card->adminCredit((int) $cardRow['id'], '100000', 'checked by hand'));
+checkSame('the wallet is unchanged', '0.00', wallet($db, 1));
+$cardGateway->checkResult = ['status' => '1', 'value' => '100000', 'amount' => '100000', 'declared_value' => '100000', 'request_id' => $parked['request_id']];
+checkSame('a fresh matching provider result credits once', 'credited', $card->adminCredit((int) $cardRow['id'], '100000', 'checked'));
+checkThrows('the operator recheck cannot run twice', function () use ($card, $cardRow) {
     $card->adminCredit((int) $cardRow['id'], '100000', 'again');
 });
 checkSame('the duplicate changed nothing', '100000.00', wallet($db, 1));
@@ -405,6 +440,26 @@ checkSame('the order is still PAID', 'PAID', $card->find($outOfOrder['request_id
 checkSame('the wallet still holds exactly one credit', '100000.00', wallet($db, 1));
 checkSame('the ledger still holds exactly one row for it', 1, (int) $db->query("SELECT COUNT(*) FROM gtf_ledger WHERE transid = 'GTF_CARD_" . $outOfOrder['request_id'] . "'")->fetchColumn());
 
+// A callback can complete while the initial submit() is still waiting for a response.
+section('C12b late submit answers cannot overwrite an already-paid order');
+foreach (['99', '1', '2', '3', '4', '100', 'undocumented', 'timeout'] as $lateStatus) {
+    seed($db);
+    $cardGateway->submitError = $lateStatus === 'timeout';
+    $cardGateway->submitResult = ['status' => $lateStatus];
+    $cardGateway->onSubmit = function ($requestId) use ($cardGateway, $card) {
+        $cardGateway->checkResult = ['status'=>'1', 'value'=>'100000', 'amount'=>'100000', 'declared_value'=>'100000', 'request_id'=>$requestId];
+        if ($card->reconcile($card->find($requestId), true) !== 'credited') { throw new RuntimeException('fixture callback did not credit'); }
+    };
+    $late = $card->create(1, ['telco'=>'VIETTEL', 'amount'=>'100000', 'serial'=>'SERILATE12', 'pin'=>'PINLATE123']);
+    $lateRow = $card->find($late['request_id']);
+    checkSame('late ' . $lateStatus . ' returns confirmed success', 'success', $late['status']);
+    checkSame('late ' . $lateStatus . ' leaves PAID intact', 'PAID', $lateRow['status']);
+    checkSame('late ' . $lateStatus . ' leaves one wallet credit', '100000.00', wallet($db, 1));
+    checkSame('late ' . $lateStatus . ' leaves one ledger row', 1, countRows($db, 'gtf_ledger'));
+}
+$cardGateway->submitError = false;
+$cardGateway->submitResult = ['status' => '99'];
+
 // --- C13: concurrent crediting ------------------------------------------------
 section('C13 two database connections cannot credit the same order twice');
 seed($db);
@@ -421,25 +476,26 @@ check('both workers see the order as creditable', $raceRowOnConn1['credited_at']
 $cardGateway->checkResult = ['status' => '1', 'value' => '50000', 'amount' => '50000', 'declared_value' => '50000', 'request_id' => $race['request_id']];
 checkSame('worker 1 credits the order', 'credited', $card->reconcile($cardRow = $card->find($race['request_id']), true));
 check('worker 1 marked it paid', $card->find($race['request_id'])['credited_at'] !== null);
-checkSame('worker 2, holding a stale row, is refused', 'already_credited', $card2->credit($raceRowOnConn2, '50000', 'provider_confirmed'));
+checkSame('worker 2, holding a stale row, is refused', 'already_credited', $card2->reconcile($raceRowOnConn2, true));
 checkSame('the wallet received exactly one credit', '50000.00', wallet($db, 1));
 checkSame('the ledger holds exactly one row for the raced order', 1, (int) $db->query("SELECT COUNT(*) FROM gtf_ledger WHERE transid = 'GTF_CARD_" . $race['request_id'] . "'")->fetchColumn());
 
 // A held row lock must make a concurrent credit fail cleanly, not half-apply.
 $locked = $card->create(1, ['telco' => 'VINAPHONE', 'amount' => '20000', 'serial' => 'SERI515151', 'pin' => 'PIN5151515']);
 $lockedRow = $card->find($locked['request_id']);
+$cardGateway->checkResult = ['status'=>'1', 'value'=>'20000', 'amount'=>'20000', 'declared_value'=>'20000', 'request_id'=>$locked['request_id']];
 $before = wallet($db, 1);
 $db2->beginTransaction();
 $db2->prepare('SELECT id FROM gtf_card_orders WHERE id = ? FOR UPDATE')->execute([(int) $lockedRow['id']]);
 $db->exec('SET innodb_lock_wait_timeout = 1');
 checkThrows('a credit blocked by another connection fails instead of waiting forever', function () use ($card, $lockedRow) {
-    $card->credit($lockedRow, '20000', 'provider_confirmed');
+    $card->reconcile($lockedRow, true);
 });
 $db->exec('SET innodb_lock_wait_timeout = 50');
 checkSame('the blocked credit moved no money', $before, wallet($db, 1));
 checkSame('the blocked credit wrote no ledger row', 0, (int) $db->query("SELECT COUNT(*) FROM gtf_ledger WHERE transid = 'GTF_CARD_" . $locked['request_id'] . "'")->fetchColumn());
 $db2->rollBack();
-checkSame('once the lock is released the credit succeeds', 'credited', $card->credit($card->find($locked['request_id']), '20000', 'provider_confirmed'));
+checkSame('once the lock is released the credit succeeds', 'credited', $card->reconcile($card->find($locked['request_id']), true));
 checkSame('and it is still exactly once', 1, (int) $db->query("SELECT COUNT(*) FROM gtf_ledger WHERE transid = 'GTF_CARD_" . $locked['request_id'] . "'")->fetchColumn());
 
 // --- C14: redaction ------------------------------------------------------------

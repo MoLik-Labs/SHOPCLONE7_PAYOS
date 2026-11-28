@@ -3,6 +3,8 @@
 if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
+require_once __DIR__ . "/../../libs/brand_identity.php";
+$orbitLegacyLogo = "assets/brand/molik-wordmark-light.svg";
 echo "\n\n";
 if($CMSNT->site("widget_phone1_status") == 1) {
     echo "<div class=\"hotline-phone-ring-wrap\">\n    <div class=\"hotline-phone-ring\">\n        <div class=\"hotline-phone-ring-circle\"></div>\n        <div class=\"hotline-phone-ring-circle-fill\"></div>\n        <div class=\"hotline-phone-ring-img-circle\">\n            <a href=\"tel:";
@@ -42,7 +44,7 @@ if($CMSNT->site("widget_fbzalo2_status") == 1) {
 echo "\n\n<footer class=\"footer-part\">\n    <div class=\"container\">\n        <div class=\"row\">\n            <div class=\"col-sm-6 col-xl-4\">\n                <div class=\"footer-widget\">\n                    <a class=\"footer-logo\" href=\"";
 echo base_url();
 echo "\">\n                        <img src=\"";
-echo BASE_URL($CMSNT->site("logo_light"));
+echo htmlspecialchars(BASE_URL($orbitLegacyLogo), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
 echo "\" alt=\"logo\"></a>\n                    <p class=\"footer-desc\">\n                        ";
 echo $CMSNT->site("description");
 echo "</p>\n                </div>\n            </div>\n            <div class=\"col-sm-6 col-xl-4\">\n                <div class=\"footer-widget contact\">\n                    <h3 class=\"footer-title\">";
@@ -72,9 +74,9 @@ echo base_url("client/document-api");
 echo "\">";
 echo __("Tài liệu API");
 echo "</a></li>\n                        </ul>\n                    </div>\n                </div>\n            </div>\n        </div>\n        <div class=\"row\">\n            <div class=\"col-12\">\n                <div class=\"footer-bottom\">\n                    <p class=\"footer-copytext\">© All Copyrights Reserved by <a href=\"#\">";
-echo $CMSNT->site("title");
+echo htmlspecialchars((string) $CMSNT->site("title"), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
 echo "</a>\n                        | ";
-echo $CMSNT->site("copyright_footer");
+echo '<a href="' . htmlspecialchars(orbit_brand_url(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">MoLik Studio</a>';
 echo "</p>\n                    <div class=\"footer-card\">\n                        ";
 echo $CMSNT->site("footer_card");
 echo "\n\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</footer>\n<script src=\"";

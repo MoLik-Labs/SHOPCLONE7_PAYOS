@@ -1,5 +1,8 @@
 # 09 — QA / backtesting report and test matrix (2026-10-04)
 
+> Historical report for its reviewed revision. For subsequent changes and current isolated fixture
+> retests, including the removal of manual amount overrides, see `13-security-hardening-retest.md`.
+
 **Scope of this pass:** the frozen GachtheFast implementation (`libs/gtf*.php`, `api/callback-gtf-card.php`,
 `ajaxs/{client,admin}/gtf.php`, `cron/gtf-*.php`, `scripts/migrate-gtf.php`, the three `recharge-gtf*`
 views) plus the pre-existing regression suites. Isolated and deterministic only: fake HTTP transports,

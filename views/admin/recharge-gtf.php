@@ -82,9 +82,6 @@ try {
                                             <td><?= $gtfEscape($gtfRow['serial_masked']) ?></td>
                                             <td class="text-nowrap"><?= $gtfEscape($gtfRow['created_at']) ?></td>
                                             <td class="text-nowrap">
-                                                <button class="btn btn-sm btn-success gtf-action"
-                                                        data-action="card_credit" data-order-id="<?= (int) $gtfRow['id'] ?>"
-                                                        data-amount="<?= $gtfEscape($gtfRow['declared_amount']) ?>">Cộng tiền</button>
                                                 <button class="btn btn-sm btn-outline-primary gtf-action"
                                                         data-action="card_reconcile" data-order-id="<?= (int) $gtfRow['id'] ?>">Đối soát</button>
                                                 <button class="btn btn-sm btn-outline-danger gtf-action"
@@ -160,12 +157,6 @@ try {
     document.querySelectorAll('.gtf-action').forEach(function (button) {
         button.addEventListener('click', function () {
             var payload = {action: button.dataset.action, order_id: button.dataset.orderId};
-            if (button.dataset.action === 'card_credit') {
-                var amount = prompt('Số tiền cộng cho đơn này (VND):', button.dataset.amount || '');
-                if (!amount) { return; }
-                payload.amount = amount;
-                payload.note = prompt('Ghi chú (tuỳ chọn):', '') || '';
-            }
             if (button.dataset.action === 'card_resolve') {
                 payload.status = button.dataset.status;
                 payload.note = prompt('Lý do:', '') || '';

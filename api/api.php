@@ -5,20 +5,15 @@ require_once __DIR__ . "/../libs/db.php";
 require_once __DIR__ . "/../config.php";
 require_once __DIR__ . "/../libs/lang.php";
 require_once __DIR__ . "/../libs/helper.php";
+require_once __DIR__ . "/../libs/api_credentials.php";
+orbit_api_no_store();
 require_once __DIR__ . "/../libs/sendEmail.php";
 require_once __DIR__ . "/../libs/suppliers.php";
 require_once __DIR__ . "/../libs/database/users.php";
 $Mobile_Detect = new Mobile_Detect();
 $CMSNT = new DB();
-/* Two names, one credential: the read-only endpoints (api/profile.php, api/products.php, api/product.php)
-   call it `api_key`, this one historically called it `apikey`. Accept either so an integrator can carry
-   one parameter name across the whole API. */
-$apiKey = "";
-if (!empty($_GET["apikey"])) {
-    $apiKey = check_string($_GET["apikey"]);
-} elseif (!empty($_GET["api_key"])) {
-    $apiKey = check_string($_GET["api_key"]);
-}
+/* Prefer X-API-Key; legacy query names remain available unless the operator disables them. */
+$apiKey = check_string(orbit_api_credential(["apikey", "api_key"], false));
 if ($apiKey === "") {
     exit(json_encode(["code" => 201, "msg" => __("Thiếu apikey")]));
 }
@@ -81,10 +76,9 @@ if ($apiAction == "get-balance") { // lấy sô dư
     if ($maxQuantity > 0 && $amount > $maxQuantity) {
         exit(json_encode(["code" => 201, "message" => __("Số lượng cần mua tối đa là") . " " . format_cash($maxQuantity)]));
     }
-    /*
-     * Optional idempotency key. A client whose connection drops after the debit can retry with the
-     * same key and receive the order it already paid for, instead of paying twice. The key is
-     * namespaced by the buyer and hashed, so it can never name another customer's order.
+    /* Optional buyer-scoped correlation key: completed orders may be found by their derived ID.
+     * This lookup is not a durable claim and does not prove a retry is safe after a lost response:
+     * debit, supplier delivery and order insertion do not share one atomic transaction.
      */
     $clientOrderKey = isset($_GET["client_order_id"]) && is_string($_GET["client_order_id"])
         ? trim($_GET["client_order_id"]) : "";
@@ -585,7 +579,8 @@ if ($refundState === "failed") {
         exit(json_encode(["code" => 500, "message" => "ERROR 2 - " . __("Vui lòng thử lại")]));
     }
 } elseif ($apiAction == 'get-order-detail') {
-    if (empty(check_string($_GET["order_id"]))) {
+    $orderId = isset($_GET["order_id"]) && is_string($_GET["order_id"]) ? check_string($_GET["order_id"]) : "";
+    if ($orderId === "") {
         exit(json_encode([
             "code" => 201,
             "message" => __("Mã đơn hàng không hợp lệ"),
@@ -593,17 +588,18 @@ if ($refundState === "failed") {
         ]));
     }
 
+    // One owner-scoped read serves both existence and delivery; no duplicate SELECT *.
+    $errorsBefore = DB::$errors;
+    $soldRows = $CMSNT->get_list("SELECT `account` FROM `product_sold` WHERE `trans_id` = '" . $orderId . "' AND `buyer` = '" . (int) $getUser['id'] . "'");
+    if (DB::$errors !== $errorsBefore) {
+        http_response_code(503);
+        exit(json_encode(["code" => 201, "message" => __("Không thể tra cứu đơn hàng lúc này"), "order" => ["status" => 0, "data" => []]]));
+    }
+    if (!$soldRows) {
+        exit(json_encode(["code" => 201, "message" => __("Mã đơn hàng không hợp lệ"), "order" => ["status" => 0, "data" => []]]));
+    }
     $accounts = [];
-   if (!$CMSNT->get_row("SELECT * FROM `product_sold` WHERE `trans_id` = '" . check_string($_GET["order_id"]) . "' AND `buyer` = '" . $getUser['id'] . "'")) {
-    exit(json_encode([
-        "code" => 201,
-        "message" => __("Mã đơn hàng không hợp lệ"),
-        "order" => ["status" => 0, "data" => []]
-    ]));
-}
-
-    
-    foreach ($CMSNT->get_list("SELECT * FROM `product_sold` WHERE `trans_id` = '" . check_string($_GET["order_id"]) . "' AND `buyer` = '".$getUser['id']."'") as $account_sold) {
+    foreach ($soldRows as $account_sold) {
         $accounts[] = preg_replace("/\r/", "", $account_sold["account"]);
     }
 

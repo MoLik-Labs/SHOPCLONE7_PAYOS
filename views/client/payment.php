@@ -106,7 +106,7 @@ store_shell_open($storeShell);
               <dd><?php echo $storeNetwork !== "" ? store_e($storeNetwork) : "—"; ?></dd>
             </div>
             <div>
-              <dt>Địa chỉ nhận</dt>
+              <dt><label for="invoice-address">Địa chỉ nhận</label></dt>
               <dd class="copy-row">
                 <input class="input" id="invoice-address" type="text" readonly
                   value="<?php echo store_e($storeAddress); ?>">

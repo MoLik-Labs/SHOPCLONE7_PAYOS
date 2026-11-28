@@ -55,8 +55,8 @@ try {
                 throw new DomainException('Số tiền cộng không hợp lệ.');
             }
             $result = $cardService->adminCredit($orderId, $amount, $note);
-            $CMSNT->insert('logs', ['user_id' => $getUser['id'], 'ip' => myip(), 'device' => $Mobile_Detect->getUserAgent(), 'createdate' => gettime(), 'action' => 'GachtheFast card review credit #' . $orderId . ' (' . $result . ')']);
-            gtf_json(['status' => 'success', 'msg' => $result === 'credited' ? 'Đã cộng tiền cho đơn.' : 'Đơn này đã được cộng tiền trước đó.']);
+            $CMSNT->insert('logs', ['user_id' => $getUser['id'], 'ip' => myip(), 'device' => $Mobile_Detect->getUserAgent(), 'createdate' => gettime(), 'action' => 'GachtheFast card review recheck #' . $orderId . ' (' . $result . ')']);
+            gtf_json(['status' => 'success', 'msg' => 'Kết quả đối soát: ' . $result]);
 
         case 'card_resolve':
             $cardService->adminResolve($orderId, strtoupper(trim((string) ($_POST['status'] ?? ''))), $note);
@@ -71,6 +71,7 @@ try {
                 throw new DomainException('Không tìm thấy đơn.');
             }
             $outcome = $cardService->reconcile($row, true);
+            $CMSNT->insert('logs', ['user_id' => $getUser['id'], 'ip' => myip(), 'device' => $Mobile_Detect->getUserAgent(), 'createdate' => gettime(), 'action' => 'GachtheFast card reconcile #' . $orderId . ' (' . $outcome . ')']);
             gtf_json(['status' => 'success', 'msg' => 'Kết quả đối soát: ' . $outcome]);
 
     }

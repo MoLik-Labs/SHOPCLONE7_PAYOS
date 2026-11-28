@@ -4,15 +4,30 @@
 # have; this script owns the process boundary instead and does the same assertion.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
-# libs/db.php includes vendor/autoload.php before the guard runs; the checkout has no vendor tree.
-if [ ! -f vendor/autoload.php ]; then
-  mkdir -p vendor && cp tools/dev/vendor-stub.php vendor/autoload.php
+# The probe needs a Dotenv stub only when Composer dependencies are absent. Never leave a
+# test-only autoloader in the deployable tree, and never overwrite or remove a real autoloader.
+created_stub=0
+probe_err=$(mktemp "${TMPDIR:-/tmp}/orbit-legacy-probe.XXXXXX") || exit 1
+cleanup() {
+  rm -f "$probe_err"
+  if [ "$created_stub" -eq 1 ] && cmp -s vendor/autoload.php tools/dev/vendor-stub.php; then
+    rm -f vendor/autoload.php
+    rmdir vendor 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+if [ ! -e vendor/autoload.php ] && [ ! -L vendor/autoload.php ]; then
+  if [ -L vendor ]; then echo "Refusing to create a test stub in a symlinked vendor directory." >&2; exit 1; fi
+  mkdir -p vendor || exit 1
+  if ! cp tools/dev/vendor-stub.php vendor/autoload.php; then exit 1; fi
+  created_stub=1
 fi
 fail=0
 probe() {
-  out=$(node tools/dev/phpcl.mjs tests/legacy_payment_gate_test.php --probe "$1" ${2:+"$2"} 2>/tmp/probe.err)
-  err=$(cat /tmp/probe.err)
-  if ! grep -q '^HTTP_STATUS=410$' <<<"$out" || [ -n "$err" ]; then
+  out=$(node tools/dev/phpcl.mjs tests/legacy_payment_gate_test.php --probe "$1" ${2:+"$2"} 2>"$probe_err")
+  rc=$?
+  err=$(cat "$probe_err")
+  if [ "$rc" -ne 0 ] || ! grep -q '^HTTP_STATUS=410$' <<<"$out" || [ -n "$err" ]; then
     echo "FAIL $1 ${2:-} -> $(tr '\n' ' ' <<<"$out") $(tr '\n' ' ' <<<"$err")"
     fail=1
   fi

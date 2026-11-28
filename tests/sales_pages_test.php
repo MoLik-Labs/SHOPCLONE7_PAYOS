@@ -409,6 +409,7 @@ check("every order statement ran with buyer = the session user", $unscoped === 0
 
 /* search + pagination must stay inside their own data and their own URLs */
 $_GET = array("module" => "client", "action" => "purchase-history", "days" => "30", "q" => "netflix' OR 1=1 --", "page" => "2");
+DB::$fixtures["mine_total"] = 43; /* Exercise a real multi-page pager. */
 DB::$log = array();
 ob_start();
 include __DIR__ . "/../views/client/purchase-history.php";
@@ -420,8 +421,9 @@ check("…and the term is still passed as a filter", strpos($searchSql, "LIKE") 
 check("…while remaining scoped to the session user", strpos($searchSql, "buyer` = 7") !== false);
 check("a quote cannot survive into the search field", strpos($searchHtml, "netflix'") === false && strpos($searchHtml, "&#039;") === false);
 check("the search term is still usable after sanitising", strpos($searchHtml, 'value="netflix') !== false);
-check("a page beyond the end is clamped, not empty", strpos($searchHtml, 'aria-current="page"') !== false);
-check("pagination links keep the search term and days", strpos($searchHtml, "purchase-history&amp;days=30") !== false);
+check("the requested purchase-history page is marked", strpos($searchHtml, 'aria-current="page"') !== false);
+check("purchase history period and pager use direct index routes", strpos($searchHtml, 'index.php?module=client&amp;action=purchase-history&amp;days=30') !== false
+    && strpos($searchHtml, 'q=netflix') !== false && strpos($searchHtml, 'page=') !== false);
 
 echo "\nsales_pages_test: " . $pass . " passed, " . $fail . " failed\n";
 exit($fail > 0 ? 1 : 0);

@@ -3,12 +3,13 @@
 if(!defined("IN_SITE")) {
     exit("The Request Not Found");
 }
+require_once __DIR__ . "/../../libs/brand_identity.php";
 /* Baseline hardening headers; harmless for every rendered page. */
 if(function_exists("orbit_security_headers")) {
     orbit_security_headers();
 }
 echo "<!doctype html>\n<html class=\"h-100\">\n\n<head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">\n    <meta http-equiv=\"Content-Security-Policy\" content=\"upgrade-insecure-requests\">\n    <link rel=\"canonical\" href=\"";
-echo url();
+echo htmlspecialchars(url(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 echo "\" />\n    <title>";
 echo isset($body["title"]) ? $body["title"] : $CMSNT->site("title");
 echo "</title>\n    <meta name=\"description\" content=\"";
@@ -16,9 +17,9 @@ echo isset($body["desc"]) ? $body["desc"] : $CMSNT->site("description");
 echo "\" />\n    <meta name=\"keywords\" content=\"";
 echo isset($body["keyword"]) ? $body["keyword"] : $CMSNT->site("keywords");
 echo "\">\n    <meta name=\"copyright\" content=\"";
-echo $CMSNT->site("author");
+echo "MoLik Studio";
 echo "\" />\n    <meta name=\"author\" content=\"";
-echo $CMSNT->site("author");
+echo "MoLik Studio";
 echo "\" />\n    <meta property=\"og:url\" content=\"";
 echo base_url("");
 echo "\">\n    <meta property=\"og:site_name\" content=\"";
@@ -36,7 +37,7 @@ echo isset($body["image"]) ? $body["image"] : BASE_URL($CMSNT->site("image"));
 echo "\" />\n    <meta name=\"twitter:image:alt\" content=\"";
 echo $body["title"];
 echo "\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"";
-echo BASE_URL($CMSNT->site("favicon"));
+echo htmlspecialchars(BASE_URL(orbit_brand_favicon($CMSNT->site("favicon"))), ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
 echo "\" />\n    <style>\n    :root {\n        --primary: ";
 echo $CMSNT->site("theme_color");
 echo ";\n    }\n    </style>\n    <style>\n    :root {\n        --primary1: ";

@@ -289,8 +289,8 @@ check("no third-party script or font",
 check("the product page loads the store shell", strpos($html, 'data-theme="light"') !== false
     && strpos($html, "store.css") !== false);
 preg_match('~<span class="topbar__name">([^<]*)</span>~', $html, $brandName);
-check("the header keeps the shop name, not the product name",
-    isset($brandName[1]) && $brandName[1] === "Orbit Shop");
+check("the header keeps the fixed studio name, not the product name",
+    isset($brandName[1]) && $brandName[1] === "MoLik Studio");
 
 /* --- product: signed in -------------------------------------------------- */
 echo "\nproduct (signed in)\n";
@@ -304,6 +304,15 @@ $productSource = (string) file_get_contents(__DIR__ . "/../views/client/product.
 check("the largest image is fetched early",
     strpos($productSource, 'fetchpriority="high"') !== false && strpos($productSource, 'id="gallery-main"') !== false);
 check("every control has a label", strpos($html, 'for="amount"') !== false && strpos($html, 'for="coupon"') !== false);
+check("the buyer is told that checkout requires JavaScript", strpos($html, '<noscript>') !== false
+    && strpos($html, 'Bật JavaScript để thanh toán') !== false);
+check("checkout recovery offers a reference and useful links, initially hidden",
+    strpos($html, 'data-buy-reference hidden') !== false
+    && strpos($html, 'data-buy-reference-value') !== false
+    && strpos($html, 'data-buy-help hidden') !== false
+    && strpos($html, 'href="https://shop.example/product-orders"') !== false
+    && strpos($html, 'href="https://shop.example/client/contact"') !== false
+    && strpos($html, 'không phải mã đơn hàng') !== false);
 
 /* --- product: out of stock ----------------------------------------------- */
 echo "\nproduct (out of stock)\n";
@@ -311,6 +320,26 @@ $CMSNT->stock = array("NF1" => 0);
 $html = render_view("views/client/product.php", array("slug" => "netflix-premium"), array("login" => "tok"), $CMSNT);
 check("out of stock disables buying", strpos($html, "Tạm hết hàng") !== false && strpos($html, "data-buy-submit") === false);
 $CMSNT->stock = array("NF1" => 24);
+
+/* Stock or an upper limit below the minimum cannot produce a valid order. */
+$CMSNT->product["min"] = 3;
+$CMSNT->stock = array("NF1" => 2);
+$html = render_view("views/client/product.php", array("slug" => "netflix-premium"), array("login" => "tok"), $CMSNT);
+check("insufficient stock for minimum disables checkout honestly", strpos($html, "data-buy-submit") === false
+    && strpos($html, "Chưa đủ số lượng") !== false && strpos($html, "tối thiểu") !== false);
+$CMSNT->stock = array("NF1" => 24);
+$CMSNT->product["max"] = 2;
+$html = render_view("views/client/product.php", array("slug" => "netflix-premium"), array("login" => "tok"), $CMSNT);
+check("an inconsistent max below min disables checkout", strpos($html, "data-buy-submit") === false
+    && strpos($html, "Chưa đủ số lượng") !== false);
+$CMSNT->product["min"] = 1;
+$CMSNT->product["max"] = 5;
+
+$CMSNT->category["slug"] = 'bad" onmouseover="alert(1)';
+$html = render_view("views/client/product.php", array("slug" => "netflix-premium"), array("login" => "tok"), $CMSNT);
+check("category breadcrumb cannot inject an attribute", strpos($html, 'onmouseover="alert(1)') === false
+    && strpos($html, 'bad%22%20onmouseover%3D%22alert%281%29') !== false);
+$CMSNT->category["slug"] = "tai-khoan-giai-tri";
 
 /* --- sign-in ------------------------------------------------------------- */
 echo "\nlogin\n";

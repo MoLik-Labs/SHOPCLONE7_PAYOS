@@ -88,7 +88,9 @@ store_shell_open($storeShell);
         <span class="pill"><?php echo format_cash($storeTotal); ?> dòng</span>
       </div>
 
-      <form class="toolbar" method="get" action="<?php echo store_e(BASE_URL("client/affiliate-history")); ?>">
+      <form class="toolbar" method="get" action="<?php echo store_e(BASE_URL("index.php")); ?>">
+        <input type="hidden" name="module" value="client">
+        <input type="hidden" name="action" value="affiliate-history">
         <div class="toolbar__field">
           <label class="toolbar__label" for="affh-reason">Lý do</label>
           <input class="input" id="affh-reason" name="reason" type="search" maxlength="64"

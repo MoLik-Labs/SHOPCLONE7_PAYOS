@@ -34,6 +34,23 @@ expect_security(myip() === '203.0.113.10', 'Invalid forwarded IP must fail back 
 $_SERVER['REMOTE_ADDR'] = '';
 expect_security(myip() === '0.0.0.0', 'Missing remote address must remain a safe literal.');
 
+unset($_ENV['TRUSTED_PROXY_IPS']);
+putenv('TRUSTED_PROXY_IPS=203.0.113.10');
+$_SERVER['REMOTE_ADDR'] = '203.0.113.10';
+$_SERVER['HTTP_X_FORWARDED_FOR'] = '198.51.100.30';
+expect_security(myip() === '198.51.100.30', 'Trusted proxies configured only in the process environment must work.');
+putenv('TRUSTED_PROXY_IPS');
+unset($_ENV['APP_URL'], $_SERVER['HTTPS'], $_SERVER['HTTP_X_FORWARDED_PROTO'], $_SERVER['SERVER_PORT']);
+putenv('APP_URL=https://shop.example');
+expect_security(orbit_is_https(), 'The secure-cookie APP_URL fallback must work with a process environment.');
+putenv('APP_URL');
+$_SERVER['REMOTE_ADDR'] = '203.0.113.10';
+$_SERVER['HTTP_X_FORWARDED_PROTO'] = 'https';
+expect_security(!orbit_is_https(), 'An untrusted peer must not control the forwarded scheme.');
+$_ENV['TRUSTED_PROXY_IPS'] = '203.0.113.10';
+expect_security(orbit_is_https(), 'An explicitly trusted proxy may signal HTTPS.');
+unset($_ENV['TRUSTED_PROXY_IPS'], $_SERVER['HTTP_X_FORWARDED_PROTO']);
+
 for ($i = 0; $i < 30; ++$i) {
     $token = random('ABC012', 64);
     expect_security(strlen($token) === 64 && preg_match('/^[ABC012]{64}$/D', $token) === 1, 'Tokens must preserve requested length and alphabet.');

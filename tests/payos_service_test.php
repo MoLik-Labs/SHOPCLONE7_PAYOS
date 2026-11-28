@@ -132,7 +132,9 @@ $client->timeoutAfterCreate = false;
 $raceOrder = $service->create(6, '5000');
 $workers = [];
 for ($i = 0; $i < 2; ++$i) {
-    $process = proc_open([PHP_BINARY, '-d', 'extension_dir=' . ini_get('extension_dir'), '-d', 'extension=pdo_mysql', __DIR__ . '/payos_race_worker.php', $raceOrder['order_code']],
+    // Inherit the PHP configuration: forcibly loading pdo_mysql a second time prints a startup
+    // warning to stdout on normal installations and corrupts the worker's status response.
+    $process = proc_open([PHP_BINARY, '-d', 'extension_dir=' . ini_get('extension_dir'), __DIR__ . '/payos_race_worker.php', $raceOrder['order_code']],
         [0 => ['pipe','r'], 1 => ['pipe','w'], 2 => ['pipe','w']], $pipes);
     if (!is_resource($process)) { throw new RuntimeException('Cannot start concurrency test.'); }
     fclose($pipes[0]);

@@ -232,12 +232,66 @@
     var payOut = panel.querySelector("[data-buy-pay]");
     var statusEl = panel.querySelector("[data-buy-status]");
     var submit = panel.querySelector("[data-buy-submit]");
+    var retryQuote = panel.querySelector("[data-buy-retry-quote]");
+    var recoveryReference = panel.querySelector("[data-buy-reference]");
+    var recoveryReferenceValue = panel.querySelector("[data-buy-reference-value]");
+    var recoveryHelp = panel.querySelector("[data-buy-help]");
     if (!endpoint || String(endpoint).charAt(0) === "#" || !productId || !amountInput) {
       return;
     }
 
     var timer = null;
     var request = null;
+    var quoteVersion = 0;
+    var quoteReady = false;
+    var purchasePending = false;
+    var purchaseComplete = false;
+    var scheduledSelection = null;
+    var recoveryBlocked = false;
+    var buyer = panel.getAttribute("data-buyer") || "";
+    var recoveryKey = "orbit:checkout:v1:" + buyer + ":" + productId;
+    var recoveryMessage = "Chưa xác định được kết quả hoặc không thể lưu trạng thái. Vui lòng kiểm tra lịch sử đơn hàng và liên hệ hỗ trợ trước khi mua lại; không gửi lại đơn này.";
+
+    // A tab-scoped warning, not a durable claim: another tab or clearing storage can bypass it.
+    function readRecovery() {
+      if (!/^[1-9]\d*$/.test(buyer) || !/^[1-9]\d*$/.test(productId)) { throw new Error("invalid scope"); }
+      var raw = window.sessionStorage.getItem(recoveryKey);
+      if (raw === null) { return null; }
+      var record = JSON.parse(raw);
+      if (!record || record.version !== 1 || record.buyer !== buyer || record.product !== productId ||
+          typeof record.key !== "string" || !/^[A-Za-z0-9-]{8,64}$/.test(record.key)) {
+        throw new Error("invalid checkout state");
+      }
+      return record;
+    }
+    function blockRecovery(reference) {
+      recoveryBlocked = true;
+      quoteVersion += 1;
+      quoteReady = false;
+      if (submit) { submit.disabled = true; }
+      if (retryQuote) { retryQuote.hidden = true; }
+      if (recoveryHelp) { recoveryHelp.hidden = false; }
+      if (recoveryReference && recoveryReferenceValue && typeof reference === "string" && /^[A-Za-z0-9-]{8,64}$/.test(reference)) {
+        recoveryReferenceValue.textContent = reference;
+        recoveryReference.hidden = false;
+      }
+      setStatus(statusEl, recoveryMessage, "error");
+    }
+
+    function selectionSignature() {
+      return JSON.stringify([amountInput.value, couponInput ? couponInput.value : ""]);
+    }
+
+    function invalidateQuote() {
+      quoteVersion += 1;
+      quoteReady = false;
+      if (submit) { submit.disabled = true; }
+      if (moneyOut) { moneyOut.textContent = "—"; }
+      if (discountOut) { discountOut.textContent = "—"; }
+      if (payOut) { payOut.textContent = "—"; }
+      if (retryQuote) { retryQuote.hidden = true; }
+      setStatus(statusEl, "Đang tính tổng tiền…");
+    }
 
     function clampAmount() {
       var value = parseInt(amountInput.value, 10);
@@ -250,9 +304,11 @@
     }
 
     function quote() {
-      if (!token) {
+      if (!token || purchasePending || purchaseComplete || recoveryBlocked) {
         return;
       }
+      invalidateQuote();
+      var version = quoteVersion;
       if (request) {
         request.abort();
       }
@@ -264,6 +320,7 @@
         coupon: couponInput ? couponInput.value : "",
         token: token
       };
+      scheduledSelection = selectionSignature();
       var body = new URLSearchParams();
       Object.keys(fields).forEach(function (key) {
         body.append(key, fields[key]);
@@ -277,23 +334,34 @@
       }).then(function (response) {
         return response.json();
       }).then(function (data) {
+        if (version !== quoteVersion || purchasePending || purchaseComplete) { return; }
         if (data.status === "success") {
           if (moneyOut) { moneyOut.textContent = data.money; }
           if (discountOut) { discountOut.textContent = data.discount; }
           if (payOut) { payOut.textContent = data.pay; }
+          quoteReady = true;
+          if (submit) { submit.disabled = false; }
+          if (retryQuote) { retryQuote.hidden = true; }
           setStatus(statusEl, "");
         } else {
-          setStatus(statusEl, data.msg || "Không tính được tổng tiền.", "error");
+          if (retryQuote) { retryQuote.hidden = false; }
+          setStatus(statusEl, data.msg || "Không tính được tổng tiền. Vui lòng thử tính lại.", "error");
         }
       }).catch(function (error) {
-        if (error && error.name === "AbortError") {
+        if (version !== quoteVersion || (error && error.name === "AbortError")) {
           return;
         }
-        setStatus(statusEl, "Không kết nối được máy chủ. Vui lòng thử lại.", "error");
+        if (retryQuote) { retryQuote.hidden = false; }
+        setStatus(statusEl, "Không tính được tổng tiền. Kiểm tra kết nối và thử tính lại.", "error");
       });
     }
 
     function scheduleQuote() {
+      if (purchasePending || purchaseComplete || recoveryBlocked) { return; }
+      var selection = selectionSignature();
+      if (selection === scheduledSelection) { return; }
+      scheduledSelection = selection;
+      invalidateQuote();
       window.clearTimeout(timer);
       timer = window.setTimeout(quote, 350);
     }
@@ -301,14 +369,21 @@
     amountInput.addEventListener("input", scheduleQuote);
     amountInput.addEventListener("change", scheduleQuote);
     if (couponInput) {
+      couponInput.addEventListener("input", scheduleQuote);
       couponInput.addEventListener("change", scheduleQuote);
     }
+    if (retryQuote) {
+      retryQuote.addEventListener("click", quote);
+    }
 
-    panel.querySelectorAll("[data-step]").forEach(function (button) {
+    var stepButtons = panel.querySelectorAll("[data-step]");
+    stepButtons.forEach(function (button) {
       button.addEventListener("click", function () {
+        if (purchasePending || purchaseComplete || recoveryBlocked) { return; }
         var step = parseInt(button.getAttribute("data-step"), 10) || 0;
         var value = (parseInt(amountInput.value, 10) || min) + step;
         amountInput.value = String(Math.max(min, Math.min(max || value, value)));
+        window.clearTimeout(timer);
         quote();
       });
     });
@@ -316,8 +391,7 @@
     if (!submit) {
       return;
     }
-    /* Keep one key for the life of the panel, even after an error. An error may mean an earlier
-       request is still processing; rotating here could turn a retry into a second purchase. */
+    /* A fresh key identifies this attempt; it is not an exactly-once guarantee. */
     function newOrderKey() {
       if (window.crypto && typeof window.crypto.randomUUID === "function") {
         return window.crypto.randomUUID();
@@ -336,23 +410,57 @@
     }
     var orderKey = newOrderKey();
 
+    function setOrderInputsDisabled(disabled) {
+      amountInput.disabled = disabled;
+      if (couponInput) { couponInput.disabled = disabled; }
+      stepButtons.forEach(function (button) { button.disabled = disabled; });
+    }
+
     submit.addEventListener("click", function () {
       if (!token || !apiKey) {
         setStatus(statusEl, "Phiên đăng nhập đã hết. Vui lòng đăng nhập lại.", "error");
         return;
       }
+      if (purchasePending || purchaseComplete || recoveryBlocked) { return; }
+      /* Autofill or another script may change a field without an input event. */
+      if (selectionSignature() !== scheduledSelection) {
+        scheduleQuote();
+        return;
+      }
+      if (!quoteReady) { return; }
       var amount = clampAmount();
+      var coupon = couponInput ? couponInput.value : "";
+      try {
+        var pendingRecovery = readRecovery();
+        if (pendingRecovery !== null) { blockRecovery(pendingRecovery.key); setOrderInputsDisabled(true); return; }
+        var record = JSON.stringify({ version: 1, buyer: buyer, product: productId, key: orderKey });
+        window.sessionStorage.setItem(recoveryKey, record);
+        if (window.sessionStorage.getItem(recoveryKey) !== record) { throw new Error("storage write failed"); }
+      } catch (error) {
+        blockRecovery();
+        setOrderInputsDisabled(true);
+        return;
+      }
+      purchasePending = true;
+      setOrderInputsDisabled(true);
       submit.disabled = true;
       setStatus(statusEl, "Đang xử lý thanh toán…");
       postForm(endpoint, {
         action: "buyProduct",
         id: productId,
         amount: amount,
-        coupon: couponInput ? couponInput.value : "",
+        coupon: coupon,
         client_order_id: orderKey,
         api_key: apiKey
       }).then(function (data) {
-        if (data.status === "success") {
+        purchasePending = false;
+        if (data && data.status === "success" && typeof data.trans_id === "string" && /^W[a-f0-9]{30}$/.test(data.trans_id)) {
+          purchaseComplete = true;
+          try {
+            window.sessionStorage.removeItem(recoveryKey);
+          } catch (error) {
+            // A stale marker is safer than silently enabling another attempt.
+          }
           var orderUrl = (panel.getAttribute("data-order-url") || "") + (data.trans_id || "");
           statusEl.textContent = "";
           var message = document.createElement("span");
@@ -365,16 +473,46 @@
           statusEl.classList.remove("is-error");
           statusEl.classList.add("is-ok");
           submit.textContent = "Đã thanh toán";
+        } else if (data && data.status === "error" && data.outcome === "not_started" && data.request_id === orderKey) {
+          // Only this request was rejected before mutations. This is not a cross-tab claim.
+          try {
+            var saved = readRecovery();
+            if (!saved || saved.key !== orderKey) { throw new Error("checkout state changed"); }
+            var nextKey = newOrderKey();
+            if (nextKey === orderKey || !/^[A-Za-z0-9-]{8,64}$/.test(nextKey)) { throw new Error("fresh reference unavailable"); }
+            window.sessionStorage.removeItem(recoveryKey);
+            if (readRecovery() !== null) { throw new Error("checkout state not cleared"); }
+            orderKey = nextKey;
+            setOrderInputsDisabled(false);
+            submit.disabled = false;
+            setStatus(statusEl, data.msg || "Không thể xử lý yêu cầu. Vui lòng kiểm tra và thử lại.", "error");
+          } catch (error) {
+            blockRecovery(orderKey);
+            setOrderInputsDisabled(true);
+          }
         } else {
-          setStatus(statusEl, data.msg || "Chưa xác định được kết quả. Vui lòng kiểm tra lịch sử đơn hàng trước khi mua lại.", "error");
-          submit.disabled = false;
+          blockRecovery(orderKey);
+          if (data && typeof data.msg === "string" && data.msg) {
+            setStatus(statusEl, data.msg + " " + recoveryMessage, "error");
+          }
+          setOrderInputsDisabled(true);
         }
       }).catch(function () {
-        setStatus(statusEl, "Không kết nối được máy chủ. Vui lòng thử lại.", "error");
-        submit.disabled = false;
+        purchasePending = false;
+        blockRecovery(orderKey);
+        setOrderInputsDisabled(true);
       });
     });
 
+    if (token && apiKey) {
+      try {
+        var savedRecovery = readRecovery();
+        if (savedRecovery !== null) { blockRecovery(savedRecovery.key); }
+      } catch (error) {
+        blockRecovery();
+      }
+    }
+    if (recoveryBlocked) { setOrderInputsDisabled(true); }
     quote();
   }
 
@@ -1022,10 +1160,17 @@
       if (!text) {
         return;
       }
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(function () {
-          setStatus(pageStatus, okMessage, "ok");
-        });
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        var copyFailed = function () {
+          setStatus(pageStatus, "Không chép được. Hãy chọn Tải xuống hoặc chép thủ công.", "error");
+        };
+        try {
+          navigator.clipboard.writeText(text).then(function () {
+            setStatus(pageStatus, okMessage, "ok");
+          }, copyFailed);
+        } catch (error) {
+          copyFailed();
+        }
         return;
       }
       downloadText("tai-khoan.txt", text);
@@ -1114,46 +1259,53 @@
   /* --- copy buttons ------------------------------------------------------- */
 
   function setupCopy() {
-    /* 2FA tool: the code changes every 30 s, so the button reads the live value at click time. */
-    document.querySelectorAll("[data-totp-copy]").forEach(function (button) {
+    function wire(button, getValue) {
+      var original = button.textContent;
+      var timer;
+      function feedback(message) {
+        window.clearTimeout(timer);
+        button.textContent = message;
+        timer = window.setTimeout(function () { button.textContent = original; }, 2000);
+      }
       button.addEventListener("click", function () {
-        var literal = button.getAttribute("data-copy-value") || "";
-        if (!literal || !navigator.clipboard) {
+        var item = getValue();
+        if (!item || !item.text) {
           return;
         }
-        navigator.clipboard.writeText(literal).then(function () {
-          var was = button.textContent;
-          button.textContent = "Đã chép";
-          window.setTimeout(function () { button.textContent = was; }, 1500);
-        });
+        function failed() {
+          /* For text inputs, leave the value selected so the buyer can copy it manually. */
+          if (item.input && typeof item.input.select === "function") {
+            item.input.select();
+          }
+          feedback("Không chép được");
+        }
+        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+          failed();
+          return;
+        }
+        try {
+          navigator.clipboard.writeText(item.text).then(function () {
+            feedback("Đã chép");
+          }, failed);
+        } catch (error) {
+          failed();
+        }
       });
-    });
+    }
 
-    document.querySelectorAll("[data-copy]").forEach(function (button) {
-      button.addEventListener("click", function () {
+    /* The 2FA code changes every 30 seconds: read the live value at click time. */
+    document.querySelectorAll("[data-totp-copy]").forEach(function (button) {
+      wire(button, function () { return { text: button.getAttribute("data-copy-value") || "" }; });
+    });
+    /* Some account rows carry only data-copy-value, not a data-copy selector. */
+    document.querySelectorAll("[data-copy], [data-copy-value]:not([data-totp-copy])").forEach(function (button) {
+      wire(button, function () {
         var literal = button.getAttribute("data-copy-value");
         if (literal !== null) {
-          if (navigator.clipboard) {
-            navigator.clipboard.writeText(literal).then(function () {
-              var was = button.textContent;
-              button.textContent = "Đã chép";
-              window.setTimeout(function () { button.textContent = was; }, 1500);
-            });
-          }
-          return;
+          return { text: literal };
         }
         var input = document.querySelector(button.getAttribute("data-copy"));
-        if (!input) {
-          return;
-        }
-        input.select();
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(input.value).then(function () {
-            var old = button.textContent;
-            button.textContent = "Đã chép";
-            window.setTimeout(function () { button.textContent = old; }, 1500);
-          });
-        }
+        return input ? { text: input.value, input: input } : null;
       });
     });
   }

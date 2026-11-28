@@ -137,7 +137,9 @@ store_shell_open($storeShell);
         <h2 class="panel__title">Khách đã giới thiệu</h2>
         <span class="pill"><?php echo format_cash($storeTotal); ?></span>
       </div>
-      <form class="toolbar" method="get" action="<?php echo store_e(BASE_URL("client/affiliates")); ?>">
+      <form class="toolbar" method="get" action="<?php echo store_e(BASE_URL("index.php")); ?>">
+        <input type="hidden" name="module" value="client">
+        <input type="hidden" name="action" value="affiliates">
         <div class="toolbar__field">
           <label class="toolbar__label" for="aff-time">Khoảng ngày</label>
           <input class="input" id="aff-time" name="time" type="text" inputmode="numeric"

@@ -1,15 +1,17 @@
-# Orbit Office — shop source
+# MoLik Studio — shop source
 
 A Vietnamese digital-goods shop: accounts, licences and top-up cards, sold from a PHP monolith with
 MySQL. The storefront, account area and money paths were rebuilt on one design system ("Orbit") on top
 of the CMSNT `SHOPCLONE7` codebase; the CMSNT licence layer is kept intact and is **not** to be
 removed.
 
-**By NggKhaiz.**
+**Nhận diện sản phẩm: MoLik Studio.**
 
-> Status: work in progress on `arena/01a1066c-shopclone7-payos` (PR #1). Nothing in this repository is
-> deployed by the agent, no live payment was created, and no licence call was made. See
-> [Known open items](#known-open-items) before a production install.
+**Tài liệu tiếng Việt:** [Trang Starlight (GitHub Pages, khi đã triển khai)](https://molik-labs.github.io/SHOPCLONE7_PAYOS/) · [Mã nguồn và hướng dẫn chạy tại chỗ](documentation/src/content/docs/phat-trien/docs.mdx).
+
+> Status: work in progress. The application has not been validated against the target hosting or a
+> real shop database. Nothing has been deployed by the agent; no live payment or licence call was made.
+> Read [Known open items](#known-open-items) before considering a production install.
 
 ---
 
@@ -33,7 +35,7 @@ removed.
 
 | Component | Version | Notes |
 | --- | --- | --- |
-| PHP | 7.4 or newer | `composer.json` pins the platform to 7.4; the code also runs on PHP 8.x. Extensions: `mysqli`, `curl`, `mbstring`, `openssl`, `fileinfo`. |
+| PHP | 7.4 or newer | `composer.json` pins dependency resolution to 7.4; use a security-supported PHP version on hosting and test it in staging. Required extensions include `mysqli`, `pdo_mysql`, `curl`, `mbstring`, `openssl`, `fileinfo` and `gd` (required by CAPTCHA). Run `composer check-platform-reqs --no-dev` on the actual host. |
 | MySQL / MariaDB | MySQL 5.7+ / MariaDB 10.3+ | `utf8mb4`; the app uses `GET_LOCK`, so the statements must run on the same server. |
 | Composer | 2.x | `composer install --no-dev --optimize-autoloader`. |
 | Web server | Apache with `mod_rewrite`, or Nginx with an equivalent config | `.htaccess` is honoured by Apache only. |
@@ -44,47 +46,53 @@ compression, caching and the deny list live in `.htaccess`.
 
 ## Install
 
-This build does not ship the CMSNT base schema. Start from an existing shop database (the one your
-CMSNT licence was issued for), or import the vendor's `shopclone7.sql` from the original package.
+This build does not ship the CMSNT base schema. Obtain the matching licensed vendor schema or a
+backup of your existing shop, and restore it **only to an isolated staging database first**. Its
+compatibility with this build is not yet established.
 
 ```bash
 composer install --no-dev --optimize-autoloader
-cp .env.example .env          # then fill in DB_* and APP_URL
-php install.php               # CLI only: adds this build's tables, columns and default settings
+composer check-platform-reqs --no-dev
+cp .env.example .env          # or configure the process environment; set DB_* and APP_URL
 ```
 
-`install.php` is additive and idempotent for the rows it inserts (`insert_options()` checks first),
-but its `CREATE TABLE` / `ALTER TABLE` statements are not `IF NOT EXISTS`; run it **once** against a
-backed-up database. It refuses to run outside the CLI.
+**Do not run `install.php` on production as an automatic installation step.** It is a legacy CLI
+script with schema-dependent, non-idempotent DDL, including a dropped/recreated index; SQL failures can
+leave a partially changed schema. It does not supply the original CMSNT base schema and has not been
+verified against your shop database. Back up and restore a copy to an isolated staging database,
+inspect its actual schema and indexes, then plan and test any required changes before seeking approval
+to apply them. Never blindly run `update.php`, which can overwrite customised files.
 
-Then:
+The payOS tables need their own `scripts/migrate-payos.php`; that script modifies legacy table types
+and engines and must likewise be reviewed and rehearsed on a backup before production approval. GTF
+is disabled/credit-locked pending its separate contract and staging gates.
 
-1. Point the document root at the repository root (the app uses `index.php?module=…&action=…` paths
-   through `BASE_URL()`; no front controller rewrite is required).
-2. Make `assets/storage/` writable by the PHP user. Uploaded images go to `assets/storage/images/`;
-   `.htaccess` refuses to execute PHP under `assets/storage/`.
-3. Sign in to `/admin` with an administrator account and change its password.
-4. Fill the owner settings in **Settings** (title, support links, currencies, maintenance mode).
-5. Only after that, configure a payment method (see [Money paths](#money-paths)).
+For staging, configure the web root, HTTPS, equivalent access restrictions and routing, then verify
+all of them on the actual server. Pretty links depend on the rewrite rules, so an equivalent Nginx
+configuration is required if Apache `.htaccess` is not honoured. Make `assets/storage/` writable
+only as needed and ensure the server will never execute uploaded scripts. Review administrator access,
+owner settings and payment configuration in staging; do not expose real users or payments until the
+remaining release gates have been completed and deployment is authorised.
 
-`install.php` refuses to run outside the CLI. Do **not** run `update.php` on a live shop; it is the
-vendor's in-place updater and it overwrites customised files.
+`install.php` refuses to run outside the CLI; that guard alone does not make its schema changes safe.
 
 ## Configuration
 
-Secrets live in `.env` only — never in the repository, never in the database. `.env.example` documents
+Deployment secrets belong in the hosting environment or an untracked `.env`, never in the repository.
+Some legacy provider settings are stored in the shop database; secure and back up that database accordingly.
+`.env.example` documents
 every key; the groups are:
 
 | Group | Keys | Notes |
 | --- | --- | --- |
 | Database | `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | |
-| App | `APP_URL`, `SECRET_KEY`, `TRUSTED_PROXY_IPS` | `TRUSTED_PROXY_IPS` is required behind a proxy, otherwise `REMOTE_ADDR` is the only accepted client IP. |
-| payOS | `PAYOS_ENABLED`, `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`, `PAYOS_MIN_AMOUNT`, `PAYOS_MAX_AMOUNT`, `PAYOS_EXPIRE_MINUTES` | The only enabled online gateway by default. |
+| App | `APP_URL`, `SECRET_KEY`, `TRUSTED_PROXY_IPS` | Set `APP_URL` to the actual canonical HTTPS origin, with no path, query or credentials; it controls absolute links and is required for password reset. Without it, legacy rendering may use the request host; an invalid nonempty value falls back to localhost. Configure an edge Host allowlist in all cases. Behind a proxy, list only its exact immediate-peer IPs (comma-separated; no CIDR) and configure it to overwrite incoming forwarding headers. Otherwise forwarded client IP/scheme are ignored. An HTTPS `APP_URL` also forces Secure cookies; enforce HTTPS at the edge. |
+| payOS | `PAYOS_ENABLED`, `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`, `PAYOS_MIN_AMOUNT`, `PAYOS_MAX_AMOUNT`, `PAYOS_EXPIRE_MINUTES` | Disabled in `.env.example`; enable only after staging and provider verification. |
 | Cron | `CRON_TOKEN` (≥ 16 chars) | Every `cron/*.php` worker refuses HTTP without `X-Cron-Token` (or `?token=`); CLI runs are always allowed. |
 | GachtheFast | `GTF_*` | Ships **disabled and credit-locked**. Read `docs/gachthefast/` before changing anything. |
 
-Optional `DB_DEBUG=1` logs the SQL text of failed statements (never values). Leave it off in
-production.
+Optional `DB_DEBUG=1` logs SQL text of failed statements, which **can contain values and secrets**.
+Leave it off in production and protect any debug logs.
 
 ## How a request is served
 
@@ -165,8 +173,10 @@ Retries are therefore reported as `duplicate`, not applied twice.
 
 ## Testing
 
-The suites are plain PHP scripts. They need no database except the four `gtf_*`/`payos_service`
-suites, which require a disposable MySQL whose DSN contains `test` and refuse anything else.
+Most suites are plain PHP scripts with fixture data. Database integration suites require a disposable
+MySQL and may create, change or drop fixture tables; read each suite's safety checks and never point
+one at a real shop database. The local mysqli and wallet suites additionally require explicitly named
+`orbit_test_*` databases on loopback; the wallet suite insists on an initially empty database.
 
 ```bash
 npm install --prefix tools/dev          # once: PHP-WASM runner for machines without a PHP binary
@@ -178,13 +188,9 @@ node tools/dev/phpcl.mjs tests/count_query_test.php
 A suite that cannot run (no database, no sub-process support) is reported as **NOT RUN** and never
 counted as passing. `tests/README.md` lists every suite and what it pins.
 
-Latest full run on this branch:
-
-```
-LINT 308 files, 0 parse errors
-SCAN 237 files: 0 critical, 0 high, 0 medium, 0 low
-42 suites, 1 not run (payos_service, no disposable database), 0 failures
-```
+See `docs/frontend/30-native-database-review.md` for the native PHP/MySQL fixture runs and their
+limits. The PHP-WASM runner reports the database-dependent suites as NOT RUN; it does not replace
+native MySQL testing.
 
 Operator-side tools (read-only unless stated):
 
@@ -216,23 +222,39 @@ Operator-side tools (read-only unless stated):
 
 These are tracked, documented and **not** silently assumed to be fine:
 
-- **No staging smoke test yet.** The sandbox has no MySQL and no browser session, so AJAX POSTs,
-  login and the partial-delivery branch are proven by unit/source assertions, not by a live run.
-- **Missing database constraints.** `UNIQUE (transid)` on `dongtien` and `UNIQUE (coupon_id, user_id)`
-  on `coupon_used` are not applied. The code serialises both paths (row lock, `GET_LOCK`), but the
-  keys are the complete guarantee. Run `tools/db-index-audit.php` and resolve duplicates first.
-- **Source protection level 4** is designed but the encoder is deferred by the owner.
-- **`payos_service_test.php`** requires a disposable MySQL and is reported as NOT RUN in this
-  environment.
-- Legacy payment entry points stay in the tree for historical invoices; they are gated with 410 when
-  payOS is on, not deleted.
+- **Target staging not tested.** Native PHP/MySQL tests use synthetic tables, not the vendor schema
+  or hosting configuration. Login, complete checkout, actual provider behaviour and production data
+  remain unverified; the base CMSNT schema is not included.
+- **Checkout recovery is incomplete.** An interrupted purchase or supplier timeout may leave an
+  ambiguous outcome; same-tab warnings are not a durable claim or exactly-once guarantee. See
+  `docs/frontend/26-checkout-recovery-plan.md` and `28-checkout-support-runbook.md`.
+- **Missing database constraints.** Audit the actual schema and duplicates before proposing unique
+  indexes; do not blindly add them or change/delete existing data. `tools/db-index-audit.php` is
+  read-only and produces suggestions, not a migration.
+- **Legacy installer is unsafe to run blindly**, and payOS migration changes engine/column types.
+  Rehearse on an isolated restored backup and obtain approval before production changes.
+- **Legacy data and password modes need review.** Explicit quote encoding differs from older PHP
+  defaults; existing stored values may require a staged compatibility audit. Legacy MD5/SHA-1 modes
+  remain supported, not modern password storage; plan a safe migration rather than toggling the
+  setting blindly. Configure the canonical `APP_URL` and an edge host allowlist.
+- **Legacy APIs expose credentials in URLs.** Reseller purchase and privileged stock import still
+  accept API keys in query strings; GET purchase is a mutation, and checkout is not fully atomic.
+  Restrict access and redact query strings in proxy, server, APM and analytics logs; coordinate a
+  staged migration to authenticated POST before removing legacy compatibility. Never blindly retry
+  uncertain purchases. See `docs/frontend/32-public-security-review.md`.
+- **GachtheFast remains disabled and credit-locked** until its provider contract, retry semantics
+  and release gates are resolved. The operator-credit and callback hardening is fixture-tested, not
+  provider-verified; see `docs/gachthefast/13-security-hardening-retest.md`. Source-protection encoder
+  is deferred by the owner.
+- Legacy payment entry points remain for historical invoices; they are gated with 410 when payOS is
+  enabled, not deleted.
 
 ## Licence and attribution
 
 This is a licensed CMSNT product. Keep the licence check and the attribution as the owner decided:
 
-- product identity: **Orbit Office**;
-- footer credit **“By NggKhaiz”** is allowed;
+- product identity: **MoLik Studio**;
+- footer credit: **“MoLik Studio”**;
 - the CMSNT licence verification must not be removed, bypassed or stubbed, and `install.php` /
   `update.php` must not be used to strip it.
 

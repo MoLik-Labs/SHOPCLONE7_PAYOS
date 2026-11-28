@@ -57,11 +57,14 @@ $forgot = substr($auth, $forgotStart, $forgotEnd - $forgotStart);
 check_auth('an unknown address gets the same answer as a known one',
     strpos($forgot, 'không tồn tại trong hệ thống') === false);
 check_auth('the neutral answer does not promise that mail was sent',
-    substr_count($forgot, 'Nếu địa chỉ Email tồn tại trong hệ thống') === 2);
-check_auth('both neutral exits are success responses',
-    preg_match_all('/Nếu địa chỉ Email tồn tại trong hệ thống.*?"status" => "success"/s', $forgot) === 2);
+    substr_count($forgot, 'Nếu địa chỉ Email tồn tại trong hệ thống') === 4);
+check_auth('all neutral exits are success responses',
+    preg_match_all('/"status" => "success", "msg" => __\("Nếu địa chỉ Email tồn tại trong hệ thống/', $forgot) === 4);
 check_auth('the rate limit also answers neutrally',
     strpos($forgot, 'time() - (int) $getUser["time_forgot_password"] < 60') !== false);
+check_auth('OTP and 2FA redirects do not expose tokens to a hostile Host',
+    strpos($auth, '"url" => "/?action=verify_otp&token="') !== false
+    && strpos($auth, '"url" => "/?action=verify_2fa&token="') !== false);
 
 /* ---- sessions -------------------------------------------------------------- */
 check_auth('logout is centralised in one helper',

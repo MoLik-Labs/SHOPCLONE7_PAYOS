@@ -4,16 +4,19 @@ This folder keeps the AI "skills" this project uses, so a future session can pic
 re-cloning anything. A skill is a folder with a `SKILL.md`: YAML frontmatter (name + when to use it)
 and the instructions themselves.
 
-Two kinds live here:
-
 | Folder | Kind | What it is for |
 | --- | --- | --- |
-| `anthropic/` | Upstream, vendored unchanged | General design and browser-testing guidance from Anthropic's public skills repository |
-| `project/` | Written for this repository | The rules and commands that actually work on this PHP monolith |
+| `anthropic/` | Selected upstream skills | General design and browser-testing guidance from Anthropic |
+| `project/` | Project-specific | Constraints and commands for this PHP monolith |
+| `upstream/` | Pinned reference copies | Taste, Impeccable, Superpowers, marketplace index, UI/UX Pro Max, low-level, Go and ECC; see [inventory and usage](UPSTREAM.md) |
 
-**When they disagree, `project/` wins.** The upstream skills assume a modern JS toolchain; this shop is
-plain PHP with no package manager, no PHP CLI on the build host and a database that must never be touched
-by a test.
+The repository-root `AGENTS.md` points future compatible agent sessions to these files. Automatic
+loading depends on the client and on opening a branch containing this change; it is not global memory.
+
+Follow the user's directions and safety requirements first, then project-specific constraints, then
+applicable upstream guidance. Do not import incompatible aesthetic rules or blindly execute scripts.
+This shop uses plain PHP, Node-based development tools and a php-wasm CLI shim; the shim is not a
+native PHP/MySQL production environment. Tests must never touch a production database.
 
 ---
 
@@ -61,8 +64,9 @@ build work).
 
 ## 4. Keeping this folder honest
 
-- Do not edit files under `anthropic/`. If upstream changes, re-vendor the folder and update the commit
-  in this README.
+- Keep `anthropic/` and `upstream/` as reference copies. When updating, review provenance and licences,
+  re-vendor intentionally, and record the commit in this README or `UPSTREAM.md`.
 - When a project skill stops matching reality (a command changed, a page was rewritten), fix the skill in
   the same commit that changes the code. A stale checklist is worse than none.
-- Skills contain no secrets, no customer data and no production hosts.
+- Never add secrets or customer data to skill guidance; review upstream material before executing or
+  reusing it, and keep production hosts and credentials out of examples.

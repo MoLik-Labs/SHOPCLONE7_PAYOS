@@ -33,20 +33,20 @@ if (isset($_SESSION["login"])) {
 }
 
 /* --- request (all scalars are bounded before they reach SQL) -------------- */
-$storePage = isset($_GET["page"]) ? (int) $_GET["page"] : 1;
-$storePage = max(1, min(1000, $storePage));
+$storePage = isset($_GET["page"]) && is_scalar($_GET["page"]) ? (int) $_GET["page"] : 1;
+$storePage = max(1, $storePage);
 
-$storeKeyword = isset($_GET["keyword"]) ? trim((string) $_GET["keyword"]) : "";
+$storeKeyword = isset($_GET["keyword"]) && is_scalar($_GET["keyword"]) ? trim((string) $_GET["keyword"]) : "";
 if (function_exists("mb_substr") && mb_strlen($storeKeyword) > 80) {
     $storeKeyword = mb_substr($storeKeyword, 0, 80);
 } elseif (strlen($storeKeyword) > 80) {
     $storeKeyword = substr($storeKeyword, 0, 80);
 }
 
-$storeSlug = isset($_GET["slug"]) ? trim((string) $_GET["slug"]) : "";
-$storeCategoryId = isset($_GET["category"]) ? (int) $_GET["category"] : 0;
+$storeSlug = isset($_GET["slug"]) && is_scalar($_GET["slug"]) ? trim((string) $_GET["slug"]) : "";
+$storeCategoryId = isset($_GET["category"]) && is_scalar($_GET["category"]) ? (int) $_GET["category"] : 0;
 
-$storeSort = isset($_GET["sort"]) ? (string) $_GET["sort"] : "";
+$storeSort = isset($_GET["sort"]) && is_scalar($_GET["sort"]) ? (string) $_GET["sort"] : "";
 $storeSorts = array(
     "" => "Mặc định",
     "price-asc" => "Giá thấp đến cao",
@@ -102,7 +102,9 @@ if ($storeSort === "price-asc") {
     $storeOrder = " ORDER BY `name` ASC ";
 }
 
-$storeTotal = (int) $CMSNT->num_rows(" SELECT * FROM `products` WHERE " . $storeWhere . " ");
+$storeTotal = max(0, (int) $CMSNT->num_rows(" SELECT * FROM `products` WHERE " . $storeWhere . " "));
+/* Clamp before querying so stale links and the pager refer to the same page. */
+$storePage = min($storePage, max(1, (int) ceil($storeTotal / $storeLimit)));
 $storeFrom = ($storePage - 1) * $storeLimit;
 $storeProducts = (array) $CMSNT->get_list(
     " SELECT * FROM `products` WHERE " . $storeWhere . " " . $storeOrder
@@ -157,7 +159,7 @@ $storeStockOf = function ($product) use ($storeStock) {
 /* The shop may hide sold-out rows; filter after the batched stock read. */
 $storeVisible = array();
 foreach ($storeProducts as $storeProduct) {
-    if ((string) $CMSNT->site("product_hide_outstock") === "1" && $storeStockOf($storeProduct) === 0) {
+    if ((string) $CMSNT->site("product_hide_outstock") === "1" && $storeStockOf($storeProduct) <= 0) {
         continue;
     }
     $storeProduct["_stock"] = $storeStockOf($storeProduct);
@@ -264,7 +266,7 @@ store_shell_open($storeShell);
     <ul class="hero__list">
       <?php foreach ($storeHeroProducts as $storeHeroProduct) { ?>
       <li>
-        <a class="hero__item" href="<?php echo BASE_URL("product/" . $storeHeroProduct["slug"]); ?>">
+        <a class="hero__item" href="<?php echo store_e(BASE_URL("product/" . rawurlencode((string) $storeHeroProduct["slug"]))); ?>">
           <span class="hero__item-name"><?php echo store_e($storeHeroProduct["name"]); ?></span>
           <span class="hero__item-meta">
             <?php
@@ -278,11 +280,11 @@ store_shell_open($storeShell);
           </span>
           <span class="hero__item-price">
             <?php
-            $storeHeroPrice = (float) $storeHeroProduct["price"]
-                * (1 - ((float) $storeHeroProduct["discount"] / 100));
+            $storeHeroDiscount = orbit_percent($storeHeroProduct["discount"]);
+            $storeHeroPrice = orbit_unit_price($storeHeroProduct);
             echo store_e(format_currency($storeHeroPrice));
             ?>
-            <small><?php echo (int) $storeHeroProduct["discount"] > 0 ? "đã giảm " . (int) $storeHeroProduct["discount"] . "%" : "giá hiện tại"; ?></small>
+            <small><?php echo $storeHeroDiscount > 0 ? "đã giảm " . (int) $storeHeroDiscount . "%" : "giá hiện tại"; ?></small>
           </span>
         </a>
       </li>
@@ -315,7 +317,7 @@ store_shell_open($storeShell);
           $storeCount = isset($storeCategoryCounts[(int) $storeCategoryRow["id"]])
               ? (int) $storeCategoryCounts[(int) $storeCategoryRow["id"]] : 0;
           ?>
-      <a class="category-card" href="<?php echo BASE_URL("category/" . $storeCategoryRow["slug"]); ?>">
+      <a class="category-card" href="<?php echo store_e(BASE_URL("category/" . rawurlencode((string) $storeCategoryRow["slug"]))); ?>">
         <?php if ($storeIcon !== "") { ?>
         <img class="category-card__icon" src="<?php echo store_e(BASE_URL($storeIcon)); ?>" alt="" width="36" height="36" loading="lazy" decoding="async">
         <?php } else { ?>
@@ -349,11 +351,13 @@ store_shell_open($storeShell);
         <?php foreach ($storeCategories as $storeCategoryRow) {
             $storeChipActive = $storeCategoryId === (int) $storeCategoryRow["id"];
             ?>
-        <a class="chip" role="listitem" href="<?php echo BASE_URL("category/" . $storeCategoryRow["slug"]); ?>#san-pham"
+        <a class="chip" role="listitem" href="<?php echo store_e(BASE_URL("category/" . rawurlencode((string) $storeCategoryRow["slug"]))); ?>#san-pham"
           <?php echo $storeChipActive ? 'aria-current="page"' : ""; ?>><?php echo store_e($storeCategoryRow["name"]); ?></a>
         <?php } ?>
       </div>
-      <form class="catalog-bar__sort cluster" method="get" action="<?php echo BASE_URL("client/home"); ?>#san-pham">
+      <form class="catalog-bar__sort cluster" method="get" action="<?php echo store_e(BASE_URL("index.php")); ?>#san-pham">
+        <input type="hidden" name="module" value="client">
+        <input type="hidden" name="action" value="home">
         <?php if ($storeKeyword !== "") { ?>
         <input type="hidden" name="keyword" value="<?php echo store_e($storeKeyword); ?>">
         <?php } ?>
@@ -374,8 +378,13 @@ store_shell_open($storeShell);
 
     <?php if (empty($storeVisible)) { ?>
     <div class="empty">
+      <?php if (!empty($storeProducts) && (string) $CMSNT->site("product_hide_outstock") === "1") { ?>
+      <p class="empty__title">Trang này chưa có sản phẩm còn hàng</p>
+      <p class="muted small"><?php echo $storeTotal > $storeLimit ? "Thử chuyển sang trang khác hoặc xem toàn bộ sản phẩm." : "Thử từ khóa khác hoặc liên hệ shop để hỏi về hàng mới."; ?></p>
+      <?php } else { ?>
       <p class="empty__title">Không có sản phẩm phù hợp</p>
       <p class="muted small">Thử từ khóa khác hoặc xem toàn bộ sản phẩm.</p>
+      <?php } ?>
       <div class="empty__actions">
         <a class="btn btn--primary" href="<?php echo BASE_URL("client/home"); ?>#san-pham">Xem tất cả</a>
         <a class="btn btn--ghost" href="<?php echo BASE_URL("client/contact"); ?>">Liên hệ</a>
@@ -394,7 +403,7 @@ store_shell_open($storeShell);
           $storeStockCount = (int) $storeProduct["_stock"];
           ?>
       <article class="product-card">
-        <a class="product-card__media" href="<?php echo BASE_URL("product/" . $storeProduct["slug"]); ?>" tabindex="-1" aria-hidden="true">
+        <a class="product-card__media" href="<?php echo store_e(BASE_URL("product/" . rawurlencode((string) $storeProduct["slug"]))); ?>" tabindex="-1" aria-hidden="true">
           <?php if ($storeProductImage !== "") { ?>
           <img src="<?php echo store_e(BASE_URL($storeProductImage)); ?>" alt="" width="400" height="225" loading="lazy" decoding="async">
           <?php } else { ?>
@@ -409,7 +418,7 @@ store_shell_open($storeShell);
           <span class="product-card__category"><?php echo store_e($storeProductCategory["name"]); ?></span>
           <?php } ?>
           <h3 class="product-card__title">
-            <a href="<?php echo BASE_URL("product/" . $storeProduct["slug"]); ?>"><?php echo store_e($storeProduct["name"]); ?></a>
+            <a href="<?php echo store_e(BASE_URL("product/" . rawurlencode((string) $storeProduct["slug"]))); ?>"><?php echo store_e($storeProduct["name"]); ?></a>
           </h3>
           <p class="product-card__desc clamp-2"><?php echo store_e(trim(strip_tags((string) $storeProduct["short_desc"]))); ?></p>
           <div class="product-card__meta">
@@ -429,7 +438,7 @@ store_shell_open($storeShell);
               <span class="price"><?php echo store_e(format_currency($storeFinal)); ?></span>
             </span>
             <?php if ($storeStockCount > 0) { ?>
-            <a class="btn" href="<?php echo BASE_URL("product/" . $storeProduct["slug"]); ?>">Xem</a>
+            <a class="btn" href="<?php echo store_e(BASE_URL("product/" . rawurlencode((string) $storeProduct["slug"]))); ?>">Xem</a>
             <?php } else { ?>
             <span class="btn" aria-disabled="true">Tạm hết</span>
             <?php } ?>
@@ -439,10 +448,11 @@ store_shell_open($storeShell);
       <?php } ?>
     </div>
 
+    <?php } ?>
     <?php
+    /* Even if every row on this page is hidden as sold out, let the buyer reach other pages. */
     echo store_pager($storePage, $storeTotal, $storeLimit, $storeQuery);
     ?>
-    <?php } ?>
   </div>
 </section>
 

@@ -1,5 +1,9 @@
 # 12 — Staging-first release plan, prerequisites, rollback and verdict
 
+> Historical release assessment. SEC-01 and parts of SEC-02/03 were subsequently changed and retested
+> with fixtures; see `13-security-hardening-retest.md`. The **NO-GO** remains: provider contract,
+> callback retry semantics, actual hosting/schema, independent review and release approval are unresolved.
+
 **Verdict: NO-GO.** The GachtheFast integration must **not** be enabled in production. Six items are
 **BLOCKED** on owner input (below), one P1 security defect is open (SEC-01), and the provider contract
 is unconfirmed. Nothing was deployed, no production database or provider was contacted, and no

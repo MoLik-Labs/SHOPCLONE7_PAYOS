@@ -1,0 +1,12 @@
+{
+  "pagefind.clear_search": "Xóa tìm kiếm",
+  "pagefind.load_more": "Xem thêm kết quả",
+  "pagefind.search_label": "Tìm trong tài liệu",
+  "pagefind.filters_label": "Bộ lọc",
+  "pagefind.zero_results": "Không tìm thấy kết quả cho [SEARCH_TERM]",
+  "pagefind.many_results": "[COUNT] kết quả cho [SEARCH_TERM]",
+  "pagefind.one_result": "[COUNT] kết quả cho [SEARCH_TERM]",
+  "pagefind.alt_search": "Không tìm thấy kết quả cho [SEARCH_TERM]. Hiển thị kết quả cho [DIFFERENT_TERM]",
+  "pagefind.search_suggestion": "Không tìm thấy kết quả cho [SEARCH_TERM]. Hãy thử:",
+  "pagefind.searching": "Đang tìm [SEARCH_TERM]..."
+}

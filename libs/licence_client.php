@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Orbit Office — shop-side licence client.
+ * MoLik Studio — shop-side licence client.
  *
  * Talks to the licence portal (tools/license-portal) over HTTPS, binds this
  * installation to a hardware fingerprint, and caches the result so a sleeping
@@ -401,15 +401,15 @@ function licence_request(LicenceStore $store, array $cfg, $mode, callable $trans
             case 'invalid_key_format':
             case 'invalid_request':
                 $state = LICENCE_STATE_INVALID;
-                $message = 'This licence key was not recognised. Check it, or contact Orbit Office.';
+                $message = 'This licence key was not recognised. Check it, or contact your licence provider.';
                 break;
             case 'revoked':
                 $state = LICENCE_STATE_REVOKED;
-                $message = 'This licence has been revoked. Contact Orbit Office.';
+                $message = 'This licence has been revoked. Contact your licence provider.';
                 break;
             case 'expired':
                 $state = LICENCE_STATE_REVOKED;
-                $message = 'This licence has expired. Contact Orbit Office to renew it.';
+                $message = 'This licence has expired. Contact your licence provider to renew it.';
                 break;
             case 'hwid_mismatch':
                 $state = LICENCE_STATE_MISMATCH;

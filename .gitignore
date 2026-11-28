@@ -5,8 +5,13 @@
 /vendor/
 /node_modules/
 **/node_modules/
+__pycache__/
+*.py[cod]
+/.cache/
 *.log
 *.sql
+# Upstream skill examples only; never unignore database exports elsewhere.
+!/docs/skills/upstream/ecc/skills/**/*.sql
 *.bak
 *.backup
 *.zip
