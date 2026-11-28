@@ -8,10 +8,10 @@
   },
   "scripts": {
     "dev": "astro dev --host 0.0.0.0",
-    "build": "astro build && vitepress build reference",
+    "build": "astro build && vitepress build reference && node scripts/search-index.mjs",
     "preview": "astro preview --host 0.0.0.0",
     "check": "astro check",
-    "lint:content": "nimbus-docs lint --rule nimbus/single-h1 && nimbus-docs lint --rule nimbus/bare-url",
+    "lint:content": "nimbus-docs lint --rule nimbus/single-h1 && nimbus-docs lint --rule nimbus/bare-url && nimbus-docs lint --rule nimbus/heading-hierarchy && nimbus-docs lint --rule nimbus/code-block-lang && nimbus-docs lint --rule nimbus/description-required",
     "check:links": "node scripts/check-links.mjs",
     "test:links": "node scripts/test-check-links.mjs"
   },
@@ -23,6 +23,7 @@
   "devDependencies": {
     "@astrojs/check": "0.9.6",
     "@cloudflare/nimbus-docs": "0.20.2",
+    "pagefind": "1.6.0",
     "parse5": "8.1.1",
     "typescript": "5.9.3",
     "vitepress": "2.0.0-alpha.21",

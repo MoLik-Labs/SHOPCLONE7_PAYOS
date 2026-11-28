@@ -3,11 +3,13 @@ import { defineConfig } from 'vitepress';
 export default defineConfig({
   title: 'MoLik Studio Docs',
   description: 'Tham chiếu kỹ thuật và hướng dẫn debug MoLik Shop',
-  lang: 'vi-VN',
+  lang: 'vi',
   base: '/SHOPCLONE7_PAYOS/reference/',
   outDir: '../dist/reference',
   // Use .html links: GitHub Pages does not provide clean-URL rewrites.
   cleanUrls: false,
+  // Index the article, not navigation, in the shared Pagefind search.
+  transformHtml: (html) => html.replace(/(<div[^>]*class="vp-doc[^"]*")/, '$1 data-pagefind-body'),
   head: [['link', { rel: 'icon', href: '/SHOPCLONE7_PAYOS/favicon.svg' }]],
   themeConfig: {
     logo: '/favicon.svg',

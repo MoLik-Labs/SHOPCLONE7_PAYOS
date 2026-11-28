@@ -3,7 +3,7 @@ title: Trang docs & GitHub Pages
 description: Xây dựng và phát hành trang tài liệu Starlight.
 ---
 
-Trang chính dùng Astro + Starlight; Nimbus lint kiểm tra nội dung MDX. Phần [tham chiếu kỹ thuật và debug](../../reference/) dùng VitePress và được build chung vào cùng artifact Pages. Trang nằm trong `documentation/`, tách khỏi ứng dụng PHP. Tìm kiếm chạy trên các chỉ mục tĩnh riêng cho từng phần, không cần server backend.
+Trang chính dùng Astro + Starlight; Nimbus lint kiểm tra nội dung MDX. Phần [tham chiếu kỹ thuật và debug](../../reference/) dùng VitePress và được build chung vào cùng artifact Pages. Trang nằm trong `documentation/`, tách khỏi ứng dụng PHP. Tìm kiếm trên Starlight bao gồm cả tài liệu chính và tham chiếu; tìm kiếm trong VitePress chỉ bao gồm tham chiếu. Cả hai dùng chỉ mục tĩnh, không cần server backend.
 
 ## Chạy cục bộ
 
@@ -23,7 +23,7 @@ npm run check:links --prefix documentation
 npm run preview --prefix documentation
 ```
 
-Trang dùng Node 22.23.4 trở lên (khuyến nghị Node 24 LTS). Nội dung chính dùng MDX trong `documentation/src/content/docs/`; tham chiếu VitePress dùng Markdown trong `documentation/reference/`. Nimbus kiểm tra các quy tắc một H1 và URL trần. Bộ kiểm tra riêng xác minh liên kết nội bộ sau build, không kiểm tra liên kết ngoài; điều hướng và `base` của từng phần nằm trong `documentation/astro.config.mjs` và `documentation/reference/.vitepress/config.mjs`. VitePress đang được ghim vào bản 2 alpha để tránh các cảnh báo bảo mật trong phụ thuộc của bản ổn định 1.x; cần theo dõi cập nhật và kiểm thử trước khi nâng cấp. Đường dẫn project Pages dự kiến là `https://molik-labs.github.io/SHOPCLONE7_PAYOS/` sau khi triển khai thành công.
+Trang dùng Node 22.23.4 trở lên (khuyến nghị Node 24 LTS). Nội dung chính dùng MDX trong `documentation/src/content/docs/`; tham chiếu VitePress dùng Markdown trong `documentation/reference/`. Nimbus lint kiểm tra H1, URL trần, thứ bậc tiêu đề, ngôn ngữ khối mã và mô tả trên các trang MDX của Starlight; không kiểm tra Markdown của VitePress. Bộ kiểm tra riêng xác minh liên kết nội bộ sau build, không kiểm tra liên kết ngoài; điều hướng và `base` của từng phần nằm trong `documentation/astro.config.mjs` và `documentation/reference/.vitepress/config.mjs`. VitePress đang được ghim vào bản 2 alpha để tránh các cảnh báo bảo mật trong phụ thuộc của bản ổn định 1.x; cần theo dõi cập nhật và kiểm thử trước khi nâng cấp. Đường dẫn project Pages dự kiến là `https://molik-labs.github.io/SHOPCLONE7_PAYOS/` sau khi triển khai thành công.
 
 ## Triển khai
 

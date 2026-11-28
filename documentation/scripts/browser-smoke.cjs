@@ -12,7 +12,7 @@ const executablePath = process.env.CHROMIUM_PATH || '/tmp/chromium';
       await page.setViewport({ width, height: 900 });
       page.on('pageerror', (error) => errors.push(`${width}: ${error.message}`));
       page.on('response', (response) => {
-        if (response.url().startsWith(root) && response.status() >= 400) errors.push(`${width}: ${response.status()} ${response.url()}`);
+        if (response.url().startsWith(root) && !response.url().endsWith('/kiem-tra-404-khong-ton-tai/') && response.status() >= 400) errors.push(`${width}: ${response.status()} ${response.url()}`);
       });
       const home = await page.goto(root, { waitUntil: 'networkidle0' });
       if (home.status() !== 200) throw new Error(`home returned ${home.status()}`);
@@ -36,7 +36,12 @@ const executablePath = process.env.CHROMIUM_PATH || '/tmp/chromium';
       await page.waitForSelector('dialog[open] input');
       await page.type('dialog[open] input', 'nhập kho');
       await page.waitForFunction(() => document.querySelector('dialog[open]')?.innerText.includes('kết quả'), { timeout: 10000 });
-      console.log(`${width}px: navigation, reload, two search indexes, layout OK`);
+      await page.$eval('dialog[open] input', (input) => { input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); });
+      await page.type('dialog[open] input', 'lặp base');
+      await page.waitForFunction(() => [...document.querySelectorAll('dialog[open] a')].some((a) => a.href.includes('/reference/pages.html')), { timeout: 10000 });
+      const missing = await page.goto(root + 'kiem-tra-404-khong-ton-tai/', { waitUntil: 'networkidle0' });
+      if (missing.status() !== 404 || !(await page.evaluate(() => document.body.innerText.includes('Đường dẫn có thể đã thay đổi')))) throw new Error('custom 404 failed');
+      console.log(`${width}px: navigation, reload, shared and reference search, custom 404, layout OK`);
       await page.close();
     }
     if (errors.length) throw new Error(errors.join('\n'));

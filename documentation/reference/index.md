@@ -4,7 +4,7 @@ title: Tham chiếu kỹ thuật
 
 # Tham chiếu kỹ thuật
 
-Tra cứu các giới hạn hiện tại và debug theo triệu chứng. Phần này dùng VitePress; tìm kiếm ở đây chỉ tìm trong các trang tham chiếu. Dùng <a href="/SHOPCLONE7_PAYOS/">tài liệu chính</a> để tìm hướng dẫn cài đặt, vận hành và các chủ đề khác.
+Tra cứu các giới hạn hiện tại và debug theo triệu chứng. Phần này dùng VitePress; tìm kiếm ở đây chỉ tìm trong các trang tham chiếu. Dùng tìm kiếm ở <a href="/SHOPCLONE7_PAYOS/">tài liệu chính</a> để tra cứu cả hướng dẫn và phần tham chiếu.
 
 ::: warning Phạm vi
 Ứng dụng chưa được xác minh trên schema và hạ tầng production. Không dùng tiền thật hoặc dữ liệu khách hàng cho các bước thử nghiệm ở đây.
