@@ -1,0 +1,39 @@
+---
+title: Tài liệu MoLik Shop
+description: Cài đặt, vận hành và tích hợp cửa hàng một cách rõ ràng và an toàn.
+template: splash
+hero:
+  tagline: Từ môi trường thử nghiệm đến vận hành hàng ngày — bắt đầu đúng bước, hiểu rõ giới hạn và tích hợp tự tin hơn.
+  actions:
+    - text: Bắt đầu tại đây
+      link: ./bat-dau/tong-quan/
+      icon: right-arrow
+    - text: Xem API
+      link: ./api/xac-thuc/
+      variant: minimal
+---
+
+import { Card, CardGrid, Steps, Aside } from '@astrojs/starlight/components';
+
+<Aside type="caution" title="Trạng thái dự án">
+Dự án vẫn đang hoàn thiện. Chưa xác minh toàn bộ schema, môi trường hosting và thanh toán thực tế. Không coi tài liệu này là phê duyệt đưa vào production.
+</Aside>
+
+## Bạn đang tìm gì?
+
+<CardGrid>
+  <Card title="Cài đặt & cấu hình" icon="rocket">Chuẩn bị môi trường, bản sao database và cấu hình HTTPS trước khi thử nghiệm. [Xem cài đặt](./bat-dau/cai-dat/).</Card>
+  <Card title="Vận hành cửa hàng" icon="setting">Kiểm tra giao diện, thanh toán, đối soát và xử lý các trạng thái chưa rõ. [Xem vận hành](./van-hanh/checklist/).</Card>
+  <Card title="Tích hợp API" icon="open-book">Đọc dữ liệu và nhập kho với header API key, kèm các giới hạn cần biết. [Xem API](./api/xac-thuc/).</Card>
+  <Card title="Phát triển an toàn" icon="pencil">Chạy kiểm thử fixture, hiểu các phần chưa được xác minh và đóng góp tài liệu. [Xem kiểm thử](./phat-trien/kiem-thu/).</Card>
+</CardGrid>
+
+## Một lộ trình ngắn
+
+<Steps>
+1. Đọc [tổng quan](./bat-dau/tong-quan/) để xác định phạm vi và các điều kiện còn thiếu.
+2. Thiết lập [môi trường staging](./bat-dau/cai-dat/) bằng dữ liệu thử nghiệm.
+3. Xem [checklist vận hành](./van-hanh/checklist/) và kiểm tra từng tích hợp trước khi cân nhắc triển khai.
+</Steps>
+
+Tài liệu từ [MoLik Studio](https://github.com/MoLik-Labs) · [Mã nguồn dự án](https://github.com/MoLik-Labs/SHOPCLONE7_PAYOS).

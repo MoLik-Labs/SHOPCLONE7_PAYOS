@@ -7,6 +7,8 @@ removed.
 
 **Nhận diện sản phẩm: MoLik Studio.**
 
+**Tài liệu tiếng Việt:** [Trang Starlight (GitHub Pages, khi đã triển khai)](https://molik-labs.github.io/SHOPCLONE7_PAYOS/) · [Mã nguồn và hướng dẫn chạy tại chỗ](documentation/src/content/docs/phat-trien/docs.md).
+
 > Status: work in progress. The application has not been validated against the target hosting or a
 > real shop database. Nothing has been deployed by the agent; no live payment or licence call was made.
 > Read [Known open items](#known-open-items) before considering a production install.

@@ -1,0 +1,19 @@
+/* MoLik Studio's indigo/lavender identity; Starlight retains accessible navigation. */
+:root {
+  --sl-color-accent-low: #28213e;
+  --sl-color-accent: #9f85e6;
+  --sl-color-accent-high: #e8d8ff;
+  --sl-content-width: 48rem;
+}
+:root[data-theme='light'] {
+  --sl-color-accent-low: #f0eafa;
+  --sl-color-accent: #6649a3;
+  --sl-color-accent-high: #2d1d4d;
+}
+.site-title { font-weight: 750; letter-spacing: -0.035em; }
+.site-title img { border-radius: .6rem; }
+.hero { padding-block: clamp(3rem, 7vw, 6rem); }
+.hero h1 { letter-spacing: -.055em; line-height: 1.04; max-width: 15ch; }
+.hero .tagline { max-width: 45rem; line-height: 1.7; }
+.card { border-radius: .8rem; }
+.sl-markdown-content a { text-underline-offset: .2em; }
