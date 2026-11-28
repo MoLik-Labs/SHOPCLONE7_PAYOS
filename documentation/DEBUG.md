@@ -10,6 +10,8 @@ Kiểm tra trên bản build tĩnh và preview cô lập, không kết nối dat
 2. **Cảnh báo route `/404`:** nội dung 404 tùy chỉnh vừa được Starlight đưa vào danh sách route vừa trùng route 404 của Astro. Đặt `draft: true` để loại khỏi danh sách route production; trang 404 vẫn đọc entry này. Preview trả HTTP 404 và nội dung tiếng Việt. Cần xác minh lại trên GitHub Pages sau khi phát hành.
 3. **Đường dẫn bị lặp base:** hai framework có quy tắc tự thêm base; dùng `/reference/` trong cấu hình sidebar Starlight thay vì gắn sẵn `/SHOPCLONE7_PAYOS/` hai lần. `check:links` kiểm tra target và anchor trong artifact dưới project base, cùng fixture cho lỗi base thiếu.
 
+4. **Cảnh báo Node 20 trong Actions:** workflow trước dùng action chạy Node 20, được runner ép sang Node 24. Đã cập nhật các action Pages/checkout/setup-node và ghim SHA phiên bản hỗ trợ Node 24. Cần xác nhận lại job deploy thật sau khi merge.
+
 ## Chạy lại
 
 ```bash
